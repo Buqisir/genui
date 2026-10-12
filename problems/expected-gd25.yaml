@@ -1,0 +1,32 @@
+# 2025 广东卷（部分试题）答案键。不发给模型。
+gd25-01:
+  - { q: "选项", choice: "B" }
+gd25-02:
+  - { q: "选项", choice: "D" }
+gd25-03:
+  - { q: "选项", choice: "A" }
+gd25-04:
+  - { q: "选项", choice: "AC" }
+gd25-05:
+  - { q: "(1) 直径读数", any: [8.259, 8.26, 8.261] }
+  - { q: "(2)② 通过两光电门", text: "时间相等", manual: true }
+  - { q: "(2)③ t2 与 t1 的关系", text: "=", manual: true }
+  - { q: "(2)④ 动能比值", any: [0.56] }
+gd25-06:
+  - { q: "(1)① 最大电流", any: [0.58] }
+  - { q: "(1)② 实物连线", text: "按图（a）限流接法：R_0 接滑动变阻器 a 端，滑片 P 与 b 端短接后串联电流表 0.6A 接线柱，电流表负接线柱接电磁铁", manual: true }
+  - { q: "(2)① 滑片置于 b 端时电流", text: "最小", manual: true }
+  - { q: "(2)② 电流读数", any: [0.48] }
+  - { q: "(2)④ B-I 图线斜率", any: [30] }
+gd25-07:
+  - { q: "(1) 液面下降高度 h2", any: [0.05, 5, 50] }
+  - { q: "(1) 气室压强 p1", any: [1.2e5, 120, 1.2] }
+  - { q: "(2) 气室压强 p2", any: [1.35e5, 135, 1.35] }
+gd25-08:
+  - { q: "(1) 角速度 ω", text: "ω = √(2ah)/r", manual: true }
+  - { q: "(2) 开瓶器对木塞做的功 W", text: "W = mah + mgh + (1/2)f_0 h", manual: true }
+  - { q: "(3) 功率 P 与 t 的关系", text: "P = magt + ma^2 t + f_0 a t − (f_0 a^2)/(2h) t^3", manual: true }
+gd25-09:
+  - { q: "(1) 带电量 q", text: "q = mgdl/(uh)", manual: true }
+  - { q: "(2) 带电量 Q", text: "Q = kmgdh/(ul)", manual: true }
+  - { q: "(3) 电场力做的功 W", text: "W = mgl^2/h + 4k^2 mgh + 4k^4 mgh^3/l^2", manual: true }

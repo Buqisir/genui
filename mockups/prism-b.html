@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>立体棱镜光路：B+ 冷灰实体（样张）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 32px; background: #e4e6e9; font-family: 'Noto Sans SC', sans-serif; color: #23272d; }
+  .card { width: 820px; box-sizing: border-box; padding: 18px 20px 14px; border-radius: 16px;
+          background: linear-gradient(180deg, #f7f8fa 0%, #f1f2f5 62%, #e9ebef 100%);
+          box-shadow: 0 0 40px rgba(51,51,51,.08), 0 0 0 1px #e1e4e8; }
+  .card.night { background: linear-gradient(180deg, #2a2f36 0%, #22262c 62%, #1b1e23 100%); color: #e2e7ee; box-shadow: 0 0 40px rgba(0,0,0,.3), 0 0 0 1px #343a42; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; letter-spacing: -.01em; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #7d838c; border: 1px solid #d6d9de; border-radius: 4px; padding: 1px 6px; background: #f8f9fa; }
+  .night .tag { background: #2c3138; border-color: #3d434c; color: #9aa1ab; }
+  .readout { display: flex; gap: 26px; }
+  .ro { display: flex; flex-direction: column; align-items: flex-end; }
+  .ro .k { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8a9099; letter-spacing: .04em; }
+  .ro .k i { font-family: 'Source Serif 4', serif; font-size: 12px; margin-left: 4px; color: #5d636c; }
+  .night .ro .k i { color: #aab1bb; }
+  .ro .v { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 26px; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .ro .v small { font-size: 11px; font-weight: 400; color: #8a9099; margin-left: 3px; letter-spacing: 0; }
+  .ro.red .v { color: #d4372c; }
+  .ro.violet .v { color: #7a45d6; }
+  svg { display: block; width: 780px; height: 520px; margin: 0 auto; cursor: grab; user-select: none; }
+  .foot { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; font-size: 11.5px; color: #8b9098; margin-top: 2px; line-height: 1.6; }
+  .keys { display: flex; gap: 10px; align-items: center; white-space: nowrap; }
+  .kbd { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #5d636c; border: 1px solid #d3d7dc; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #fbfbfc; }
+  .night .kbd { background: #2c3138; border-color: #3d434c; color: #aab1bb; }
+
+  .controls { width: 820px; box-sizing: border-box; margin-top: 14px; padding: 14px 20px; border-radius: 14px; background: #f5f6f8; box-shadow: 0 0 0 1px #e1e4e8;
+              display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 26px; font-size: 12.5px; color: #4a5059; }
+  .controls label { display: flex; flex-direction: column; gap: 4px; }
+  .controls label.chk { flex-direction: row; align-items: center; gap: 6px; }
+  .controls .lab { display: flex; justify-content: space-between; }
+  .controls .lab span { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7d838c; }
+  .controls input[type=range] { width: 100%; accent-color: #3a4048; }
+  .controls .btns { display: flex; gap: 8px; align-items: center; }
+  .controls button { font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid #d3d7dc; border-bottom-width: 2px; background: #fbfbfc; color: #3a4048; cursor: pointer; }
+  .controls select { font: inherit; font-size: 12px; }
+  .info { width: 820px; box-sizing: border-box; font-size: 12px; color: #6b717a; line-height: 1.7; padding: 10px 4px; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="head">
+    <div class="title">三棱镜色散<span class="tag" id="gtag">K9 · n≈1.52</span></div>
+    <div class="readout">
+      <div class="ro red"><span class="k">红光偏折<i>δ</i></span><span class="v" id="dR">—</span></div>
+      <div class="ro violet"><span class="k">紫光偏折<i>δ</i></span><span class="v" id="dV">—</span></div>
+      <div class="ro"><span class="k">色散角<i>Δδ</i></span><span class="v" id="dD">—</span></div>
+    </div>
+  </div>
+  <svg id="s" viewBox="-390 -258 780 520"></svg>
+  <div class="foot">
+    <span id="note">默认色散放大约 5 倍、只画 7 种色光；勾选「真实比例」按 Sellmeier 公式算 31 个波长。</span>
+    <span class="keys"><span class="kbd">拖动</span> 旋转视角</span>
+  </div>
+</div>
+<div class="controls">
+  <div class="btns"><button id="v3d">立体视角</button><button id="v2d">考卷视角</button></div>
+  <label><span class="lab">入射角<span id="ia"></span></span><input type="range" id="inc" min="5" max="85" value="50"></label>
+  <label><span class="lab">偏离主截面<span id="ta"></span></span><input type="range" id="tilt" min="0" max="35" value="0"></label>
+  <label><span class="lab">光束宽度<span id="bwv"></span></span><input type="range" id="bw" min="0" max="60" value="0"></label>
+  <label class="chk"><input type="checkbox" id="band"> 狭缝光（一排平行光）</label>
+  <label class="chk"><input type="checkbox" id="white" checked> 白光色散</label>
+  <label class="chk"><input type="checkbox" id="loss"> 反射损失和亮度</label>
+  <label class="chk"><input type="checkbox" id="real"> 真实比例</label>
+  <label class="chk">玻璃 <select id="glass"><option value="bk7">冕牌玻璃 K9（BK7）</option><option value="sf11">重火石玻璃（SF11）</option></select></label>
+  <label class="chk"><input type="checkbox" id="dark"> 暗室</label>
+</div>
+<p class="info" id="info"></p>
+<script>
+const $ = (id) => document.getElementById(id)
+const S = $('s')
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k]
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+const norm = (a) => mul(a, 1 / Math.hypot(...a))
+const rad = (d) => (d * Math.PI) / 180
+
+// Equilateral cross-section, apex up, extruded along z; centroid at the origin.
+const A = 2, H = Math.sqrt(3), LEN = 3, YC = H / 3
+const tri = [[-A / 2, -YC], [A / 2, -YC], [0, H - YC]]
+const V = []
+for (const z of [-LEN / 2, LEN / 2]) for (const [x, y] of tri) V.push([x, y, z])
+const FACES = [[0, 1, 2], [5, 4, 3], [0, 3, 4, 1], [1, 4, 5, 2], [2, 5, 3, 0]]
+const PLANES = FACES.map((f) => {
+  let n = norm(cross(sub(V[f[1]], V[f[0]]), sub(V[f[2]], V[f[0]])))
+  if (dot(n, V[f[0]]) < 0) n = mul(n, -1)
+  return { n, d: dot(n, V[f[0]]) }
+})
+const EDGES = []
+FACES.forEach((f, fi) => f.forEach((v, k) => {
+  const w = f[(k + 1) % f.length]
+  const e = EDGES.find((e) => (e.a === w && e.b === v))
+  if (e) e.f2 = fi
+  else EDGES.push({ a: v, b: w, f1: fi })
+}))
+
+// The prism sits on a pedestal so the downward-deviated fan reaches the screen before the floor.
+const FLOOR_Y = -YC - 2.2
+const SCREEN_X = 3.9, SCREEN_Y = [FLOOR_Y, 1.4], SCREEN_Z = [-2.2, 2.8]
+const PED = { x: [-1.15, 1.15], z: [-1.75, 1.75], y: [FLOOR_Y, -YC] }
+const COLORS = [[0.68, '#e0302a'], [0.62, '#f07d10'], [0.58, '#e2b800'], [0.53, '#2ea83a'], [0.49, '#14a5b8'], [0.45, '#3557e8'], [0.41, '#8a3ae0']]
+// Cauchy n = A + B/λ², B exaggerated about 5x so the fan is visible at this scale.
+const nExaggerated = (lam) => 1.5 + 0.02 / (lam * lam)
+// Sellmeier coefficients (λ in μm), Schott catalogue values; K9 is the Chinese equivalent of N-BK7.
+const SELLMEIER = {
+  bk7: { name: '冕牌玻璃 K9', B: [1.03961212, 0.231792344, 1.01046945], C: [0.00600069867, 0.0200179144, 103.560653] },
+  sf11: { name: '重火石玻璃 SF11', B: [1.73759695, 0.313747346, 1.89878101], C: [0.013188707, 0.0623068142, 155.23629] },
+}
+const nSellmeier = (g, lam) => { const l2 = lam * lam; return Math.sqrt(1 + g.B.reduce((s, b, i) => s + (b * l2) / (l2 - g.C[i]), 0)) }
+// Approximate visible-wavelength colour (Bruton), dimmed toward the ends of the spectrum.
+function wl2rgb(nm) {
+  let r = 0, g = 0, b = 0
+  if (nm < 440) { r = -(nm - 440) / 60; b = 1 } else if (nm < 490) { g = (nm - 440) / 50; b = 1 } else if (nm < 510) { g = 1; b = -(nm - 510) / 20 }
+  else if (nm < 580) { r = (nm - 510) / 70; g = 1 } else if (nm < 645) { r = 1; g = -(nm - 645) / 65 } else r = 1
+  const f = nm < 420 ? 0.3 + (0.7 * (nm - 380)) / 40 : nm > 680 ? 0.3 + (0.7 * (750 - nm)) / 70 : 1
+  const c = (v) => Math.round(255 * Math.pow(v * f, 0.8))
+  return `rgb(${c(r)},${c(g)},${c(b)})`
+}
+const REAL_WAVES = Array.from({ length: 31 }, (_, i) => { const nm = 700 - i * 10; return [nm / 1000, wl2rgb(nm)] })
+
+function refract(i, n, eta) {
+  const c = -dot(n, i)
+  const k = 1 - eta * eta * (1 - c * c)
+  return k < 0 ? null : norm(add(mul(i, eta), mul(n, eta * c - Math.sqrt(k))))
+}
+const reflect = (i, n) => add(i, mul(n, -2 * dot(n, i)))
+
+function enter(o, d) {
+  let t0 = -Infinity, t1 = Infinity, face = -1
+  PLANES.forEach((p, k) => {
+    const dn = dot(p.n, d), t = (p.d - dot(p.n, o)) / dn
+    if (dn < 0) { if (t > t0) { t0 = t; face = k } } else if (dn > 0) t1 = Math.min(t1, t)
+  })
+  return t0 < t1 && t0 > 0 ? { t: t0, face } : null
+}
+function leave(o, d) {
+  let best = Infinity, face = -1
+  PLANES.forEach((p, k) => {
+    const dn = dot(p.n, d)
+    if (dn > 1e-9) { const t = (p.d - dot(p.n, o)) / dn; if (t > 1e-7 && t < best) { best = t; face = k } }
+  })
+  return { t: best, face }
+}
+
+// Unpolarised Fresnel reflectance: mean of the s and p amplitudes squared.
+function fresnel(ci, ct, n1, n2) {
+  const rs = (n1 * ci - n2 * ct) / (n1 * ci + n2 * ct), rp = (n2 * ci - n1 * ct) / (n2 * ci + n1 * ct)
+  return (rs * rs + rp * rp) / 2
+}
+
+// Each segment carries the intensity I it starts with; refl lists the partial reflections split off.
+function trace(o, d, ng) {
+  const segs = [], refl = []
+  const hit = enter(o, d)
+  if (!hit) return { segs: [{ p: o, q: add(o, mul(d, 9)), I: 1 }], refl, tir: 0, I: 1 }
+  let p = add(o, mul(d, hit.t)), I = 1
+  segs.push({ p: o, q: p, I })
+  const nIn = PLANES[hit.face].n
+  const t0 = refract(d, nIn, 1 / ng)
+  const R0 = fresnel(-dot(nIn, d), -dot(nIn, t0), 1, ng)
+  refl.push({ p, d: reflect(d, nIn), I: R0, outside: true })
+  I *= 1 - R0
+  d = t0
+  let tir = 0, Rs = [R0]
+  for (let k = 0; k < 8; k++) {
+    const out = leave(p, d)
+    const q = add(p, mul(d, out.t))
+    segs.push({ p, q, inside: true, I })
+    p = q
+    const inward = mul(PLANES[out.face].n, -1)
+    const t = refract(d, inward, ng)
+    if (t) {
+      const R = fresnel(-dot(inward, d), -dot(inward, t), ng, 1)
+      refl.push({ p, d: reflect(d, inward), I: I * R, outside: false })
+      Rs.push(R)
+      I *= 1 - R
+      d = t
+      break
+    }
+    d = reflect(d, inward); tir++
+  }
+  let end = add(p, mul(d, 7)), onScreen = null
+  if (d[0] > 0) {
+    const t = (SCREEN_X - p[0]) / d[0], q = add(p, mul(d, t))
+    if (q[1] > SCREEN_Y[0] && q[1] < SCREEN_Y[1] && q[2] > SCREEN_Z[0] && q[2] < SCREEN_Z[1]) { end = q; onScreen = q }
+  }
+  segs.push({ p, q: end, I })
+  return { segs, refl, tir, onScreen, dOut: d, I, Rs }
+}
+
+let yaw = -38, pitch = 22, anim = null
+const SCALE = 64, SHIFT = -0.8
+function proj(v) {
+  const cy = Math.cos(rad(yaw)), sy = Math.sin(rad(yaw)), cp = Math.cos(rad(pitch)), sp = Math.sin(rad(pitch))
+  const x = v[0] + SHIFT, x1 = x * cy + v[2] * sy, z1 = -x * sy + v[2] * cy
+  const y2 = v[1] * cp - z1 * sp, z2 = v[1] * sp + z1 * cp
+  return [x1 * SCALE, -y2 * SCALE, z2]
+}
+const rot = (n) => { const a = proj(n), b = proj([0, 0, 0]); return a[2] - b[2] }
+const pts = (arr) => arr.map((v) => proj(v).slice(0, 2).map((c) => c.toFixed(1)).join(',')).join(' ')
+const el = (tag, attrs, text, parent = S) => {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag)
+  for (const k in attrs) e.setAttribute(k, attrs[k])
+  if (text) e.textContent = text
+  // mix-blend-mode on a <g> only blends the finished group; children must blend individually to add up.
+  const blendMode = parent.getAttribute && parent.getAttribute('data-blend')
+  if (blendMode) e.setAttribute('style', `mix-blend-mode: ${blendMode}`)
+  parent.appendChild(e)
+  return e
+}
+const line2 = (a3, b3) => { const a = proj(a3), b = proj(b3); return { x1: a[0], y1: a[1], x2: b[0], y2: b[1] } }
+// Convex hull in the floor plane (x, z), returned as 3D points.
+function hull(ps) {
+  const p = ps.slice().sort((a, b) => a[0] - b[0] || a[2] - b[2])
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[2] - o[2]) - (a[2] - o[2]) * (b[0] - o[0])
+  const lo = [], up = []
+  for (const q of p) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q) }
+  for (const q of p.reverse()) { while (up.length > 1 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q) }
+  return lo.slice(0, -1).concat(up.slice(0, -1))
+}
+
+// ---- B+ material layer -------------------------------------------------------
+const LIGHT = norm([-0.35, 1, 0.45])
+const hexRgb = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16))
+const mix = (a, b, t) => { const A = hexRgb(a), B = hexRgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})` }
+const RAMPS = {
+  light: {
+    steel: ['#AEB4BC', '#F6F7F9'], steelHi: ['#C2C7CE', '#FFFFFF'], dark: ['#23272C', '#5C626B'],
+    paper: ['#D5D8D3', '#FCFCFA'], rubber: ['#1C1F23', '#4C5159'],
+  },
+  night: {
+    steel: ['#1E2125', '#555A62'], steelHi: ['#262A2F', '#646A73'], dark: ['#121417', '#383C43'],
+    paper: ['#2A2E33', '#4A4F57'], rubber: ['#0E1012', '#2A2D32'],
+  },
+}
+const shadeOf = (n) => 0.18 + 0.82 * Math.max(0, dot(n, LIGHT)) * 0.85 + 0.15 * Math.max(0, n[1])
+
+function boxFaces(x0, x1, y0, y1, z0, z1) {
+  const P = (x, y, z) => [x, y, z]
+  return [
+    { n: [0, 1, 0], q: [P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)] },
+    { n: [0, -1, 0], q: [P(x0, y0, z0), P(x0, y0, z1), P(x1, y0, z1), P(x1, y0, z0)] },
+    { n: [0, 0, 1], q: [P(x0, y0, z1), P(x0, y1, z1), P(x1, y1, z1), P(x1, y0, z1)] },
+    { n: [0, 0, -1], q: [P(x0, y0, z0), P(x1, y0, z0), P(x1, y1, z0), P(x0, y1, z0)] },
+    { n: [1, 0, 0], q: [P(x1, y0, z0), P(x1, y0, z1), P(x1, y1, z1), P(x1, y1, z0)] },
+    { n: [-1, 0, 0], q: [P(x0, y0, z0), P(x0, y1, z0), P(x0, y1, z1), P(x0, y0, z1)] },
+  ]
+}
+// Oriented box: centre c, unit axes e1..e3, half sizes h.
+function oboxFaces(c, e1, e2, e3, h) {
+  const C = (s1, s2, s3) => add(add(add(c, mul(e1, s1 * h[0])), mul(e2, s2 * h[1])), mul(e3, s3 * h[2]))
+  return [
+    { n: e1, q: [C(1, -1, -1), C(1, 1, -1), C(1, 1, 1), C(1, -1, 1)] },
+    { n: mul(e1, -1), q: [C(-1, -1, -1), C(-1, -1, 1), C(-1, 1, 1), C(-1, 1, -1)] },
+    { n: e2, q: [C(-1, 1, -1), C(-1, 1, 1), C(1, 1, 1), C(1, 1, -1)] },
+    { n: mul(e2, -1), q: [C(-1, -1, -1), C(1, -1, -1), C(1, -1, 1), C(-1, -1, 1)] },
+    { n: e3, q: [C(-1, -1, 1), C(1, -1, 1), C(1, 1, 1), C(-1, 1, 1)] },
+    { n: mul(e3, -1), q: [C(-1, -1, -1), C(-1, 1, -1), C(1, 1, -1), C(1, -1, -1)] },
+  ]
+}
+// Cylinder along p0 -> p1. Side facets are marked so they are filled without seams or outlines.
+function tubeFaces(p0, p1, r, seg = 28) {
+  const ax = norm(sub(p1, p0))
+  const ref = Math.abs(ax[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]
+  const u = norm(cross(ax, ref)), w = cross(ax, u)
+  const ring = (p) => Array.from({ length: seg }, (_, i) => { const a = (2 * Math.PI * i) / seg; return add(p, add(mul(u, r * Math.cos(a)), mul(w, r * Math.sin(a)))) })
+  const A = ring(p0), B = ring(p1), faces = []
+  for (let i = 0; i < seg; i++) {
+    const j = (i + 1) % seg, a = (2 * Math.PI * (i + 0.5)) / seg
+    faces.push({ n: add(mul(u, Math.cos(a)), mul(w, Math.sin(a))), q: [A[i], A[j], B[j], B[i]], side: true })
+  }
+  faces.push({ n: ax, q: B.slice(), cap: true })
+  faces.push({ n: mul(ax, -1), q: A.slice().reverse(), cap: true })
+  return faces
+}
+const centroid = (faces) => { let s = [0, 0, 0], k = 0; for (const f of faces) for (const v of f.q) { s = add(s, v); k++ } return mul(s, 1 / k) }
+
+function drawSolid(sol, R, T, parent = S) {
+  const [lo, hi] = R[sol.mat]
+  const vis = sol.faces.filter((f) => rot(f.n) > 1e-6)
+  for (const f of vis) {
+    const c = mix(lo, hi, Math.min(1, shadeOf(f.n)))
+    el('polygon', { points: pts(f.q), fill: c, stroke: c, 'stroke-width': f.side ? 0.9 : 0.4, 'stroke-linejoin': 'round' }, null, parent)
+  }
+  // Outline only the flat faces; a tube reads from its shading, its cap closes it.
+  for (const f of vis) {
+    if (f.side) continue
+    el('polygon', { points: pts(f.q), fill: 'none', stroke: T.soft, 'stroke-width': 0.75, 'stroke-linejoin': 'round' }, null, parent)
+    if (f.n[1] > 0.9 && !f.cap) {
+      // Bevel: a white hairline on the two edges of the top face nearest the viewer.
+      const P2 = f.q.map(proj)
+      let k = 0
+      P2.forEach((p, i) => { if (p[1] > P2[k][1]) k = i })
+      const a = f.q[(k + f.q.length - 1) % f.q.length], b = f.q[k], c = f.q[(k + 1) % f.q.length]
+      el('polyline', { points: pts([a, b, c]), fill: 'none', stroke: T.bevel, 'stroke-width': 1, 'stroke-opacity': 0.9 }, null, parent)
+    }
+  }
+}
+// Text printed onto a face: placed at a 3D point, kept upright in screen space.
+const print = (p3, text, T, o = {}) => {
+  const p = proj(p3)
+  el('text', { x: p[0], y: p[1], 'font-family': "'JetBrains Mono', monospace", 'font-size': o.size || 8.5, fill: o.fill || T.print, 'letter-spacing': '0.06em', 'text-anchor': o.anchor || 'middle' }, text)
+}
+
+function draw() {
+  S.innerHTML = ''
+  const inc = +$('inc').value, tilt = +$('tilt').value, band = $('band').checked, white = $('white').checked
+  $('ia').textContent = inc + '°'; $('ta').textContent = tilt + '°'
+  const al = rad(-30 + inc)
+  const d0 = norm([Math.cos(rad(tilt)) * Math.cos(al), Math.cos(rad(tilt)) * Math.sin(al), Math.sin(rad(tilt))])
+  const mid = [(tri[0][0] + tri[2][0]) / 2, (tri[0][1] + tri[2][1]) / 2]
+  const zs = band ? [-1.0, -0.5, 0, 0.5, 1.0] : [0]
+  const real = $('real').checked, glass = SELLMEIER[$('glass').value]
+  $('glass').disabled = !real
+  const nOf = (lam) => (real ? nSellmeier(glass, lam) : nExaggerated(lam))
+  const waves = white ? (real ? REAL_WAVES : COLORS) : [[0.589, '#d9480f']]
+  const facing = FACES.map((f, k) => rot(PLANES[k].n) > 0)
+  const dark = $('dark').checked
+  $('card').classList.toggle('night', dark)
+  const R = RAMPS[dark ? 'night' : 'light']
+  const T = dark
+    ? { soft: 'rgba(226,231,238,0.22)', bevel: 'rgba(255,255,255,0.28)', print: 'rgba(226,231,238,0.5)', text: '#9aa1ab', floor: '0,0,0', shadow: 0.55, glass: '150,200,214', edge: 'rgba(170,215,225,0.75)', edgeHi: '#f4ffff', beam: '#ffffff', mono: '#ff7a3d', section: 'rgba(226,231,238,0.45)', glowOp: 0.55, screenTxt: '#d8e3ea', lamp: '#ffd27a' }
+    : { soft: 'rgba(38,43,50,0.42)', bevel: '#FFFFFF', print: 'rgba(38,43,50,0.52)', text: '#767c85', floor: '30,36,44', shadow: 0.2, glass: '120,170,186', edge: 'rgba(52,92,104,0.8)', edgeHi: '#ffffff', beam: '#3a3f46', mono: '#d9480f', section: 'rgba(38,43,50,0.38)', glowOp: 0.16, screenTxt: '#d8e3ea', lamp: '#f2a93b' }
+  const YF = FLOOR_Y
+
+  const defs = el('defs', {})
+  let defStr = `
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(${T.floor})" stop-opacity="0"/><stop offset="1" stop-color="rgb(${T.floor})" stop-opacity="${dark ? 0.25 : 0.05}"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.2"/></filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+    <filter id="contact" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter>
+    <filter id="hair" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="0.6"/></filter>`
+
+  // ---- apparatus ----
+  const plateY = [-YC - 0.14, -YC]
+  const table = [
+    { mat: 'steel', faces: boxFaces(-1.3, 1.3, YF, YF + 0.1, -1.0, 1.0) },
+    { mat: 'steelHi', faces: tubeFaces([0, YF + 0.1, 0], [0, plateY[0], 0], 0.2) },
+    { mat: 'steelHi', faces: boxFaces(-1.2, 1.2, plateY[0], plateY[1], -1.7, 1.7) },
+    ...[[-1.05, -0.78], [1.05, -0.78], [0, 0.82]].map(([x, z]) => ({ mat: 'rubber', faces: tubeFaces([x, YF + 0.1, z], [x, YF + 0.2, z], 0.09, 18) })),
+  ]
+  // Lamp housing sits where the incident beam starts; its front face is the slit.
+  const P0 = [mid[0], mid[1], 0]
+  const o0 = sub(P0, mul(d0, 3.2))
+  const e2 = norm(cross([0, 0, 1], d0)), e3 = norm(cross(d0, e2))
+  const lampLen = 1.1, lampH = 0.15, lampW = band ? 1.25 : 0.24
+  const lampC = sub(o0, mul(d0, lampLen / 2))
+  const postX = lampC[0], postZ = lampC[2]
+  const postTop = lampC[1] - lampH - 0.02
+  const lamp = [
+    { mat: 'steel', faces: boxFaces(postX - 0.45, postX + 0.45, YF, YF + 0.08, postZ - 0.45, postZ + 0.45) },
+    { mat: 'steelHi', faces: tubeFaces([postX, YF + 0.08, postZ], [postX, postTop, postZ], 0.05, 16) },
+    { mat: 'dark', faces: boxFaces(postX - 0.09, postX + 0.09, postTop - 0.16, postTop + 0.02, postZ - 0.11, postZ + 0.11) },
+    { mat: 'steel', faces: oboxFaces(lampC, d0, e2, e3, [lampLen / 2, lampH, lampW]) },
+    { mat: 'dark', faces: oboxFaces(add(o0, mul(d0, -0.04)), d0, e2, e3, [0.04, lampH + 0.015, lampW + 0.015]) },
+  ]
+  const scrT = 0.07
+  const screen = [
+    { mat: 'paper', faces: boxFaces(SCREEN_X, SCREEN_X + scrT, YF + 0.14, SCREEN_Y[1], SCREEN_Z[0], SCREEN_Z[1]) },
+    ...[SCREEN_Z[0] + 0.35, SCREEN_Z[1] - 0.35].map((z) => ({ mat: 'steel', faces: boxFaces(SCREEN_X - 0.35, SCREEN_X + 0.42, YF, YF + 0.14, z - 0.12, z + 0.12) })),
+  ]
+  const solids = [...table, ...lamp]
+
+  if (pitch > 3) {
+    const fl = [[-5.5, YF, -3.2], [5.8, YF, -3.2], [5.8, YF, 4.2], [-5.5, YF, 4.2]]
+    const fc = proj([0.6, YF, 0.4])
+    defStr += `<radialGradient id="floorR" gradientUnits="userSpaceOnUse" cx="${fc[0]}" cy="${fc[1]}" r="430" gradientTransform="translate(${fc[0]} ${fc[1]}) scale(1 0.42) translate(${-fc[0]} ${-fc[1]})"><stop offset="0" stop-color="rgb(${T.floor})" stop-opacity="${dark ? 0.3 : 0.07}"/><stop offset="1" stop-color="rgb(${T.floor})" stop-opacity="0"/></radialGradient>`
+    el('polygon', { points: pts(fl), fill: 'url(#floorR)' })
+    const shadowOf = (ps, op) => {
+      const sh = hull(ps.map((v) => sub(v, mul(LIGHT, (v[1] - YF) / LIGHT[1]))))
+      el('polygon', { points: pts(sh), fill: '#000', 'fill-opacity': op, filter: 'url(#soft)' })
+    }
+    shadowOf(V.concat(table.flatMap((s) => s.faces.flatMap((f) => f.q))), T.shadow)
+    shadowOf(lamp.flatMap((s) => s.faces.flatMap((f) => f.q)), T.shadow * 0.8)
+    shadowOf(screen[0].faces.flatMap((f) => f.q), T.shadow * 0.7)
+    // Contact shadows: a tight dark footprint wherever a part touches the floor.
+    for (const s of [table[0], lamp[0], screen[1], screen[2]]) {
+      const foot = s.faces[1].q
+      el('polygon', { points: pts(foot), fill: '#000', 'fill-opacity': dark ? 0.6 : 0.3, filter: 'url(#contact)' })
+    }
+  }
+  // The screen is large, so a centroid sort misplaces it: it is behind everything when its lit face looks at us.
+  const screenBack = rot([-1, 0, 0]) > 0
+  if (screenBack) screen.forEach((s) => drawSolid(s, R, T))
+  solids.map((s) => ({ s, z: proj(centroid(s.faces))[2] })).sort((a, b) => a.z - b.z).forEach(({ s }) => drawSolid(s, R, T))
+  if (!screenBack) screen.forEach((s) => drawSolid(s, R, T))
+
+  // Printing on the parts: model tags, the scale along the top of the screen.
+  if (rot([0, 0, 1]) > 0.05) print([0, plateY[0] - 0.02, 1.7], 'PT-1 · 棱镜台', T, { size: 8 })
+  // Kept toward the slit end and low on the housing, clear of the indicator lamp near the back.
+  print(add(add(lampC, mul(d0, 0.2)), mul(e2, -lampH * 0.55)), band ? 'SL-05' : 'SL-01', T, { size: 7.5 })
+  const sx = SCREEN_X - 0.002
+  if (rot([-1, 0, 0]) > 0.05) for (let z = SCREEN_Z[0] + 0.25, i = 0; z <= SCREEN_Z[1] - 0.2; z += 0.25, i++) {
+    const big = i % 4 === 0
+    el('line', { ...line2([sx, SCREEN_Y[1] - 0.02, z], [sx, SCREEN_Y[1] - (big ? 0.2 : 0.11), z]), stroke: T.print, 'stroke-width': big ? 0.8 : 0.55 })
+    if (big) print([sx, SCREEN_Y[1] - 0.33, z], String(i), T, { size: 7.5 })
+  }
+  if (rot([-1, 0, 0]) > 0.05) print([sx, YF + 0.32, SCREEN_Z[1] - 0.5], 'SCR-3 · 光屏', T, { size: 8, anchor: 'end' })
+  // Lamp indicator: on whenever light is coming out.
+  const ind = proj(add(add(lampC, mul(d0, -lampLen * 0.3)), mul(e2, lampH * 0.55)))
+  el('circle', { cx: ind[0], cy: ind[1], r: 5, fill: T.lamp, 'fill-opacity': 0.35, filter: 'url(#contact)' })
+  el('circle', { cx: ind[0], cy: ind[1], r: 2.1, fill: T.lamp })
+
+  // Prism back faces and hidden edges.
+  FACES.forEach((f, k) => { if (!facing[k]) el('polygon', { points: pts(f.map((i) => V[i])), fill: `rgba(${T.glass},0.08)` }) })
+  EDGES.forEach((e) => {
+    if (facing[e.f1] || facing[e.f2]) return
+    el('line', { ...line2(V[e.a], V[e.b]), stroke: T.edge, 'stroke-width': 0.8, 'stroke-opacity': 0.35 })
+  })
+
+  const z0 = 0
+  el('polygon', { points: pts(tri.map(([x, y]) => [x, y, z0])), fill: 'none', stroke: T.section, 'stroke-dasharray': '4 4', 'stroke-width': 0.8 })
+  const pl = proj([tri[2][0] + 0.14, tri[2][1] - 0.08, z0])
+  el('text', { x: pl[0], y: pl[1], 'font-size': 10.5, fill: T.text }, '主截面')
+
+  // ---- light ----
+  const blend = dark ? { 'data-blend': 'screen' } : {}
+  const gGlow = el('g', { filter: 'url(#glow)', opacity: T.glowOp, ...blend })
+  const gCore = el('g', { ...blend })
+  const thin = real && white
+  const lossOn = $('loss').checked
+  const bw = +$('bw').value / 100
+  $('bwv').textContent = bw ? `${(bw * 10).toFixed(1)} mm` : '0'
+  const bright = (I) => (lossOn ? I : 1)
+  const ray = (a3, b3, col, w, op) => {
+    el('line', { ...line2(a3, b3), stroke: col, 'stroke-width': w * (thin ? 2.5 : 4), 'stroke-linecap': 'round', 'stroke-opacity': thin ? 0.35 * op : op }, null, gGlow)
+    el('line', { ...line2(a3, b3), stroke: col, 'stroke-width': thin ? w * 0.7 : w, 'stroke-opacity': thin ? op * 0.55 : op, 'stroke-linecap': 'round' }, null, gCore)
+  }
+  const quad = (a, b, c, d, col, op) => {
+    const poly = pts([a, b, c, d])
+    el('polygon', { points: poly, fill: col, 'fill-opacity': op * 0.6 }, null, gGlow)
+    el('polygon', { points: poly, fill: col, 'fill-opacity': op }, null, gCore)
+  }
+  const perp = norm(cross(d0, [0, 0, 1]))
+  const beamOp = (white ? (real ? 0.16 : 0.42) : 0.6) * (dark ? 1 : 0.6)
+  let info = [], hits = waves.map(() => []), spans = waves.map(() => []), hits0 = [], spans0 = [], devs = [], centre = null
+  for (const z of zs) {
+    const P = [mid[0], mid[1], z]
+    const o = sub(P, mul(d0, 3.2))
+    const oA = add(o, mul(perp, bw / 2)), oB = sub(o, mul(perp, bw / 2))
+    if (bw > 0) {
+      const eA = enter(oA, d0), eB = enter(oB, d0)
+      if (eA && eB) quad(oA, add(oA, mul(d0, eA.t)), add(oB, mul(d0, eB.t)), oB, white ? T.beam : T.mono, dark ? 0.9 : 0.3)
+    } else ray(o, P, white ? T.beam : T.mono, 1.6, dark ? 1 : 0.85)
+    waves.forEach(([lam, col], wi) => {
+      const n = nOf(lam)
+      const r = trace(o, d0, n)
+      const lines = () => r.segs.slice(1).forEach((s) => ray(s.p, s.q, col, s.inside ? 1.4 : 1.3, (s.inside ? 0.8 : 0.95) * bright(s.I)))
+      if (bw > 0) {
+        const ra = trace(oA, d0, n), rb = trace(oB, d0, n)
+        if (ra.segs.length === rb.segs.length) {
+          for (let k = 1; k < ra.segs.length; k++) quad(ra.segs[k].p, ra.segs[k].q, rb.segs[k].q, rb.segs[k].p, col, beamOp * bright(ra.segs[k].I))
+        } else lines()
+        if (ra.onScreen && rb.onScreen) {
+          spans[wi].push([ra.onScreen, rb.onScreen])
+          if (z === 0) spans0.push({ y1: ra.onScreen[1], y2: rb.onScreen[1], col, I: bright(ra.I) })
+        }
+      } else lines()
+      if (r.onScreen) hits[wi].push(r.onScreen)
+      if (z === 0) {
+        if (wi === Math.floor(waves.length / 2)) centre = r
+        if (r.onScreen) hits0.push({ y: r.onScreen[1], col })
+        const dev = Math.acos(Math.max(-1, Math.min(1, dot(d0, r.dOut)))) * 180 / Math.PI
+        devs.push({ dev, n, tir: r.tir, lam })
+      }
+    })
+  }
+  // Readouts: numbers live in the card corner, the picture only carries names.
+  const fmt = (d) => `${d.toFixed(real ? 2 : 1)}°`
+  const anyTir = devs.some((d) => d.tir)
+  if (white && devs.length > 1) {
+    $('dR').innerHTML = fmt(devs[0].dev); $('dV').innerHTML = fmt(devs[devs.length - 1].dev)
+    $('dD').innerHTML = anyTir ? '—' : fmt(devs[devs.length - 1].dev - devs[0].dev)
+  } else {
+    $('dR').innerHTML = devs[0] ? fmt(devs[0].dev) : '—'; $('dV').innerHTML = '—'; $('dD').innerHTML = '—'
+  }
+  const nMid = nOf(0.589)
+  $('gtag').textContent = `${real ? glass.name.replace('玻璃 ', '·') : '示意玻璃'} · n≈${nMid.toFixed(2)}`
+  $('note').textContent = real
+    ? `按 Sellmeier 公式计算 400–700 nm 共 31 个波长，${glass.name}。左上角小屏把屏上光谱放大显示。`
+    : '色散放大约 5 倍、只画 7 种色光，便于看清规律；勾选「真实比例」按真实玻璃计算。'
+  for (const [k, d] of [[0, devs[0]], [1, devs[devs.length - 1]]]) {
+    if (!d || (k === 1 && devs.length < 2)) continue
+    const name = !white ? `单色光（${Math.round(d.lam * 1000)} nm）` : `${k === 0 ? '红光' : '紫光'}（${Math.round(d.lam * 1000)} nm）`
+    info.push(`${name}：n = ${d.n.toFixed(4)}，偏折 ${d.dev.toFixed(real ? 2 : 1)}°${d.tir ? `，全反射 ${d.tir} 次` : ''}`)
+  }
+  if (anyTir) info.push('光在第二个面上发生了全反射。折射率越大，临界角越小；增大入射角，光才能从第二个面射出。')
+  if (lossOn && centre) {
+    const [rIn, rOut] = centre.refl
+    const c = white ? T.beam : T.mono
+    if (rIn) ray(rIn.p, add(rIn.p, mul(rIn.d, 2.6)), c, 1.1, Math.sqrt(rIn.I))
+    if (rOut && !rOut.outside) { const lv = leave(rOut.p, rOut.d); ray(rOut.p, add(rOut.p, mul(rOut.d, lv.t)), c, 1, Math.sqrt(rOut.I)) }
+    const pct = (x) => (x * 100).toFixed(1) + '%'
+    info.push(`反射损失（${white ? `${Math.round(waves[Math.floor(waves.length / 2)][0] * 1000)} nm` : '该色光'}）：入射面反射 ${pct(centre.Rs[0])}${centre.Rs[1] != null ? `，出射面反射 ${pct(centre.Rs[1])}` : ''}，透过 ${pct(centre.I)}`)
+  }
+  if (bw > 0 && white) info.push('光束有宽度：各色光大部分重叠，屏上中间仍是白的，只有两边带颜色。光束越窄（用狭缝）、屏越远，颜色才分得开。')
+  if (bw > 0) waves.forEach(([, col], wi) => {
+    const s = spans[wi]
+    if (!s.length) return
+    const poly = s.length > 1
+      ? [s[0][0], s[0][1], s[s.length - 1][1], s[s.length - 1][0]]
+      : [add(s[0][0], [0, 0, -0.06]), add(s[0][1], [0, 0, -0.06]), add(s[0][1], [0, 0, 0.06]), add(s[0][0], [0, 0, 0.06])]
+    const op = (white ? (real ? 0.3 : 0.6) : 0.85) * (dark ? 1 : 0.7)
+    el('polygon', { points: pts(poly), fill: col, 'fill-opacity': op }, null, gGlow)
+    el('polygon', { points: pts(poly), fill: col, 'fill-opacity': op }, null, gCore)
+  })
+  else waves.forEach(([, col], wi) => {
+    const h = hits[wi]
+    if (h.length > 1) {
+      el('polyline', { points: pts(h), stroke: col, 'stroke-width': 14, 'stroke-linecap': 'round', fill: 'none' }, null, gGlow)
+      el('polyline', { points: pts(h), stroke: col, 'stroke-width': 4.5, 'stroke-linecap': 'round', fill: 'none', 'stroke-opacity': 0.9 }, null, gCore)
+    } else if (h.length === 1) {
+      // A halo lying in the screen plane, so the spot reads as light landing on the screen.
+      if (rot([-1, 0, 0]) > 0.05) {
+        const ring = (r) => Array.from({ length: 28 }, (_, i) => {
+          const a = (i / 28) * Math.PI * 2
+          return [SCREEN_X - 0.003, h[0][1] + r * Math.sin(a), h[0][2] + r * Math.cos(a)]
+        })
+        const haloOp = (thin ? 0.08 : 0.22) * (dark ? 1.4 : 1)
+        el('polygon', { points: pts(ring(0.34)), fill: col, 'fill-opacity': haloOp * 0.35, filter: 'url(#soft)' })
+        el('polygon', { points: pts(ring(0.15)), fill: col, 'fill-opacity': haloOp, filter: 'url(#glow)' })
+      }
+      const p = proj(h[0])
+      el('circle', { cx: p[0], cy: p[1], r: 8, fill: col }, null, gGlow)
+      el('circle', { cx: p[0], cy: p[1], r: 3.2, fill: col }, null, gCore)
+    }
+  })
+
+  // ---- glass ----
+  const front = []
+  FACES.forEach((f, k) => {
+    if (!facing[k]) return
+    const P2 = f.map((i) => proj(V[i]))
+    const xs = P2.map((p) => p[0]), ys = P2.map((p) => p[1])
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
+    const nz = Math.min(1, rot(PLANES[k].n)), lam = Math.max(0, dot(PLANES[k].n, LIGHT))
+    const a = 0.07 + 0.34 * Math.pow(1 - nz, 2) + 0.1 * lam
+    const poly = P2.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')
+    defStr += `<linearGradient id="fg${k}" gradientUnits="userSpaceOnUse" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}">
+        <stop offset="0" stop-color="rgb(${T.glass})" stop-opacity="${(a * 1.5).toFixed(3)}"/>
+        <stop offset="0.55" stop-color="rgb(${T.glass})" stop-opacity="${(a * 0.5).toFixed(3)}"/>
+        <stop offset="1" stop-color="rgb(${T.glass})" stop-opacity="${(a * 1.2).toFixed(3)}"/></linearGradient>
+      <clipPath id="fc${k}"><polygon points="${poly}"/></clipPath>`
+    front.push({ poly, x0, x1, y0, y1, lam, k })
+  })
+  front.forEach(({ poly, x0, x1, y0, y1, lam, k }) => {
+    el('polygon', { points: poly, fill: `url(#fg${k})` })
+    const w = x1 - x0
+    const band = (f0, f1, op) => el('polygon', {
+      points: `${x0 + w * f0},${y1 + 6} ${x0 + w * f1},${y1 + 6} ${x0 + w * (f1 + 0.32)},${y0 - 6} ${x0 + w * (f0 + 0.32)},${y0 - 6}`,
+      fill: '#ffffff', 'fill-opacity': op, 'clip-path': `url(#fc${k})`,
+    })
+    band(0.1, 0.24, (dark ? 0.04 : 0.14) + 0.1 * lam)
+    band(0.27, 0.31, (dark ? 0.07 : 0.2) + 0.12 * lam)
+  })
+  EDGES.forEach((e) => {
+    if (!(facing[e.f1] || facing[e.f2])) return
+    el('line', { ...line2(V[e.a], V[e.b]), stroke: T.edge, 'stroke-width': 1.3, 'stroke-linecap': 'round' })
+    el('line', { ...line2(V[e.a], V[e.b]), stroke: T.edgeHi, 'stroke-width': 0.8, 'stroke-opacity': 0.85, filter: 'url(#hair)', transform: 'translate(-0.8,-0.8)' })
+  })
+  defs.innerHTML = defStr
+
+  // ---- inset: a small instrument screen with the magnified spectrum ----
+  const inset = (title, fill) => {
+    const W = 220, Hh = 22, X0 = -362, Y0 = -218
+    el('rect', { x: X0 - 12, y: Y0 - 30, width: W + 24, height: Hh + 50, rx: 7, fill: '#2b2f35', stroke: 'rgba(0,0,0,0.35)' })
+    el('rect', { x: X0 - 11, y: Y0 - 29, width: W + 22, height: 1, fill: '#ffffff', 'fill-opacity': 0.18 })
+    el('text', { x: X0, y: Y0 - 13, 'font-size': 9.5, fill: T.screenTxt, 'font-family': "'JetBrains Mono', monospace", 'letter-spacing': '0.06em' }, title)
+    el('rect', { x: X0, y: Y0, width: W, height: Hh, rx: 2, fill: '#0d1013' })
+    const g = el('g', { 'data-blend': 'screen' })
+    fill(g, X0, Y0, W, Hh)
+    el('text', { x: X0 + W * 0.1, y: Y0 + Hh + 12, 'font-size': 9, fill: '#9aa4ae', 'text-anchor': 'middle' }, '红')
+    el('text', { x: X0 + W * 0.9, y: Y0 + Hh + 12, 'font-size': 9, fill: '#9aa4ae', 'text-anchor': 'middle' }, '紫')
+  }
+  if (white && bw > 0 && spans0.length > 1) {
+    const ys = spans0.flatMap((s) => [s.y1, s.y2]), lo = Math.min(...ys), hi = Math.max(...ys)
+    const pxPerUnit = (220 * 0.8) / Math.max(hi - lo, 1e-6), mag = pxPerUnit / SCALE
+    inset(`SPEC · 屏上光斑 ×${mag >= 1.5 ? Math.round(mag) : 1}`, (g, X0, Y0, W, Hh) => {
+      const op = real ? 0.3 : 0.6
+      for (const s of spans0) {
+        const xa = X0 + W * 0.1 + (hi - Math.max(s.y1, s.y2)) * pxPerUnit, xb = X0 + W * 0.1 + (hi - Math.min(s.y1, s.y2)) * pxPerUnit
+        el('rect', { x: xa, y: Y0, width: Math.max(1, xb - xa), height: Hh, fill: s.col, 'fill-opacity': op * s.I }, null, g)
+      }
+    })
+  } else if (white && hits0.length > 1) {
+    const ys = hits0.map((h) => h.y), lo = Math.min(...ys), hi = Math.max(...ys)
+    const pxPerUnit = (220 * 0.8) / Math.max(hi - lo, 1e-6), mag = pxPerUnit / SCALE
+    inset(`SPEC · 屏上光谱 ×${mag >= 1.5 ? Math.round(mag) : 1}`, (g, X0, Y0, W, Hh) => {
+      const xs = hits0.map((h) => X0 + W * 0.1 + (hi - h.y) * pxPerUnit)
+      hits0.forEach((h, i) => {
+        const left = i > 0 ? (xs[i] - xs[i - 1]) / 2 : 3, right = i < xs.length - 1 ? (xs[i + 1] - xs[i]) / 2 : 3
+        const pad = real ? 1.15 : 0.6
+        el('rect', { x: xs[i] - Math.abs(left) * pad, y: Y0, width: Math.max(2, (Math.abs(left) + Math.abs(right)) * pad), height: Hh, fill: h.col }, null, g)
+      })
+    })
+  }
+  if (tilt > 0) info.push('光线已离开主截面：考卷上的二维图画不出这条光路。')
+  $('info').innerHTML = info.join('<br>')
+}
+
+function goTo(y, p) {
+  const y0 = yaw, p0 = pitch, t0 = performance.now()
+  cancelAnimationFrame(anim)
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / 700), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2
+    yaw = y0 + (y - y0) * e; pitch = p0 + (p - p0) * e; draw()
+    if (k < 1) anim = requestAnimationFrame(step)
+  }
+  anim = requestAnimationFrame(step)
+}
+$('v3d').onclick = () => goTo(38, 22)
+$('v2d').onclick = () => goTo(0, 0)
+for (const id of ['inc', 'tilt', 'band', 'white', 'dark', 'real', 'glass', 'bw', 'loss']) $(id).oninput = draw
+let drag = null
+S.onpointerdown = (e) => { drag = [e.clientX, e.clientY, yaw, pitch]; S.setPointerCapture(e.pointerId) }
+S.onpointermove = (e) => {
+  if (!drag) return
+  yaw = drag[2] + (e.clientX - drag[0]) * 0.4
+  pitch = Math.max(-80, Math.min(80, drag[3] + (e.clientY - drag[1]) * 0.4))
+  draw()
+}
+S.onpointerup = () => { drag = null }
+const q = new URLSearchParams(location.search)
+yaw = 38
+if (q.has('yaw')) yaw = +q.get('yaw')
+if (q.has('pitch')) pitch = +q.get('pitch')
+if (q.has('tilt')) $('tilt').value = q.get('tilt')
+if (q.has('inc')) $('inc').value = q.get('inc')
+if (q.has('band')) $('band').checked = true
+if (q.has('dark')) $('dark').checked = true
+if (q.has('real')) $('real').checked = true
+if (q.has('glass')) $('glass').value = q.get('glass')
+if (q.has('bw')) $('bw').value = q.get('bw')
+if (q.has('loss')) $('loss').checked = true
+document.fonts.ready.then(draw)
+draw()
+</script>
+</body>
+</html>

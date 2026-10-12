@@ -1,0 +1,194 @@
+---
+id: gd22-04
+title: 旋转磁极式发电机
+source: 2022 广东卷 第 4 题（单选，4 分）
+question: 图是简化的某种旋转磁极式发电机原理图。定子是仅匝数 n 不同的两线圈，n_1 > n_2，二者轴线在同一平面内且相互垂直，两线圈到其轴线交点 O 的距离相等，且均连接阻值为 R 的电阻，转子是中心在 O 点的条形磁铁，绕 O 点在该平面内匀速转动时，两线圈输出正弦式交变电流。不计线圈电阻、自感及两线圈间的相互影响，下列说法正确的是（ ）
+choice: B
+answers:
+  - { name: f, value: 5, unit: Hz }
+---
+
+条形磁铁以 O 为轴匀速转动，两个定子线圈的轴线在同一平面内互相垂直，到 O 的距离相等。磁铁每转一周，每个线圈的磁通量都完整变化一次，两线圈都输出正弦式交变电动势。
+
+题目只给出字母：$n_1 > n_2$，两电阻都是 $R$。下面取代表性数值 $n_1 = 200$、$n_2 = 100$、$R = 10\ \Omega$，转速 $f = 5\ \mathrm{Hz}$。设单匝电动势最大值为 $e_0 = 0.02\ \mathrm{V}$，则
+
+$$
+e_1 = n_1 e_0 \sin(2\pi f t), \qquad e_2 = n_2 e_0 \cos(2\pi f t)
+$$
+
+正弦和余弦相差四分之一周期，对应两轴线互相垂直。线圈电阻、自感和互感都不计，电动势直接加在电阻 $R$ 上。
+
+## 完整解答
+
+**A. 两线圈产生的电动势的有效值相等 —— 错误。** 法拉第电磁感应定律：
+
+$$
+e = -n\frac{\Delta\Phi}{\Delta t}
+$$
+
+两线圈到 O 的距离相等，磁铁转一周时单匝磁通量的变化规律相同，电动势最大值与匝数成正比。正弦交流的有效值是最大值的 $1/\sqrt{2}$，也与匝数成正比：
+
+$$
+E_1 = \frac{n_1 e_0}{\sqrt{2}}, \qquad E_2 = \frac{n_2 e_0}{\sqrt{2}}
+$$
+
+$n_1 > n_2$，所以 $E_1 > E_2$，两者不相等。
+
+**B. 两线圈产生的交变电流频率相等 —— 正确。** 磁铁转一周，每个线圈的磁通量都变化一个完整周期。频率由转子的转速决定，与匝数无关：
+
+$$
+f_1 = f_2 = f = \boxed{5\ \mathrm{Hz}}
+$$
+
+两线圈的交变电流频率相等。
+
+**C. 两线圈产生的电动势同时达到最大值 —— 错误。** 两轴线互相垂直。磁铁轴线正对着一个线圈时，该线圈的磁通量变化最快、电动势达到最大值；此时另一线圈的轴线正好与磁铁垂直，磁通量变化最慢、电动势为零。两者相差四分之一周期，不会同时达到最大值。
+
+**D. 两电阻消耗的电功率相等 —— 错误。** 不计线圈电阻，电阻上的电流有效值是 $I = E/R$，电功率是
+
+$$
+P = I^2 R = \frac{E^2}{R} = \frac{n^2 e_0^2}{2R}
+$$
+
+两电阻都是 $R$，功率与匝数的平方成正比。$n_1 > n_2$，所以 $P_1 > P_2$，两者不相等。
+
+因 $\boxed{\text{B}}$
+
+## 交互演示
+
+拖动时间，条形磁铁绕 O 匀速转动一周。水平线圈 $n_1$ 的电动势按正弦变化，竖直线圈 $n_2$ 的电动势按余弦变化，两条曲线相差四分之一周期。电流和电功率由电路组件按此刻的电动势求解，不手写欧姆定律。画出的匝数和线圈到 O 的距离都不按比例。
+
+<Param name="t" label="时间" value={0} min={0} max={0.2} step={0.005} unit="s" />
+
+<Param name="f" label="转速" value={5} min={2} max={10} step={1} unit="Hz" />
+
+<Param name="n1" label="线圈 1 匝数" symbol="n_1" value={200} min={100} max={400} step={20} />
+
+<Param name="n2" label="线圈 2 匝数" symbol="n_2" value={100} min={40} max={200} step={20} />
+
+<Param name="R" label="电阻" value={10} min={5} max={20} step={1} unit="Ω" />
+
+<Param name="e0" label="单匝电动势最大值" symbol="e_0" value={0.02} hidden />
+
+<Define name="E1" expr="n1*e0/sqrt(2)" />
+
+<Define name="E2" expr="n2*e0/sqrt(2)" />
+
+<Define name="P1avg" expr="E1*E1/R" />
+
+<Define name="P2avg" expr="E2*E2/R" />
+
+<Question text="A. 两线圈产生的电动势的有效值相等" set={{t: 0, n1: 200, n2: 100, f: 5}} hint="E 与匝数成正比，n_1 = 200、n_2 = 100 时 E_1 是 E_2 的 2 倍" />
+
+<Question text="B. 两线圈产生的交变电流频率相等" set={{t: 0, f: 5, n1: 200, n2: 100}} hint="两条曲线一周期都是 1/f = 0.2 s，频率都是 5 Hz" />
+
+<Question text="C. 两线圈产生的电动势同时达到最大值" set={{t: 0.05, f: 5}} hint="t = T/4 时 e_1 达到最大，e_2 正好为 0" />
+
+<Question text="D. 两电阻消耗的电功率相等" set={{t: 0, n1: 200, n2: 100, R: 10}} hint="平均功率与匝数的平方成正比，P_1 是 P_2 的 4 倍" />
+
+<Status cases={[
+  {when: "abs(n1 - 200) < 1e-6 and abs(n2 - 100) < 1e-6 and abs(f - 5) < 1e-6", label: "题目数据：频率相等，电动势与功率都不相等，选 B", tone: "success"},
+  {when: "abs(n1 - n2) < 1e-6", label: "两匝数被调成相等，已偏离题目的 n_1 > n_2", tone: "warning"},
+  {label: "已偏离代表性数值：频率仍相等，电动势有效值仍与匝数成正比", tone: "info"}
+]} />
+
+<Readout items={[
+  {label: "两线圈频率", symbol: "f", expr: "f", unit: "Hz", digits: 0, color: "field"},
+  {label: "电动势有效值 1", symbol: "E_1", expr: "E1", unit: "V", digits: 3, color: "charge"},
+  {label: "电动势有效值 2", symbol: "E_2", expr: "E2", unit: "V", digits: 3, color: "charge"},
+  {label: "电阻 1 平均功率", symbol: "P_1", expr: "P1avg", unit: "W", digits: 4, color: "force"},
+  {label: "电阻 2 平均功率", symbol: "P_2", expr: "P2avg", unit: "W", digits: 4, color: "force"}
+]} />
+
+<Preset label="题目数据" set={{t: 0, f: 5, n1: 200, n2: 100, R: 10}} />
+
+<Preset label="e_1 最大、e_2 为零" set={{t: 0.05, f: 5}} />
+
+<Answer items={[
+  {label: "答案", text: "B"},
+  {label: "交变电流频率", symbol: "f", expr: "f", value: 5, unit: "Hz", digits: 0}
+]} />
+
+<Sim title="旋转磁极式发电机" height={360} size="narrow" duration="1/f" time="t" playSeconds={6} loop={true} params={["f", "n1", "n2", "R", "e0", "E1", "E2", "c1", "c2"]} marks={[{t: 0, label: "磁铁水平，e_2 最大、e_1 为 0"}, {t: "1/(4*f)", label: "磁铁竖直，e_1 最大、e_2 为 0"}, {t: "1/(2*f)", label: "磁铁再次水平"}, {t: "3/(4*f)", label: "e_1 反向达到最大"}]} hud={[{symbol: "e_1", label: "线圈 1", expr: "n1*e0*sin(2*pi*f*t)", unit: "V", digits: 2}, {symbol: "e_2", label: "线圈 2", expr: "n2*e0*cos(2*pi*f*t)", unit: "V", digits: 2}]} legend={[{kind: "field", label: "磁铁的磁场"}, {kind: "charge", label: "感生电动势"}]} note="匝数与线圈到 O 的距离不按比例；电阻用国标矩形符号">
+sim({
+  at(t, p) {
+    const phi = 2 * Math.PI * p.f * t
+    return {
+      angle: phi * 180 / Math.PI,
+      e1: p.n1 * p.e0 * Math.sin(phi),
+      e2: p.n2 * p.e0 * Math.cos(phi),
+    }
+  },
+  draw(ctx, s, v) {
+    const m = v.view({ xmin: -3.7, xmax: 2.5, ymin: -3.9, ymax: 2.6, equal: true })
+    v.circle(m, 0, 0, 1.35, { color: v.color.steel, dash: true, width: 1 })
+    v.arrow(m, 1.35, 0, 1.35, 0.38, { color: v.color.steel, width: 1.2 })
+    const coil1 = v.solenoid(m, -2.85, 0, -1.7, 0, {
+      r: 0.4,
+      turns: 9,
+      sense: 1,
+      current: s.e1,
+      terminals: 'above',
+      field: false,
+    })
+    const coil2 = v.solenoid(m, 0, -2.85, 0, -1.7, {
+      r: 0.4,
+      turns: 5,
+      sense: 1,
+      current: s.e2,
+      terminals: 'above',
+      field: false,
+    })
+    v.magnet(m, 0, 0, { kind: 'bar', w: 1.9, h: 0.42, angle: s.angle, north: 'left', field: 3 })
+    v.label(m, 0.34, 0.34, 'O')
+    v.line(m, -1.55, 0, -1.05, 0, { color: v.color.steel, dash: true, width: 1 })
+    v.line(m, 1.05, 0, 1.55, 0, { color: v.color.steel, dash: true, width: 1 })
+    v.line(m, 0, -1.55, 0, -1.05, { color: v.color.steel, dash: true, width: 1 })
+    v.line(m, 0, 1.05, 0, 1.55, { color: v.color.steel, dash: true, width: 1 })
+    const t1 = coil1.terminals
+    const high1 = t1[0][1] >= t1[1][1] ? t1[0] : t1[1]
+    const low1 = t1[0][1] >= t1[1][1] ? t1[1] : t1[0]
+    const mid1 = (high1[0] + low1[0]) / 2
+    const top1 = Math.min(high1[1] + 0.42, 2.15)
+    v.line(m, high1[0], high1[1], high1[0], top1, { color: v.color.ink, width: 1.4 })
+    v.line(m, low1[0], low1[1], low1[0], top1, { color: v.color.ink, width: 1.4 })
+    v.line(m, high1[0], top1, mid1 - 0.32, top1, { color: v.color.ink, width: 1.4 })
+    v.line(m, low1[0], top1, mid1 + 0.32, top1, { color: v.color.ink, width: 1.4 })
+    v.rect(m, mid1 - 0.32, top1 - 0.16, 0.64, 0.32, { color: v.color.ink, width: 1.4 })
+    v.label(m, mid1, top1 + 0.3, 'R')
+    const t2 = coil2.terminals
+    const left2 = t2[0][0] <= t2[1][0] ? t2[0] : t2[1]
+    const right2 = t2[0][0] <= t2[1][0] ? t2[1] : t2[0]
+    const mid2 = (left2[1] + right2[1]) / 2
+    const side2 = Math.max(left2[0] - 0.55, -3.35)
+    v.line(m, left2[0], left2[1], side2, left2[1], { color: v.color.ink, width: 1.4 })
+    v.line(m, right2[0], right2[1], side2 - 0.72, right2[1], { color: v.color.ink, width: 1.4 })
+    v.line(m, side2, left2[1], side2, mid2 + 0.32, { color: v.color.ink, width: 1.4 })
+    v.line(m, side2 - 0.72, right2[1], side2 - 0.72, mid2 - 0.32, { color: v.color.ink, width: 1.4 })
+    v.line(m, side2, mid2 + 0.32, side2 - 0.2, mid2 + 0.32, { color: v.color.ink, width: 1.4 })
+    v.line(m, side2 - 0.72, mid2 - 0.32, side2 - 0.52, mid2 - 0.32, { color: v.color.ink, width: 1.4 })
+    v.rect(m, side2 - 0.52, mid2 - 0.32, 0.32, 0.64, { color: v.color.ink, width: 1.4 })
+    v.label(m, side2 - 1.02, mid2, 'R')
+    v.label(m, -2.3, -0.72, 'n_1')
+    v.label(m, 0.72, -2.3, 'n_2')
+  },
+})
+</Sim>
+
+<Circuit title="线圈 n_1 的回路" size="narrow" source={{type: "generator", label: "n_1", emf: "n1*e0*sin(2*pi*f*t)"}} load={{type: "resistor", label: "R", R: "R", read: {I: "I1", P: "P1"}}} transient={{name: "c1", until: "1/f", at: "t"}} note="不计线圈电阻与自感" />
+
+<Circuit title="线圈 n_2 的回路" size="narrow" source={{type: "generator", label: "n_2", emf: "n2*e0*cos(2*pi*f*t)"}} load={{type: "resistor", label: "R", R: "R", read: {I: "I2", P: "P2"}}} transient={{name: "c2", until: "1/f", at: "t"}} note="电动势比 n_1 超前四分之一周期" />
+
+<Plot title="两线圈的电动势" caption="两条曲线周期相同，相差四分之一周期" x={{name: "tau", label: "t", unit: "s", min: 0, max: "1/f"}} y={{label: "e", unit: "V"}} series={[{label: "e_1", expr: "n1*e0*sin(2*pi*f*tau)", color: "charge"}, {label: "e_2", expr: "n2*e0*cos(2*pi*f*tau)", color: "field", dash: true}]} marks={[{x: "1/(4*f)", series: 0, label: "e_1 最大，e_2 = 0"}, {x: 0, series: 1, label: "e_2 最大，e_1 = 0"}]} cursor="t" />
+
+## 结合图像理解关键时刻
+
+$t = 0$ 时磁铁水平，轴线正对着竖直线圈：$e_2$ 达到最大值，$e_1 = 0$。
+
+$t = T/4$ 时磁铁转到竖直，轴线正对着水平线圈：$e_1$ 达到最大值，$e_2 = 0$。两个最大值不在同一时刻。
+
+两条曲线在一个周期内都完整变化一次，频率相等。$e_1$ 的振幅是 $e_2$ 的两倍，有效值也是两倍；平均功率与振幅的平方成正比，是四倍。
+
+## 答案汇总
+
+只有 B 正确。两线圈的交变电流频率都等于磁铁的转速，与匝数无关。电动势有效值与匝数成正比，不相等，也不同时达到最大值；两电阻消耗的平均功率与匝数的平方成正比，也不相等。

@@ -1,0 +1,440 @@
+// Canvas 2D backend for the B+ apparatus primitives. Everything is in CSS pixels
+// on an already-scaled context. Primitives never change an object's footprint:
+// the top band is carved out of the box, so contact geometry stays exact.
+import { craftTokens, type CraftTheme, type CraftTokens, type MaterialName, type MaterialTone } from './tokens'
+
+export { craftTokens }
+
+type Ctx = CanvasRenderingContext2D
+type Pt = [number, number]
+export type OutlineMode = 'auto' | 'strong' | 'soft' | 'none'
+
+/** Bodies bigger than this (px²) get the soft outline under `auto`. */
+const SOFT_AREA = 1600
+
+function gradient(ctx: Ctx, tone: MaterialTone, X: number, Y: number, W: number, H: number) {
+  const g = tone.horiz ? ctx.createLinearGradient(X, 0, X + W, 0) : ctx.createLinearGradient(0, Y, 0, Y + Math.max(H, 1))
+  for (const [o, c] of tone.stops) g.addColorStop(o, c)
+  return g
+}
+
+function pickLine(k: CraftTokens, mode: OutlineMode | undefined, area: number) {
+  if (mode === 'none') return null
+  if (mode === 'strong') return k.strong
+  if (mode === 'soft') return k.soft
+  return area > SOFT_AREA ? k.soft : k.strong
+}
+
+function seg(ctx: Ctx, a: Pt, b: Pt, color: string, width: number, alpha = 1) {
+  if (alpha <= 0) return
+  ctx.save()
+  ctx.globalAlpha *= alpha
+  ctx.strokeStyle = color
+  ctx.lineWidth = width
+  ctx.setLineDash([])
+  ctx.lineCap = 'butt'
+  ctx.beginPath()
+  ctx.moveTo(a[0], a[1])
+  ctx.lineTo(b[0], b[1])
+  ctx.stroke()
+  ctx.restore()
+}
+
+function brushed(ctx: Ctx, X: number, Y: number, W: number, H: number, theme: CraftTheme) {
+  ctx.save()
+  ctx.lineWidth = 0.35
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.globalAlpha *= theme === 'night' ? 0.12 : 0.5
+  ctx.beginPath()
+  for (let y = Y + 0.5; y < Y + H; y += 2.2) {
+    ctx.moveTo(X, y)
+    ctx.lineTo(X + W, y)
+  }
+  ctx.stroke()
+  ctx.restore()
+}
+
+export interface SolidOptions {
+  r?: number
+  /** Top band height in px (part of the box). Defaults to 16% of the height, at most 5. */
+  band?: number
+  line?: OutlineMode
+  rim?: boolean
+  brush?: boolean
+}
+
+/** A lit box: top band with bevel, front gradient, bounce rim, outline by size. */
+export function solidRect(ctx: Ctx, X: number, Y: number, W: number, H: number, mat: MaterialName, theme: CraftTheme, o: SolidOptions = {}) {
+  if (!(W > 0 && H > 0)) return
+  const k = craftTokens(theme)
+  const tone = k.materials[mat]
+  const r = Math.max(0, Math.min(o.r ?? 1.5, W / 2, H / 2))
+  const band = Math.max(0, Math.min(o.band ?? Math.min(H * 0.16, 5), H * 0.45))
+  ctx.save()
+  ctx.beginPath()
+  ctx.roundRect(X, Y, W, H, r)
+  ctx.clip()
+  ctx.fillStyle = gradient(ctx, tone, X, Y + band, W, H - band)
+  ctx.fillRect(X, Y, W, H)
+  if (mat === 'alu' && o.brush !== false) brushed(ctx, X, Y, W, H, theme)
+  if (band >= 1) {
+    ctx.fillStyle = tone.top
+    ctx.fillRect(X, Y, W, band)
+    seg(ctx, [X + 1, Y + 0.6], [X + W - 1, Y + 0.6], k.bevel, tone.dim ? 0.5 : 0.9, tone.dim ? 0.25 : 1)
+    seg(ctx, [X, Y + band], [X + W, Y + band], k.seam, 0.6)
+    seg(ctx, [X + 1, Y + band + 0.9], [X + W - 1, Y + band + 0.9], k.bevel, 0.6, tone.dim ? 0.12 : k.glint)
+  }
+  if (H > 8 && o.rim !== false) seg(ctx, [X + 1.5, Y + H - 1], [X + W - 1.5, Y + H - 1], k.bevel, 0.55, tone.dim ? 0.14 : k.rim)
+  ctx.restore()
+  const ln = pickLine(k, o.line, W * H)
+  if (ln) {
+    ctx.beginPath()
+    ctx.roundRect(X, Y, W, H, r)
+    ctx.strokeStyle = ln.color
+    ctx.lineWidth = ln.width
+    ctx.setLineDash([])
+    ctx.stroke()
+  }
+}
+
+export interface PolyOptions {
+  /** Indices of the lit edge; the band runs along it, inside the polygon. */
+  bandEdge?: [number, number]
+  band?: number
+  line?: OutlineMode
+}
+
+function polyPath(ctx: Ctx, pts: Pt[]) {
+  ctx.beginPath()
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
+  ctx.closePath()
+}
+
+function polyArea(pts: Pt[]) {
+  let a = 0
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, y1] = pts[i]
+    const [x2, y2] = pts[(i + 1) % pts.length]
+    a += x1 * y2 - x2 * y1
+  }
+  return Math.abs(a) / 2
+}
+
+/** A lit polygon (wedges, ramps). The band follows `bandEdge` instead of the top. */
+export function solidPoly(ctx: Ctx, pts: Pt[], mat: MaterialName, theme: CraftTheme, o: PolyOptions = {}) {
+  if (pts.length < 3) return
+  const k = craftTokens(theme)
+  const tone = k.materials[mat]
+  const xs = pts.map((p) => p[0])
+  const ys = pts.map((p) => p[1])
+  const X = Math.min(...xs)
+  const Y = Math.min(...ys)
+  const W = Math.max(...xs) - X
+  const H = Math.max(...ys) - Y
+  ctx.save()
+  polyPath(ctx, pts)
+  ctx.clip()
+  ctx.fillStyle = gradient(ctx, tone, X, Y, W, H)
+  ctx.fillRect(X - 1, Y - 1, W + 2, H + 2)
+  if (o.bandEdge) {
+    const a = pts[o.bandEdge[0]]
+    const b = pts[o.bandEdge[1]]
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
+    const cx = xs.reduce((s, v) => s + v, 0) / pts.length
+    const cy = ys.reduce((s, v) => s + v, 0) / pts.length
+    let nx = -(b[1] - a[1]) / len
+    let ny = (b[0] - a[0]) / len
+    if ((cx - a[0]) * nx + (cy - a[1]) * ny < 0) {
+      nx = -nx
+      ny = -ny
+    }
+    const band = o.band ?? 5
+    const off = (d: number, p: Pt): Pt => [p[0] + nx * d, p[1] + ny * d]
+    // the band is extended past the ends and trimmed by the clip
+    const ex = ((b[0] - a[0]) / len) * band * 3
+    const ey = ((b[1] - a[1]) / len) * band * 3
+    const a2: Pt = [a[0] - ex, a[1] - ey]
+    const b2: Pt = [b[0] + ex, b[1] + ey]
+    ctx.fillStyle = tone.top
+    polyPath(ctx, [a2, b2, off(band, b2), off(band, a2)])
+    ctx.fill()
+    seg(ctx, off(0.6, a2), off(0.6, b2), k.bevel, 0.9)
+    seg(ctx, off(band, a2), off(band, b2), k.seam, 0.6)
+    seg(ctx, off(band + 0.9, a2), off(band + 0.9, b2), k.bevel, 0.6, k.glint)
+  }
+  ctx.restore()
+  const ln = pickLine(k, o.line, polyArea(pts))
+  if (ln) {
+    polyPath(ctx, pts)
+    ctx.strokeStyle = ln.color
+    ctx.lineWidth = ln.width
+    ctx.lineJoin = 'round'
+    ctx.setLineDash([])
+    ctx.stroke()
+  }
+}
+
+/** Vertical end plate on a large face (incline sides, bench ends), with two screws. */
+export function endCap(ctx: Ctx, X: number, Y: number, W: number, H: number, theme: CraftTheme) {
+  if (!(W > 0 && H > 0)) return
+  const k = craftTokens(theme)
+  ctx.fillStyle = gradient(ctx, k.materials.cap, X, Y, W, H)
+  ctx.fillRect(X, Y, W, H)
+  seg(ctx, [X, Y], [X, Y + H], k.seam, 0.6, 1.6)
+  seg(ctx, [X + 0.9, Y + 2], [X + 0.9, Y + H - 1], k.bevel, 0.55, k.glint * 0.85)
+  if (H > 26) {
+    screw(ctx, X + W / 2, Y + Math.min(12, H * 0.2), Math.min(1.9, W * 0.24), theme)
+    screw(ctx, X + W / 2, Y + H - Math.min(10, H * 0.18), Math.min(1.9, W * 0.24), theme)
+  }
+}
+
+export function screw(ctx: Ctx, X: number, Y: number, r: number, theme: CraftTheme) {
+  const k = craftTokens(theme)
+  ctx.beginPath()
+  ctx.arc(X, Y, r, 0, Math.PI * 2)
+  ctx.fillStyle = k.screwHead
+  ctx.fill()
+  ctx.save()
+  ctx.strokeStyle = k.strong.color
+  ctx.globalAlpha *= 0.7
+  ctx.lineWidth = 0.5
+  ctx.stroke()
+  ctx.restore()
+  seg(ctx, [X - r * 0.65, Y + r * 0.4], [X + r * 0.65, Y - r * 0.4], k.screwSlot, 0.5)
+}
+
+/** Rubber tyre, aluminium hub with lightening holes, axle cap. */
+export function wheel(ctx: Ctx, X: number, Y: number, r: number, theme: CraftTheme) {
+  const k = craftTokens(theme)
+  const tyre = k.materials.rubber
+  ctx.beginPath()
+  ctx.arc(X, Y, r, 0, Math.PI * 2)
+  ctx.fillStyle = gradient(ctx, tyre, X - r, Y - r, 2 * r, 2 * r)
+  ctx.fill()
+  ctx.strokeStyle = k.strong.color
+  ctx.lineWidth = 0.7
+  ctx.stroke()
+  ctx.save()
+  ctx.globalAlpha *= 0.22
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = 0.6
+  ctx.beginPath()
+  ctx.arc(X, Y, r * 0.93, Math.PI * 1.15, Math.PI * 1.7)
+  ctx.stroke()
+  ctx.restore()
+  ctx.beginPath()
+  ctx.arc(X, Y, r * 0.6, 0, Math.PI * 2)
+  ctx.fillStyle = gradient(ctx, k.materials.alu, X, Y - r * 0.6, 0, r * 1.2)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(20,24,28,0.6)'
+  ctx.lineWidth = 0.5
+  ctx.stroke()
+  if (r >= 6) {
+    ctx.fillStyle = theme === 'night' ? '#23262B' : '#8E959E'
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2
+      ctx.beginPath()
+      ctx.arc(X + Math.cos(a) * r * 0.36, Y + Math.sin(a) * r * 0.36, r * 0.09, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+  ctx.beginPath()
+  ctx.arc(X, Y, Math.max(1, r * 0.15), 0, Math.PI * 2)
+  ctx.fillStyle = k.screwHead
+  ctx.fill()
+  ctx.strokeStyle = k.soft.color
+  ctx.lineWidth = 0.4
+  ctx.stroke()
+}
+
+/** Lit sphere (balls, bobs). */
+export function sphere(ctx: Ctx, X: number, Y: number, R: number, mat: MaterialName, theme: CraftTheme, o: { line?: OutlineMode } = {}) {
+  if (!(R > 0)) return
+  const k = craftTokens(theme)
+  const tone = k.materials[mat]
+  const g = ctx.createRadialGradient(X - R * 0.35, Y - R * 0.42, R * 0.08, X, Y, R)
+  g.addColorStop(0, tone.top)
+  g.addColorStop(0.55, tone.stops[Math.floor(tone.stops.length / 2)][1])
+  g.addColorStop(1, tone.stops[tone.stops.length - 1][1])
+  ctx.beginPath()
+  ctx.arc(X, Y, R, 0, Math.PI * 2)
+  ctx.fillStyle = g
+  ctx.fill()
+  if (R > 5) {
+    ctx.save()
+    ctx.globalAlpha *= tone.dim ? 0.12 : k.rim
+    ctx.strokeStyle = '#FFFFFF'
+    ctx.lineWidth = 0.6
+    ctx.beginPath()
+    ctx.arc(X, Y, R - 1, Math.PI * 0.2, Math.PI * 0.8)
+    ctx.stroke()
+    ctx.restore()
+  }
+  const ln = pickLine(k, o.line, Math.PI * R * R)
+  if (ln) {
+    ctx.beginPath()
+    ctx.arc(X, Y, R, 0, Math.PI * 2)
+    ctx.strokeStyle = ln.color
+    ctx.lineWidth = ln.width
+    ctx.setLineDash([])
+    ctx.stroke()
+  }
+}
+
+/** Flat turned disc (pulley face, knob): radial sheen and an inner groove. */
+export function disc(ctx: Ctx, X: number, Y: number, R: number, mat: MaterialName, theme: CraftTheme) {
+  if (!(R > 0)) return
+  const k = craftTokens(theme)
+  const tone = k.materials[mat]
+  const g = ctx.createLinearGradient(0, Y - R, 0, Y + R)
+  for (const [o, c] of tone.stops) g.addColorStop(o, c)
+  ctx.beginPath()
+  ctx.arc(X, Y, R, 0, Math.PI * 2)
+  ctx.fillStyle = g
+  ctx.fill()
+  if (mat === 'alu') {
+    ctx.save()
+    ctx.clip()
+    ctx.globalAlpha *= theme === 'night' ? 0.1 : 0.35
+    ctx.strokeStyle = '#FFFFFF'
+    ctx.lineWidth = 0.35
+    for (let rr = R * 0.25; rr < R; rr += 1.8) {
+      ctx.beginPath()
+      ctx.arc(X, Y, rr, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+  ctx.save()
+  ctx.globalAlpha *= tone.dim ? 0.2 : 0.9
+  ctx.strokeStyle = k.bevel
+  ctx.lineWidth = 0.7
+  ctx.beginPath()
+  ctx.arc(X, Y, R - 0.8, Math.PI * 1.1, Math.PI * 1.9)
+  ctx.stroke()
+  ctx.restore()
+  const ln = pickLine(k, 'auto', Math.PI * R * R)
+  if (ln) {
+    ctx.beginPath()
+    ctx.arc(X, Y, R, 0, Math.PI * 2)
+    ctx.strokeStyle = ln.color
+    ctx.lineWidth = ln.width
+    ctx.setLineDash([])
+    ctx.stroke()
+  }
+}
+
+function softEllipse(ctx: Ctx, cx: number, cy: number, rx: number, ry: number, color: string, core: number) {
+  if (!(rx > 0 && ry > 0)) return
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.scale(1, ry / rx)
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
+  g.addColorStop(0, color)
+  g.addColorStop(core, color)
+  g.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(0, 0, rx, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
+/** Tight dark line where a body meets the surface under it. */
+export function contactShadow(ctx: Ctx, X1: number, X2: number, Y: number, theme: CraftTheme, o: { ry?: number; strength?: number } = {}) {
+  const k = craftTokens(theme)
+  ctx.save()
+  ctx.globalAlpha *= o.strength ?? 1
+  softEllipse(ctx, (X1 + X2) / 2, Y + 0.4, Math.abs(X2 - X1) / 2 + 2, o.ry ?? 1.8, k.contact, 0.82)
+  ctx.restore()
+}
+
+/** Wide diffuse shadow under a large body (bench, apparatus base). */
+export function ambientShadow(ctx: Ctx, X1: number, X2: number, Y: number, theme: CraftTheme, o: { ry?: number } = {}) {
+  const k = craftTokens(theme)
+  softEllipse(ctx, (X1 + X2) / 2, Y, Math.abs(X2 - X1) / 2 + 16, o.ry ?? 9, k.ambient, 0.35)
+}
+
+/** Clear glass block: faint body, white edge highlights, two reflection streaks, tinted foot. */
+export function glassRect(ctx: Ctx, X: number, Y: number, W: number, H: number, theme: CraftTheme, o: { band?: number } = {}) {
+  if (!(W > 0 && H > 0)) return
+  const k = craftTokens(theme)
+  const band = Math.max(0, Math.min(o.band ?? Math.min(H * 0.1, 5), H * 0.4))
+  const g = ctx.createLinearGradient(0, Y, 0, Y + H)
+  for (const [off, c] of k.glass.stops) g.addColorStop(off, c)
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(X, Y, W, H)
+  ctx.clip()
+  ctx.fillStyle = g
+  ctx.fillRect(X, Y, W, H)
+  if (band >= 1) {
+    ctx.fillStyle = k.glass.top
+    ctx.fillRect(X, Y, W, band)
+  }
+  ctx.fillStyle = '#FFFFFF'
+  ctx.globalAlpha *= theme === 'night' ? 0.1 : 0.28
+  ctx.beginPath()
+  ctx.moveTo(X + W * 0.18, Y + band + 2)
+  ctx.lineTo(X + W * 0.34, Y + band + 2)
+  ctx.lineTo(X + W * 0.12, Y + H - 2)
+  ctx.lineTo(X + 3, Y + H - 2)
+  ctx.closePath()
+  ctx.fill()
+  ctx.globalAlpha *= 0.65
+  ctx.beginPath()
+  ctx.moveTo(X + W * 0.42, Y + band + 2)
+  ctx.lineTo(X + W * 0.47, Y + band + 2)
+  ctx.lineTo(X + W * 0.3, Y + H - 2)
+  ctx.lineTo(X + W * 0.25, Y + H - 2)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+  const hi = theme === 'night' ? 0.4 : 0.9
+  seg(ctx, [X + 1.2, Y + 1], [X + 1.2, Y + H - 1], '#FFFFFF', 1.2, hi)
+  seg(ctx, [X + 1, Y + 0.6], [X + W - 1, Y + 0.6], '#FFFFFF', 1, hi)
+  seg(ctx, [X + W - 1, Y + band + 1], [X + W - 1, Y + H - 1], k.glass.edge, 1.1, 0.8)
+  seg(ctx, [X + 1, Y + H - 1], [X + W - 1, Y + H - 1], k.glass.foot, 1.4)
+  ctx.strokeStyle = k.glass.edge
+  ctx.lineWidth = 0.6
+  ctx.setLineDash([])
+  ctx.strokeRect(X, Y, W, H)
+}
+
+/**
+ * A painted part in a fixed colour (magnet poles, coloured knobs): flat paint with the
+ * same top light and floor darkening as the metals, outline by size.
+ */
+export function paintedPoly(ctx: Ctx, pts: Pt[], fill: string, theme: CraftTheme, o: { line?: OutlineMode } = {}) {
+  if (pts.length < 3) return
+  const k = craftTokens(theme)
+  const xs = pts.map((p) => p[0])
+  const ys = pts.map((p) => p[1])
+  const X = Math.min(...xs)
+  const Y = Math.min(...ys)
+  const W = Math.max(...xs) - X
+  const H = Math.max(...ys) - Y
+  ctx.save()
+  polyPath(ctx, pts)
+  ctx.fillStyle = fill
+  ctx.fill()
+  ctx.clip()
+  const g = ctx.createLinearGradient(0, Y, 0, Y + Math.max(H, 1))
+  const night = theme === 'night'
+  g.addColorStop(0, night ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.34)')
+  g.addColorStop(0.2, night ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)')
+  g.addColorStop(0.62, 'rgba(0,0,0,0)')
+  g.addColorStop(1, night ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.18)')
+  ctx.fillStyle = g
+  ctx.fillRect(X - 1, Y - 1, W + 2, H + 2)
+  ctx.restore()
+  const ln = pickLine(k, o.line, polyArea(pts))
+  if (ln) {
+    polyPath(ctx, pts)
+    ctx.strokeStyle = ln.color
+    ctx.lineWidth = ln.width
+    ctx.lineJoin = 'round'
+    ctx.setLineDash([])
+    ctx.stroke()
+  }
+}

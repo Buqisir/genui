@@ -1,0 +1,216 @@
+---
+id: gd24-05
+title: 转动的卷轴与插销
+source: 2024 广东卷 第 5 题（单选，4 分）
+question: "如图所示，在细绳的拉动下，半径为 r 的卷轴可绕其固定的中心点 O 在水平面内转动。卷轴上沿半径方向固定着长度为 l 的细管，管底在 O 点。细管内有一根原长为 l/2、劲度系数为 k 的轻质弹簧，弹簧底端固定在管底，顶端连接质量为 m、可视为质点的插销。当以速度 v 匀速拉动细绳时，插销做匀速圆周运动。若 v 过大，插销会卡进固定的端盖。使卷轴转动停止。忽略摩擦力，弹簧在弹性限度内。要使卷轴转动不停止，v 的最大值为（　　）\n\nA. r√(k/(2m))\n\nB. l√(k/(2m))\n\nC. r√(2k/m)\n\nD. l√(2k/m)"
+choice: A
+answers: []
+---
+
+细绳以速度 $v$ 劣速拉动时，卷轴边缘的线速度也是 $v$，所以角速度
+
+$$
+\omega = \frac{v}{r}.
+$$
+
+插销随卷轴一起转，在水平面内做劣速圆周运动。设它到管底 $O$ 的距离为 $R$，弹簧原长是 $l/2$，伸长量就是 $R - l/2$。忽略摩擦力后，径向只有弹簧弹力指向圆心，由它提供向心力：
+
+$$
+k\left(R - \frac{l}{2}\right) = m\omega^2 R = m\frac{v^2}{r^2}R.
+$$
+
+插销沿管外移，最远只能到管口。再远一点就会卡进固定的端盖，卷轴被卡住。临界状态是插销刚好在管口，$R = l$。代入上式：
+
+$$
+k\left(l - \frac{l}{2}\right) = m\frac{v^2}{r^2}l,
+$$
+
+$$
+\frac{1}{2}kl = m\frac{v^2}{r^2}l.
+$$
+
+$l \neq 0$，两边约掉 $l$，得
+
+$$
+v = r\sqrt{\frac{k}{2m}}.
+$$
+
+$v$ 再大，要维持劣速圆周运动就需要 $R > l$，插销会出管口卡进端盖。所以这就是卷轴不停止时 $v$ 的最大值。
+
+题目只给了字母。下面取 $r = 0.10\,\mathrm{m}$、$l = 0.20\,\mathrm{m}$、$k = 40\,\mathrm{N/m}$、$m = 0.05\,\mathrm{kg}$ 作为代表值，与题图一样取 $l = 2r$。按这组数，
+
+$$
+v = 0.10\sqrt{\frac{40}{2\times 0.05}} = 0.10\sqrt{400} = 2.00\,\mathrm{m/s}.
+$$
+
+临界速度是 $2.00\,\mathrm{m/s}$。
+
+## 完整解答
+
+**A. 正确。** 临界时插销在管口，弹簧伸长 $l/2$，弹力 $kl/2$ 提供半径为 $l$ 的向心力：
+
+$$
+\frac{1}{2}kl = m\frac{v^2}{r^2}l \implies v = r\sqrt{\frac{k}{2m}}.
+$$
+
+代表值下 $\boxed{v = 2.00\,\mathrm{m/s}}$。
+
+**B. 错误。** 把卷轴半径 $r$ 换成了管长 $l$。细绳绕在半径为 $r$ 的卷轴上，$\omega = v/r$，不是 $v/l$。代表值下这个式子算出 $4.00\,\mathrm{m/s}$。它实际上是临界时插销的线速度 $l\omega = 4.00\,\mathrm{m/s}$，比拉绳速度大一倍。拉绳速度取到这么大，管口处的弹力已经不够提供向心力，插销会卡住。
+
+**C. 错误。** 向心力公式用反了。若写成 $mv^2/r = kl/2$，会得到 $v = r\sqrt{k/(2m)}$ 的 $\sqrt{2}$ 倍，也就是 $r\sqrt{2k/m}$。这里做圆周运动的是插销，半径是 $l$ 而不是卷轴半径 $r$；$r$ 只出现在 $\omega = v/r$ 里。代表值下这个式子是 $2.83\,\mathrm{m/s}$，已经超过临界速度。
+
+**D. 错误。** 同时用错了半径和向心力公式。把 $r$ 换成 $l$ 后再多乘一个 $\sqrt{2}$，数值上是正确结果的 $2\sqrt{2}$ 倍。代表值下是 $5.66\,\mathrm{m/s}$，远大于临界速度。
+
+## 交互演示
+
+拖动拉绳速度，看插销在管里的位置。速度一定时，半径由向心力公式解出，始终满足 $k(R - l/2) = m v^2 R / r^2$。卷轴和细管一起劣速转动；插销相对管子不动，所以弹簧长度不变。当 $R$ 到达 $l$ 时卷轴停住。尺寸按上面的代表值，管子比卷轴略粗，不按比例。
+
+<Param name="v" label="拉绳速度" symbol="v" color="velocity" value={1.6} min={0.4} max={2.4} step={0.1} unit="m/s" />
+
+<Param name="r" label="卷轴半径" symbol="r" value={0.1} hidden unit="m" />
+
+<Param name="l" label="管长" symbol="l" value={0.2} hidden unit="m" />
+
+<Param name="k" label="劲度系数" symbol="k" value={40} hidden unit="N/m" />
+
+<Param name="m" label="插销质量" symbol="m" value={0.05} hidden unit="kg" />
+
+<Define name="vMax" expr="r*sqrt(k/(2*m))" />
+
+<Define name="Rraw" expr="(k*l/2)/(k - m*v^2/r^2)" />
+
+<Define name="stuck" expr="Rraw > l ? 1 : 0" />
+
+<Define name="R" expr="stuck == 1 ? l : Rraw" />
+
+<Define name="omega" expr="stuck == 1 ? 0 : v/r" />
+
+<Define name="vPin" expr="omega*R" />
+
+<Define name="Fspring" expr="k*(R - l/2)" />
+
+<Define name="Fneed" expr="m*v^2*R/r^2" />
+
+<Define name="x0" expr="l/2" />
+
+<Motion name="reel" until={4} mass="m"
+  axis={{x: 0, y: 0, inertia: "m*R^2", com: ["R", 0]}}
+  state={{theta: 0, omega: "omega"}}
+  forces={[{label: "F", angle: 180, magnitude: "Fspring", at: ["R", 0]}]}
+/>
+
+<Question text="A. r√(k/(2m))" set={{v: "vMax"}} hint="插销刚好到管口，弹力仍能提供向心力" />
+
+<Question text="B. l√(k/(2m))" set={{v: 2.4}} hint="把 r 换成 l 后所需的向心力已经超过管口处的弹力" />
+
+<Question text="C. r√(2k/m)" set={{v: 2.4}} hint="向心力公式用反时，这个速度已经使插销卡住" />
+
+<Question text="D. l√(2k/m)" set={{v: 2.4}} hint="半径和向心力公式都用错，远大于临界速度" />
+
+<Status cases={[
+  {when: "stuck == 1", label: "插销卡进端盖，卷轴停止", tone: "danger"},
+  {when: "abs(v - vMax) < 0.005", label: "刚好到管口，临界速度", tone: "warning"},
+  {label: "插销在管内做劣速圆周运动", tone: "success"}
+]} />
+
+<Readout items={[
+  {label: "临界速度", symbol: "v_max", expr: "vMax", unit: "m/s", digits: 3, color: "velocity"},
+  {label: "圆周半径", symbol: "R", expr: "R", unit: "m", digits: 3},
+  {label: "弹簧弹力", symbol: "F", expr: "Fspring", unit: "N", digits: 2, color: "force"},
+  {label: "所需向心力", symbol: "F_n", expr: "Fneed", unit: "N", digits: 2, color: "accel"}
+]} />
+
+<Preset label="临界速度 v = r√(k/(2m))" set={{v: "vMax"}} />
+
+<Preset label="管内劣速转动 v = 1.6 m/s" set={{v: 1.6}} />
+
+<Sim title="卷轴与插销" height={380} duration={4} playSeconds={8}
+  params={["reel", "r", "l", "R", "v", "omega", "stuck", "vMax"]}
+  hud={[
+    {symbol: "v", label: "拉绳速度", expr: "v", unit: "m/s", digits: 2},
+    {symbol: "R", label: "圆周半径", expr: "R", unit: "m", digits: 3}
+  ]}
+  note="俯视；管径略加粗，不按比例。细绳从卷轴下缘向右拉出。"
+>
+sim({
+  at(t, p) {
+    const th = p.stuck > 0.5 ? 0 : p.reel.theta(t)
+    return { th: th, om: p.stuck > 0.5 ? 0 : p.reel.omega(t) }
+  },
+  draw(ctx, s, v) {
+    const p = v.p
+    const m = v.view({ xmin: -0.28, xmax: 0.42, ymin: -0.30, ymax: 0.26, equal: true, pad: 18 })
+    const th = s.th
+    const c = Math.cos(th)
+    const sn = Math.sin(th)
+    const rot = (x, y) => [x * c - y * sn, x * sn + y * c]
+    const pin = rot(p.R, 0)
+    const mouth = rot(p.l, 0)
+    const ux = pin[0] / p.R
+    const uy = pin[1] / p.R
+    v.circle(m, 0, 0, p.r, { fill: v.color.steel })
+    v.circle(m, 0, 0, p.r * 0.14, { fill: v.color.graphite })
+    const tube = v.tube(m, {
+      x: 0, y: 0, angle: th * 180 / Math.PI,
+      sections: [{ from: 0, to: p.l, r: 0.016 }],
+      wall: 3,
+    })
+    const springEnd = tube.pt(p.R - 0.014, 0)
+    v.spring(m, 0, 0, springEnd[0], springEnd[1], { coils: 9 })
+    v.block(m, mouth[0] + ux * 0.006, mouth[1] + uy * 0.006, 0.016, 0.034, {
+      angle: th * 180 / Math.PI + 90, pivot: 'center', label: false,
+    })
+    v.ball(m, pin[0], pin[1], 0.011)
+    v.label(m, pin[0] + uy * 0.05, pin[1] - ux * 0.05, '插销')
+    const ropeLen = 0.18
+    const tang = [0, -p.r]
+    const pull = [tang[0] + ropeLen, tang[1]]
+    v.rope(m, [tang, pull])
+    if (p.stuck < 0.5) v.vec(m, pull[0] - 0.03, pull[1] - 0.03, 0.07, 0, { kind: 'velocity', label: 'v' })
+    v.vec(m, pin[0], pin[1], -ux * 0.06, -uy * 0.06, { kind: 'force', label: 'F' })
+    v.label(m, -0.03, 0.045, 'O')
+    v.dim(m, 0, 0.01, 0, -p.r, 'r', { offset: -18 })
+    v.dim(m, 0, 0, mouth[0], mouth[1], 'l', { offset: 22 })
+    if (p.stuck > 0.5) v.event(m, mouth[0], mouth[1] + 0.04, '卡进端盖', { at: 0, kind: 'force' })
+  },
+})
+</Sim>
+
+<ForceDiagram title="插销在水平面内的径向受力" size="narrow"
+  surface={{type: "none"}}
+  body={{shape: "ball", label: "m"}}
+  forces={[
+    {label: "F", angle: 180, magnitude: "Fspring", showValue: true, unit: "N"}
+  ]}
+  mass="m"
+  accel={{angle: 180, magnitude: "stuck == 1 ? 0 : v^2*R/r^2"}}
+  guides={[{label: "v", angle: 90, color: "velocity"}]}
+/>
+
+<Plot title="圆周半径随拉绳速度变化" size="wide"
+  x={{name: "u", label: "v", unit: "m/s", min: 0.4, max: 2.4}}
+  y={{label: "R", unit: "m", min: 0.08, max: 0.24}}
+  series={[
+    {label: "R", expr: "u < vMax ? (k*l/2)/(k - m*u^2/r^2) : l", color: "velocity"},
+    {label: "管口", expr: "l", color: "force", dash: true}
+  ]}
+  marks={[{x: "vMax", label: "刚好到管口"}]}
+  cursor="v"
+/>
+
+## 结合图像看关键点
+
+曲线的横轴是拉绳速度，纵轴是插销到圆心的距离。$v$ 从很小增大时，$R$ 从原长 $l/2$ 附近往外移，而且越靠近管口升得越快：同一段伸长要提供更大的向心力，可用的余量越来越小。
+
+虚线是管口 $R = l$。两线相交处就是临界速度 $v = r\sqrt{k/(2m)}$。再往右，公式算出的半径会超过管长，插销已经卡住，卷轴转不动。选项 B、C、D 对应的速度都落在交点右侧，所以卷轴会停止。
+
+受力图只画水平面内的径向力。重力和管壁的支持力垂直于水平面，不参与圆周运动。插销的速度沿切线，弹簧弹力指向圆心，二者垂直。
+
+## 答案
+
+选 **A**。代表值下，临界拉绳速度为 $2.00\,\mathrm{m/s}$。
+
+<Answer items={[
+  {label: "答案", text: "A"},
+  {label: "临界速度", symbol: "v_max", expr: "vMax", value: 2, unit: "m/s"}
+]} />

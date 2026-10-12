@@ -1,0 +1,226 @@
+---
+id: gd21-06
+title: 静电推进装置上的等势面
+source: 2021 广东卷 第 6 题（单选，4 分）
+question: 图是某种静电推进装置的原理图，发射极与吸极接在高压电源两端，两极间产生强电场，虚线为等势面，在强电场作用下，一带电液滴从发射极加速飞向吸极，a、b 是其路径上的两点，不计液滴重力，下列说法正确的是（　　）
+choice: D
+answers: []
+---
+
+## 题目条件分析
+
+高压电源的长线在左、短线在右，左端接发射极，右端接吸极。长线是正极，所以发射极电势高、吸极电势低。电场线从发射极指向吸极，沿电场线方向电势降低。液滴能从发射极加速飞向吸极，说明它带正电，电场力与速度同向。题目说明不计重力。
+
+等势面的疏密就是场强的疏密：通过 a 的等势面更靠近发射极、弯曲更厉害、附近更密，通过 b 的那一条更靠近吸极、弯曲较缓。所以 $E_a > E_b$。
+
+题目没有给电压、电荷量和距离。下面取一组代表性数值：两极间电压 $U = 1.0\times 10^4\ \mathrm{V}$，液滴电荷量 $q = 2.0\times 10^{-9}\ \mathrm{C}$、质量 $m = 1.0\times 10^{-6}\ \mathrm{kg}$，a、b 离吸极缝口分别 $4.0\ \mathrm{cm}$、$1.5\ \mathrm{cm}$。画面不按比例，喷管和极板只是示意。滑块改电压时电势差、场强比和加速度比都不变号，选项的对错不依赖这组数。
+
+<Param name="U" label="两极间电压" symbol="U" value={10000} min={2000} max={20000} step={500} unit="伏" color="field" />
+
+<Param name="t" label="时间" value={0} min={0} max={0.02} step={0.0002} unit="s" hidden />
+
+<Param name="q" label="液滴电荷量" value={2} hidden />
+
+<Param name="mDrop" label="液滴质量" value={1} hidden />
+
+<Param name="xa" label="a 的位置" value={0.04} hidden />
+
+<Param name="xb" label="b 的位置" value={0.015} hidden />
+
+<Param name="x0" label="出口位置" value={0.054} hidden />
+
+<Param name="pos" label="观察位置" value={0.04} min={0.006} max={0.054} step={0.001} unit="m" hidden />
+
+<Param name="Lgap" label="极距" value={0.06} hidden />
+
+<Param name="nSharp" label="疏密指数" value={3} hidden />
+
+<Define name="phia" expr="U*(xa/Lgap)^nSharp" />
+
+<Define name="phib" expr="U*(xb/Lgap)^nSharp" />
+
+<Define name="Ea" expr="nSharp*U/Lgap*(xa/Lgap)^(nSharp - 1)" />
+
+<Define name="Eb" expr="nSharp*U/Lgap*(xb/Lgap)^(nSharp - 1)" />
+
+<Define name="aa" expr="q*Ea/mDrop" />
+
+<Define name="ab" expr="q*Eb/mDrop" />
+
+<Define name="Epa" expr="q*phia" />
+
+<Define name="Epb" expr="q*phib" />
+
+<Define name="cmpPhi" expr="phia > phib ? 1 : 0" />
+
+<Define name="cmpE" expr="Ea > Eb ? 1 : 0" />
+
+<Define name="cmpA" expr="aa > ab ? 1 : 0" />
+
+<Define name="cmpEp" expr="Epa > Epb ? 1 : 0" />
+
+<Motion name="drop" until={0.02} mass="mDrop" charge="q" steps={2000}
+  state={{x: "x0", y: 0, vx: 0, vy: 0}}
+  fields={[
+    {label: "推进电场", E: "nSharp*U/Lgap*(x/Lgap)^(nSharp - 1)", angle: 180, region: {xmin: 0.004, xmax: "x0", ymin: -0.02, ymax: 0.02}}
+  ]}
+  events={[
+    {name: "tA", when: "x - xa"},
+    {name: "tB", when: "x - xb"},
+    {name: "tHit", when: "x - 0.004", dir: "down", stop: true}
+  ]} />
+
+<Question text="A. a 点的电势比 b 点的低" set={{U: 10000, t: "tA"}} hint="发射极接正极，沿电场线电势降低，a 比 b 更靠近发射极" />
+
+<Question text="B. a 点的电场强度比 b 点的小" set={{U: 10000, t: "tA"}} hint="a 附近等势面更密，场强更大" />
+
+<Question text="C. 液滴在 a 点的加速度比在 b 点的小" set={{U: 10000, t: "tB"}} hint="不计重力，a = qE/m，跟着场强走" />
+
+<Question text="D. 液滴在 a 点的电势能比在 b 点的大" set={{U: 10000, t: "tB"}} hint="正电荷在高电势处电势能大，电场力做正功" />
+
+<Preset label="题图位置：液滴在 a" set={{U: 10000, t: "tA"}} />
+
+<Preset label="液滴在 b" set={{U: 10000, t: "tB"}} />
+
+<Preset label="电压降一半，比较不变" set={{U: 5000, t: "tB"}} />
+
+<Status cases={[
+  {when: "cmpPhi > 0.5 and cmpE > 0.5 and cmpA > 0.5 and cmpEp > 0.5", label: "φ_a > φ_b，E_a > E_b，a_a > a_b，E_{pa} > E_{pb}", tone: "success"},
+  {label: "比较与题图不符", tone: "warning"}
+]} />
+
+<Readout items={[
+  {label: "a 的电势", symbol: "φ_a", expr: "phia", unit: "伏", digits: 0, color: "field"},
+  {label: "b 的电势", symbol: "φ_b", expr: "phib", unit: "伏", digits: 0, color: "field"},
+  {label: "a 的场强", symbol: "E_a", expr: "Ea", unit: "牛/库", format: "sci", color: "field"},
+  {label: "b 的场强", symbol: "E_b", expr: "Eb", unit: "牛/库", format: "sci", color: "field"},
+  {label: "a 的加速度", symbol: "a_a", expr: "aa", unit: "米/秒²", format: "sci", color: "accel"},
+  {label: "b 的加速度", symbol: "a_b", expr: "ab", unit: "米/秒²", format: "sci", color: "accel"},
+  {label: "a 的电势能", symbol: "E_{pa}", expr: "Epa", unit: "焦", format: "sci", color: "charge"},
+  {label: "b 的电势能", symbol: "E_{pb}", expr: "Epb", unit: "焦", format: "sci", color: "charge"}
+]} />
+
+<Answer items={[
+  {label: "答案", text: "D"},
+  {label: "电势比较", text: "φ_a > φ_b，A 错"},
+  {label: "场强比较", text: "E_a > E_b，B 错"},
+  {label: "加速度比较", text: "a_a > a_b，C 错"},
+  {label: "电势能比较", text: "E_{pa} > E_{pb}，D 对"}
+]} />
+
+<Sim title="静电推进装置" height={340} duration="tHit" time="t" playSeconds={6} params={["drop", "U", "xa", "xb", "x0", "Lgap", "nSharp", "phia", "phib"]} marks={[
+  {t: 0, label: "离开发射极"},
+  {t: "tA", label: "经过 a"},
+  {t: "tB", label: "经过 b"},
+  {t: "tHit", label: "进入吸极缝"}
+]} legend={[
+  {kind: "field", label: "电场线"},
+  {kind: "steel-dash", label: "等势面"},
+  {kind: "velocity", label: "速度"},
+  {kind: "accel", label: "加速度"}
+]} note="喷管和极板不按比例；等势面是示意，a 附近更密、弯得更厉害" hud={[
+  {symbol: "φ_a", expr: "phia", unit: "伏", digits: 0},
+  {symbol: "φ_b", expr: "phib", unit: "伏", digits: 0},
+  {symbol: "E_a/E_b", expr: "Ea/Eb", digits: 2}
+]}>
+sim({
+  at(t, p) { return p.drop.state(t) },
+  draw(ctx, s, v) {
+    const m = v.view({ xmin: -0.016, xmax: 0.082, ymin: -0.027, ymax: 0.033, equal: true })
+    v.regions(m, p.drop, { lines: false })
+    const bow = (x, k) => {
+      const pts = []
+      for (let i = 0; i <= 32; i++) {
+        const y = -0.02 + (0.04 * i) / 32
+        pts.push([x - k * y * y, y])
+      }
+      return pts
+    }
+    v.path(m, bow(p.xa, 14), { color: v.color.steel, dash: true, width: 1.4 })
+    v.path(m, bow(p.xb, 5), { color: v.color.steel, dash: true, width: 1.4 })
+    v.label(m, p.xa - 0.005, -0.009, 'a')
+    v.label(m, p.xb - 0.003, -0.009, 'b')
+    v.ball(m, s.x, s.y, 0.0016, { charge: true })
+    v.trail(m, (st) => [st.x, st.y], { kind: 'velocity' })
+    const sc = 0.00004
+    v.vec(m, s.x, s.y, -Math.abs(s.vx) * sc, 0, { kind: 'velocity', label: 'v', min: 16 })
+    const eNow = p.nSharp * p.U / p.Lgap * Math.max(s.x / p.Lgap, 0) ** (p.nSharp - 1)
+    v.vec(m, s.x, s.y + 0.004, -Math.min(eNow, 2e6) / 2e6 * 0.012, 0, { kind: 'accel', label: 'a' })
+    v.path(m, [[0.0655, 0.0042], [0.0755, 0.0042], [0.0755, 0.0095], [0.0615, 0.0095], [0.0555, 0.0028], [0.0615, -0.0095], [0.0755, -0.0095], [0.0755, -0.0042], [0.0655, -0.0042]], { color: v.color.ink, width: 1.6 })
+    v.label(m, 0.067, 0.0135, '发射极')
+    v.bar(m, 0.0015, 0.0055, 0.0015, 0.0215, { thick: 10 })
+    v.bar(m, 0.0015, -0.0215, 0.0015, -0.0055, { thick: 10 })
+    v.label(m, 0.0015, -0.0255, '吸极')
+    const half = v.element(m, 0.038, 0.029, 'battery')
+    v.line(m, 0.038 - half, 0.029, 0.069, 0.029, { color: v.color.ink })
+    v.line(m, 0.069, 0.029, 0.069, 0.0095, { color: v.color.ink })
+    v.line(m, 0.038 + half, 0.029, 0.0015, 0.029, { color: v.color.ink })
+    v.line(m, 0.0015, 0.029, 0.0015, 0.0215, { color: v.color.ink })
+    v.label(m, 0.038, 0.0315, '高压电源', { place: 'above' })
+  },
+})
+</Sim>
+
+<Plot title="沿路径的电势与场强" size="wide" caption="横轴是离吸极缝口的距离，向右是发射极方向" x={{name: "r", label: "x", unit: "m", min: 0.006, max: 0.054}} y={{label: "φ / V  ·  E / (N/C)", min: 0}} series={[
+  {label: "φ", expr: "U*(r/Lgap)^nSharp", color: "field"},
+  {label: "E", expr: "nSharp*U/Lgap*(r/Lgap)^(nSharp - 1)", color: "field", dash: true}
+]} marks={[
+  {x: 0.04, label: "a：电势高、场强大"},
+  {x: 0.015, label: "b：电势低、场强小"}
+]} />
+
+<Ledger title="从 a 到 b 的能量" size="narrow" unit="焦" digits={0} caption="电势能减少的部分变成动能" parts={[
+  {label: "电势能", symbol: "E_p", expr: "q*U*(pos/Lgap)^nSharp", color: "charge"},
+  {label: "动能", symbol: "E_k", expr: "q*U*(1 - (pos/Lgap)^nSharp)", color: "velocity"}
+]} rows={[
+  {label: "在 a", at: {pos: 0.04}},
+  {label: "在 b", at: {pos: 0.015}}
+]} total={{label: "机械能", expr: "q*U"}} />
+
+## 完整解答
+
+电源长线接发射极，发射极电势高于吸极。电场线由发射极指向吸极，沿电场线方向电势降低。a 在 b 的左侧，更靠近发射极，所以
+
+$$
+\varphi_a > \varphi_b
+$$
+
+A 说「 a 点的电势比 b 点的低」，错误。
+
+等势面越密，沿电场线方向的电势变化越快，场强越大。题图中 a 附近的等势面比 b 附近更密，所以
+
+$$
+E_a > E_b
+$$
+
+B 说「 a 点的电场强度比 b 点的小」，错误。题图里 a 附近的虚线更密，对应的是更大的场强，不是更小。
+
+液滴从发射极加速飞向吸极，电场力与位移同向，液滴带正电。不计重力，电场力是合力，
+
+$$
+a = \frac{qE}{m}
+$$
+
+$q$、$m$ 不变，$E_a > E_b$，所以 $a_a > a_b$。C 说「液滴在 a 点的加速度比在 b 点的小」，错误。
+
+正电荷的电势能 $E_p = q\varphi$。$\varphi_a > \varphi_b$，所以
+
+$$
+E_{pa} > E_{pb}
+$$
+
+从 a 到 b 电场力做正功，电势能减少、动能增加，两者相等。D 正确。
+
+代表性数值只用来看大小关系。取吸极处电势为 0，沿路径写成 $\varphi = U(x/L)^3$，$E = 3U/L\,(x/L)^2$。代入 $x_a = 4.0\ \mathrm{cm}$、$x_b = 1.5\ \mathrm{cm}$、$L = 6.0\ \mathrm{cm}$，得 $\varphi_a > \varphi_b$、$E_a > E_b$。加速度比与场强比相同，电势能比与电势比相同。这个式子不是题目给的，只保证 a 附近更密、向右电势升高，和题图一致。
+
+## 交互演示
+
+拖动画面看液滴从发射极飞向吸极。虚线是通过 a、b 的两条等势面，a 那一条更靠近发射极、半径更小，相邻等势面在这里更密。速度箭头和加速度箭头都指向吸极，越靠近吸极加速度越大。侧栏读数直接比较两点的电势、场强、加速度和电势能。把电压降一半，四个量都变小，但大小关系不变。
+
+## 结合图像看关键点
+
+曲线的横轴从吸极指向发射极。电势随距离升高，a 在 b 的右侧，电势更高。虚线是点电荷模型的场强，越靠近吸极越大，只用来看 $1/x$ 的形状，疏密以题图为准。能量条把 a、b 两处放在一起：机械能不变，电势能从 a 到 b 减少，减掉的部分全部变成动能。
+
+## 答案汇总
+
+A、B、C 都把大小说反了。正确的是 $\boxed{D}$。

@@ -1,0 +1,4 @@
+#!/bin/sh
+# genui CLI. Works from any working directory; lesson paths stay relative to the caller's cwd.
+ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd) || exit 2
+exec npx --prefix "$ROOT/app" tsx "$ROOT/app/scripts/genui.ts" "$@"

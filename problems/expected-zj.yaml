@@ -1,0 +1,105 @@
+# 浙江卷答案键。不发给模型。
+# 数值按解析版。题干没写 g 时，解析按 10 m/s²。
+zj-01:
+  - { q: "选项", choice: "D" }
+zj-02:
+  - { q: "选项", choice: "D" }
+zj-03:
+  - { q: "(1) 支持力 F_N", any: [7] }
+  - { q: "(2) v 与 l_x 的关系", text: "v=√(12 l_x-9.6)，l_x≥0.85 m", manual: true }
+  - { q: "(3) l_x 之一 13/15 m", any: [0.8667] }
+  - { q: "(3) l_x 之一 9/5 m", any: [1.8] }
+  - { q: "(3) l_x 之一 41/15 m", any: [2.733] }
+zj-04:
+  - { q: "(1)① 向心加速度", any: [16] }
+  - { q: "(1)② DE 上总路程", any: [2] }
+  - { q: "(1)③ 时间比", text: "1:2", manual: true }
+  - { q: "(2) 滑块最短长度", any: [0.2] }
+zj-05:
+  - { q: "选项", choice: "BD" }
+zj-06:
+  - { q: "选项", choice: "C" }
+zj-07:
+  - { q: "选项", choice: "C" }
+zj-08:
+  - { q: "选项", choice: "D" }
+zj-09:
+  - { q: "选项", choice: "C" }
+zj-10:
+  - { q: "(1) 安培力方向", text: "ab 竖直向下，cd 竖直向上", manual: true }
+  - { q: "(2) 四个电阻", text: "R1=R4=R0+ΔR，R2=R3=R0-ΔR", manual: true }
+  - { q: "(3) B 与 U_ef", text: "B=R0*U_ef/(α*E*I0*L)", manual: true }
+zj-11:
+  - { q: "(1)① 安培力", text: "2BIL", manual: true }
+  - { q: "(1)② 安培力做功", text: "(3/4)BIL^2", manual: true }
+  - { q: "(1)② 冲量", text: "L*√(3BIm/2)", manual: true }
+  - { q: "(1)③ 电压", text: "BL^2*√(3BI/(2m))+IR", manual: true }
+  - { q: "(2) t1-t2", any: [0] }
+zj-12:
+  - { q: "选项", choice: "C" }
+zj-13:
+  - { q: "选项", choice: "D" }
+zj-14:
+  - { q: "(1)① 磁场方向", text: "垂直纸面向外", manual: true }
+  - { q: "(1)① 电流 I", any: [10] }
+  - { q: "(1)② 上升速度", any: [5] }
+  - { q: "(2)① R2", any: [0.2] }
+  - { q: "(2)② 磁感应强度", any: [2.5] }
+zj-15:
+  - { q: "选项", choice: "B" }
+zj-16:
+  - { q: "选项", choice: "B" }
+zj-17:
+  - { q: "选项", choice: "AC" }
+zj-18:
+  - { q: "选项", choice: "A" }
+zj-19:
+  - { q: "选项", choice: "C" }
+zj-20:
+  - { q: "(1) 平均速率与碰撞分子数", text: "不变；减小", manual: true }
+  - { q: "(2) V3", any: [1020.1, 1.0201e3, 0.0010201] }
+  - { q: "(3) ΔU", any: [2.53] }
+zj-21:
+  - { q: "选项", choice: "BC" }
+zj-22:
+  - { q: "选项", choice: "D" }
+zj-23:
+  - { q: "(1) 阻值", any: [34] }
+  - { q: "(2) 选项", choice: "AD" }
+  - { q: "(3) 波形", text: "C", manual: true }
+zj-24:
+  - { q: "(1)① 图1", text: "B", manual: true }
+  - { q: "(1)② 图2", text: "C", manual: true }
+  - { q: "(1)③ 初速度", text: "D", manual: true }
+  - { q: "(2) ΔxA", any: [0.78] }
+  - { q: "(2) ΔxB", any: [1.29] }
+  - { q: "(2) 势能与重力做功", text: "<", manual: true }
+zj-25:
+  - { q: "(1) 选项", choice: "B" }
+  - { q: "(2) 分子直径", text: "V/((N1+N2)S)", manual: true }
+zj-26:
+  - { q: "选项", choice: "A" }
+zj-27:
+  - { q: "(1) 指针", choice: "C" }
+  - { q: "(2) 电压", any: [0.5, 0.50] }
+  - { q: "(2) 电压表阻值", any: [3.1] }
+zj-28:
+  - { q: "选项", choice: "D" }
+zj-29:
+  - { q: "选项", choice: "C" }
+zj-30:
+  - { q: "选项", choice: "D" }
+zj-31:
+  - { q: "选项", choice: "CD" }
+zj-32:
+  - { q: "选项", choice: "BD" }
+zj-33:
+  - { q: "选项", choice: "C" }
+zj-34:
+  - { q: "③ 挡住", text: "P1和P2", manual: true }
+  - { q: "④ 第四枚针", text: "不需要", manual: true }
+  - { q: "⑤ 折射率", text: "cosα/sinθ", manual: true }
+zj-35:
+  - { q: "(1) 电路", text: "甲", manual: true }
+  - { q: "(2) 电动势", any: [1.44] }
+  - { q: "(2) 内阻", any: [0.64, 0.65] }  # 作图题；五组数据最小二乘 r = 0.649，解析手画直线读 0.64

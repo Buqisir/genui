@@ -1,0 +1,41 @@
+# Numeric answer key for the generation gate. Never sent to the model.
+# Each entry: a list of alternatives (unit variants); the lesson's `answers` must contain
+# a value within 1% of one of them. Symbolic-only problems (r5-03, r5-04, r6-05) are left out
+# because the lesson picks its own representative parameter values.
+r5-01-belt-loop:
+  - { q: "(1) 圆轨道半径 r", any: [0.5] }
+  - { q: "(2) 区间端点 5.5 m", any: [5.5] }
+  - { q: "(2) 区间端点 7 m", any: [7] }
+  - { q: "(2) 区间端点 7.5 m", any: [7.5] }
+r5-02-board-wall:
+  - { q: "(1) 撞挡板时刻", any: [1.55] }
+  - { q: "(2) 板长", any: [0.984] }
+r5-05-prism:
+  - { q: "(1) 折射率", any: [1.7321] }
+  - { q: "(2) 入射角正弦", any: [0.15892] }
+r5-06-spring-abc:
+  - { q: "(1) 速度", any: [3] }
+  - { q: "(2) 弹性势能最大值", any: [12] }
+r6-01-mercury-tubes:
+  - { q: "B 管水银柱高", any: [2] }
+  - { q: "A 管水银柱高 / 高度差", any: [1] }
+r6-02-two-pistons:
+  - { q: "(1) 压强", any: [100000, 1] }
+  - { q: "(2) 距离 l", any: [0.0909, 9.09] }
+r6-03-hydrogen-levels:
+  - { q: "(1) 谱线条数", any: [6] }
+  - { q: "(2) 能发生光电效应的种数", any: [3] }
+  - { q: "(3) 最大初动能", any: [9.55] }
+r6-04-generator-heaters:
+  - { q: "(1) 只数", any: [4] }
+  - { q: "(2) 效率", any: [0.8, 80] }
+  - { q: "(3) 最大功率", any: [6250] }
+r6-06-car-chase:
+  - { q: "(1) 最远距离", any: [16] }
+  - { q: "(2) 追上时间", any: [8] }
+r6-07-orbit-transfer:
+  - { q: "第一次加速 Δv₁", any: [2.48, 2480] }
+  - { q: "第二次加速 Δv₂", any: [1.48, 1480] }
+r6-08-wave-vibration:
+  - { q: "(1) 波速", any: [4] }
+  - { q: "(2) 路程", any: [2.8] }

@@ -1,0 +1,241 @@
+---
+id: gd22-07
+title: 立方体里的质子
+source: 2022 广东卷 第 7 题（单选，4 分）
+question: 如图所示，一个立方体空间被对角平面 MNPQ 划分成两个区域，两区域分布有磁感应强度大小相等、方向相反且与 z 轴平行的匀强磁场。一质子以某一速度从立方体左侧垂直 Oyz 平面进入磁场，并穿过两个磁场区域。下列关于质子运动轨迹在不同坐标平面的投影中，可能正确的是（ ）
+choice: A
+answers:
+  - { name: zKeep, value: 0.55, unit: m }
+  - { name: yGain, value: 0.845, unit: m }
+---
+
+立方体边长取 $a = 1\,\mathrm{m}$，质子从左侧面 $x = 0$、$y_0 = 0.30\,\mathrm{m}$、$z_0 = 0.55\,\mathrm{m}$ 处垂直于 $Oyz$ 平面射入，初速度沿 $+x$。题目只给字母，这里取代表性数值：回旋半径 $R = mv/(qB) = 0.60\,\mathrm{m}$（取 $q = 1$、$m = 1$、$v = 0.60\,\mathrm{m/s}$、$B = 1\,\mathrm{T}$），约半个边长。对角面 $MNPQ$ 过左后上顶点 $M(0,a,a)$、右侧棱中上部 $N(a,a,0.70a)$、左前棱中下部 $Q(0,0,0.30a)$ 和前右下角 $P(a,0,0)$。这个平面是
+
+$$
+z = 0.30a + 0.70y - 0.30x$$
+
+质子所在高度上，它把立方体切成两块：靠近观察者的一侧 $B$ 沿 $-z$（向下），另一侧 $B$ 沿 $+z$（向上），两者大小相等。质子带正电，洛伦兹力始终垂直于 $z$ 轴，所以 $z$ 坐标一直是入射时的 $z_0$。
+
+## 完整解答
+
+质子沿 $+x$ 进入向下的磁场。由左手定则，正电荷在向下的磁场里逆时针转，刚进入时洛伦兹力指向 $+y$。轨迹是一段圆弧，圆心在入射点的 $+y$ 一侧，$y$ 从 $y_0$ 开始增大。
+
+一直在同一个区域里走，圆弧会继续向上弯。质子穿过对角面之后进入反向的等大磁场，洛伦兹力立即反向，圆心换到轨迹的另一侧。$v_y$ 从正变到零，$y$ 增加变慢，末端趋于水平。在 $xOy$ 平面上看，就是从靠近 $x$ 轴、略高于 $x$ 轴的位置出发，先近似水平，再向上弯，斜率先变大后变小，末端趋于水平。
+
+**A. 正确。** 上面这条投影正是选项 A：$y$ 先增大，过了对角面之后趋于走平。
+
+**B. 错误。** 刚进入向下的磁场时洛伦兹力沿 $+y$，$y$ 只能先增大，不会从一开始就向下弯。选项 B 的曲线从 $y$ 轴正半轴出发后一直下降，与力的方向相反。
+
+**C. 错误。** 磁场并行于 $z$ 轴，洛伦兹力没有 $z$ 分量，也不做功。$z$ 坐标保持为入射时的 $z_0$，不会随 $x$ 下降。
+
+**D. 错误。** 同样因为 $z$ 不变，投影应该是一条水平直线，不会从原点向右上方弯曲。
+
+所以可能正确的是 $\boxed{\mathrm{A}}$。
+
+## 交互演示
+
+下面用上述代表性数值积分质子的运动。拖动入射高度 $z_0$，对角面在这个高度上的交线会移动，质子就在不同的 $x$ 处换区。拖动回旋半径 $R$，看穿过两个区域之后投影是否还是选项 A 的形状。视图切到正对 $xOy$ 或正对 $xOz$，就是题目要求的两种投影。
+
+<Param name="view" label="视图" value={0} options={[{value: 0, label: "斜二测"}, {value: 1, label: "xOy 投影"}, {value: 2, label: "xOz 投影"}]} />
+
+<Param name="y0" label="入射位置 y_0" value={0.3} min={0.15} max={0.5} step={0.01} unit="m" />
+
+<Param name="z0" label="入射高度 z_0" value={0.55} min={0.45} max={0.7} step={0.01} unit="m" />
+
+<Param name="R" label="回旋半径 R" symbol="R" value={0.6} min={0.4} max={1} step={0.01} unit="m" color="velocity" />
+
+<Param name="a" value={1} hidden />
+
+<Param name="q" value={1} hidden />
+
+<Param name="m" value={1} hidden />
+
+<Param name="B" value={1} hidden />
+
+<Param name="t" value={0} hidden />
+
+<Define name="v0" expr="q*B*R/m" />
+
+<Define name="zKeep" expr="z0" />
+
+<Define name="yL" expr="(z0 - 0.3*a)/0.7" />
+
+<Define name="yR" expr="(z0 - 0.3*a + 0.3*a)/0.7" />
+
+<Motion name="pt" until={8} mass="m" charge="q" steps={6000}
+  state={{x: 0, y: "y0", z: "z0", vx: "v0", vy: 0, vz: 0}}
+  fields={[
+    {label: "B 向下", B: "B", dir: "in",
+      region: {points: [[0, 0], ["a", 0], ["a", "yR"], [0, "yL"]]},
+      exit: "tCross"},
+    {label: "B 向上", B: "B", dir: "out",
+      region: {points: [[0, "yL"], ["a", "yR"], ["a", "a"], [0, "a"]]}}
+  ]}
+  events={[{name: "tOut", when: "x - a", dir: "up", stop: true}]}
+  read={{
+    yGain: "y @ tOut",
+    zOut: "z @ tOut",
+    vyOut: "vy @ tOut"
+  }}
+/>
+
+<Define name="dyShow" expr="yGain - y0" />
+
+<Question text="A. xOy 投影：靠近 x 轴出发，先近似水平，再向上弯，斜率先变大后变小，末端趋于水平" set={{view: 1, y0: 0.3, z0: 0.55, R: 0.6}} hint="刚进入时力沿 +y，过了对角面之后力反向，y 增加变慢" />
+
+<Question text="B. xOy 投影：从 y 轴正半轴出发，向右下方弯曲，末端在 x 轴上方趋于水平" set={{view: 1, y0: 0.3, z0: 0.55, R: 0.6}} hint="入射时洛伦兹力沿 +y，y 不会一开始就减小" />
+
+<Question text="C. xOz 投影：从 z 轴正半轴出发，向右下方弯曲，末端在 x 轴上方趋于水平" set={{view: 2, y0: 0.3, z0: 0.55, R: 0.6}} hint="磁场平行于 z 轴，z 坐标不变" />
+
+<Question text="D. xOz 投影：从原点出发，向右上方弯曲，末端趋于水平" set={{view: 2, y0: 0.3, z0: 0.55, R: 0.6}} hint="z 不变，投影是一条水平直线，不会从原点向上弯" />
+
+<Preset label="题目情形：穿过两个区域" set={{view: 0, y0: 0.3, z0: 0.55, R: 0.6}} />
+
+<Status cases={[
+  {when: "view == 2", label: "z 不变：xOz 投影是水平直线", tone: "info"},
+  {when: "abs(zOut - z0) < 1e-3 and yGain > y0 + 0.05 and abs(vyOut) < 0.08", label: "穿过两区：y 先增后走平，z 不变", tone: "success"},
+  {when: "yGain > y0", label: "y 在增加，还没有走平", tone: "warning"},
+  {label: "未穿过两个区域", tone: "neutral"}
+]} />
+
+<Readout items={[
+  {label: "穿出时的 y", symbol: "y", expr: "yGain", unit: "m", digits: 2, color: "velocity"},
+  {label: "穿出时的 z", symbol: "z", expr: "zOut", unit: "m", digits: 2},
+  {label: "穿出时的 v_y", symbol: "v_y", expr: "vyOut", unit: "m/s", digits: 3, color: "velocity"}
+]} />
+
+<Answer items={[
+  {label: "答案", text: "A"},
+  {label: "z 坐标保持不变", symbol: "z", expr: "zKeep", value: 0.55, unit: "m", digits: 2},
+  {label: "穿出时的 y", symbol: "y", expr: "yGain", value: 0.845, unit: "m", digits: 3}
+]} />
+
+<Sim title="立方体里的质子" height={460} duration="tOut" time="t" playSeconds={8}
+  params={["pt", "view", "a", "y0", "z0", "R", "tCross"]}
+  marks={[
+    {t: 0, label: "垂直 Oyz 面射入"},
+    {t: "tCross", label: "穿过对角面"},
+    {t: "tOut", label: "穿出右侧面"}
+  ]}
+  hud={[
+    {symbol: "z", label: "高度", expr: "z0", unit: "m", digits: 2},
+    {symbol: "R", label: "回旋半径", expr: "R", unit: "m", digits: 2}
+  ]}
+  legend={[{kind: "velocity", label: "质子轨迹"}, {kind: "field", label: "磁场"}]}
+  note="边长取 1 m，回旋半径取代表性数值；斜二测不按比例。">
+sim({
+  at(t, p) {
+    const s = p.pt.state(t)
+    return { x: s.x, y: s.y, z: s.z, vx: s.vx, vy: s.vy }
+  },
+  draw(ctx, s, v) {
+    const p = v.p
+    const a = p.a
+    const oblique = p.view < 0.5
+    const m = oblique
+      ? v.view({ xmin: -0.55, xmax: 2.05, ymin: -0.35, ymax: 1.55, equal: true })
+      : v.view({ xmin: -0.35, xmax: 1.45, ymin: -0.25, ymax: 1.25, equal: true })
+    const P = (x, y, z) => oblique ? [x + 0.45 * y, z + 0.28 * y] : p.view > 1.5 ? [x, z] : [x, y]
+    const edge = (A, B, dash) => {
+      const u = P(A[0], A[1], A[2])
+      const w = P(B[0], B[1], B[2])
+      v.line(m, u[0], u[1], w[0], w[1], { color: v.color.steel, width: 1.2, dash: dash || false })
+    }
+    const C = [
+      [0, 0, 0], [a, 0, 0], [a, a, 0], [0, a, 0],
+      [0, 0, a], [a, 0, a], [a, a, a], [0, a, a],
+    ]
+    const E = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]
+    const yAt = (x) => Math.min(a, Math.max(0, (p.z0 - 0.3 * a + 0.3 * x) / 0.7))
+    const slab = (yOf) => {
+      const near = []
+      const far = []
+      for (let i = 0; i <= 16; i++) {
+        const x = (a * i) / 16
+        near.push(P(x, yOf(x, 0), p.z0))
+        far.push(P(x, yOf(x, 1), p.z0))
+      }
+      return [...near, ...far.reverse()]
+    }
+    if (oblique) {
+      const down = slab((x) => yAt(x))
+      v.path(m, down, { close: true, fill: v.color.field, color: v.color.field, width: 1 })
+      const rear = slab((x, side) => (side ? a : yAt(x)))
+      v.path(m, rear, { close: true, fill: v.color.steel, color: v.color.steel, width: 1 })
+      for (const [i, j] of E) edge(C[i], C[j], true)
+      const Mq = P(0, a, a), Nq = P(a, a, 0.7 * a), Pq = P(a, 0, 0), Qq = P(0, 0, 0.3 * a)
+      v.path(m, [Mq, Nq, Pq, Qq], { close: true, color: v.color.field, width: 1.4 })
+      const up = P(0.72 * a, a, a)
+      const dn = P(0.02 * a, 0.02 * a, p.z0)
+      v.arrow(m, up[0], up[1], up[0], up[1] + 0.2, { color: v.color.field, width: 2 })
+      v.arrow(m, dn[0], dn[1] + 0.2, dn[0], dn[1], { color: v.color.field, width: 2 })
+      v.label(m, up[0], up[1] + 0.2, 'B', { place: 'right', color: v.color.field })
+      v.label(m, dn[0], dn[1], 'B', { place: 'left', color: v.color.field })
+      const tags = [['M', Mq, 'above'], ['N', Nq, 'right'], ['P', Pq, 'below-right'], ['Q', Qq, 'left'], ['O', P(0, 0, 0), 'below-left']]
+      for (const [name, q, place] of tags) v.label(m, q[0], q[1], name, { place })
+      const ox = P(0, 0, 0), xx = P(a + 0.28, 0, 0), yy = P(0, a + 0.22, 0), zz = P(0, 0, a + 0.22)
+      v.arrow(m, ox[0], ox[1], xx[0], xx[1], { color: v.color.ink, width: 1.4 })
+      v.arrow(m, ox[0], ox[1], yy[0], yy[1], { color: v.color.ink, width: 1.4 })
+      v.arrow(m, ox[0], ox[1], zz[0], zz[1], { color: v.color.ink, width: 1.4 })
+      v.label(m, xx[0], xx[1], 'x', { place: 'right' })
+      v.label(m, yy[0], yy[1], 'y', { place: 'above' })
+      v.label(m, zz[0], zz[1], 'z', { place: 'above' })
+    } else {
+      v.regions(m, p.pt)
+      function wall(x) { return 0.3 * a + 0.7 * ((p.z0 - 0.3 * a + 0.3 * x) / 0.7) - 0.3 * x }
+      const n = 24
+      const cut = []
+      for (let i = 0; i <= n; i++) {
+        const x = (a * i) / n
+        const y = Math.min(a, Math.max(0, (p.z0 - 0.3 * a + 0.3 * x) / 0.7))
+        cut.push(p.view > 1.5 ? [x, wall(x)] : [x, y])
+      }
+      v.path(m, cut, { color: v.color.field, width: 1.6, dash: true })
+      v.label(m, cut[12][0], cut[12][1], 'MNPQ', { place: 'above', color: v.color.field })
+    }
+    const here = P(s.x, s.y, s.z)
+    v.trail(m, (st) => P(st.x, st.y, st.z), { kind: 'velocity' })
+    v.ball(m, here[0], here[1], 0.035, { charge: true })
+    v.label(m, here[0], here[1], '质子', { place: oblique ? 'above-left' : 'left', color: v.color.charge })
+    const sp = Math.hypot(s.vx, s.vy) || 1
+    const ahead = P(s.x + (0.16 * s.vx) / sp, s.y + (0.16 * s.vy) / sp, s.z)
+    if (oblique || p.view < 1.5) v.vec(m, here[0], here[1], ahead[0] - here[0], ahead[1] - here[1], { kind: 'velocity' })
+    const side = P(s.x - (0.14 * s.vy) / sp, s.y + (0.14 * s.vx) / sp, s.z)
+    if (oblique || p.view < 1.5) v.label(m, side[0], side[1], 'v', { place: 'above', color: v.color.velocity })
+    if (!oblique) {
+      const horiz = p.view < 1.5
+      v.axisX(m, { y: 0, from: 0, to: 1.35, step: 0.5, unit: 'm' })
+      v.label(m, 1.4, 0.02, 'x', { place: 'right' })
+      v.label(m, -0.04, 1.15, horiz ? 'y' : 'z', { place: 'above' })
+      v.arrow(m, 0, 0, 0, 1.2, { color: v.color.ink, width: 1.3 })
+    }
+    v.event(m, here[0], here[1], '穿过对角面', { at: p.tCross, kind: 'field' })
+  },
+})
+</Sim>
+
+<Plot title="xOy 平面上的投影" size="narrow"
+  x={{name: "u", label: "x", unit: "m", min: 0, max: 1.05}}
+  y={{label: "y", unit: "m", min: 0, max: 1.05}}
+  series={[{label: "y", color: "velocity", over: {name: "u", min: 0, max: "tOut"}, x: "pt.x(u)", expr: "pt.y(u)", point: "t"}]}
+  caption="对照选项 A：y 先增大，过了对角面之后趋于水平"
+/>
+
+<Plot title="xOz 平面上的投影" size="narrow"
+  x={{name: "u", label: "x", unit: "m", min: 0, max: 1.05}}
+  y={{label: "z", unit: "m", min: 0, max: 1.05}}
+  series={[{label: "z", color: "graphite", over: {name: "u", min: 0, max: "tOut"}, x: "pt.x(u)", expr: "pt.z(u)", point: "t"}]}
+  caption="z 不变，不是选项 C、D 的弯曲"
+/>
+
+## 结合图像看关键时刻
+
+刚射入时速度沿 $+x$，向下的磁场给出沿 $+y$ 的洛伦兹力，所以 $xOy$ 投影从起点向上弯，不是选项 B 的向下弯。
+
+穿过对角面的一刻，磁场反向，洛伦兹力也反向。$v_y$ 由正减到零，投影的斜率先变大后变小，穿出右侧面时趋于水平，这就是选项 A。
+
+整段过程里 $v_z = 0$，$z$ 始终等于入射高度。$xOz$ 投影是一条水平直线，选项 C 的下降和选项 D 的上升都不可能。
+
+## 答案汇总
+
+可能正确的是 $\boxed{\mathrm{A}}$。

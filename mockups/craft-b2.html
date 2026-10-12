@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>B 冷灰实体：升级版（样张）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 32px; background: #e4e6e9; font-family: 'Noto Sans SC', sans-serif; color: #222; }
+  section { margin: 0 0 40px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  p.desc { font-size: 13px; color: #555; margin: 0 0 12px; max-width: 700px; line-height: 1.6; }
+  svg { display: block; width: 640px; height: 340px; }
+
+  .card { width: 680px; box-sizing: border-box; padding: 18px 20px 14px; border-radius: 16px; color: #23272d;
+          background: linear-gradient(180deg, #f7f8fa 0%, #f1f2f5 62%, #e9ebef 100%);
+          box-shadow: 0 0 40px rgba(51,51,51,.08), 0 0 0 1px #e1e4e8; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; letter-spacing: -.01em; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #7d838c; border: 1px solid #d6d9de; border-radius: 4px; padding: 1px 6px; background: #f8f9fa; }
+  .readout { display: flex; gap: 26px; }
+  .ro { display: flex; flex-direction: column; align-items: flex-end; }
+  .ro .k { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8a9099; letter-spacing: .04em; }
+  .ro .k i { font-family: 'Source Serif 4', serif; font-size: 12px; margin-left: 4px; color: #5d636c; }
+  .ro .v { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 26px; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .ro .v small { font-size: 11px; font-weight: 400; color: #8a9099; margin-left: 3px; letter-spacing: 0; }
+  .ro.lit .v { color: #1f4fd8; }
+  .foot { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #8b9098; margin-top: 4px; }
+  .keys { display: flex; gap: 10px; align-items: center; }
+  .kbd { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #5d636c; border: 1px solid #d3d7dc; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #fbfbfc; margin-right: 4px; }
+
+  .old { width: 680px; box-sizing: border-box; padding: 18px 20px 14px; border-radius: 14px; background: #f3f4f6; color: #2a2f36; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 0 0 1px #e3e5e9; }
+</style>
+</head>
+<body>
+
+<section>
+  <h2>B+　冷灰实体（升级）</h2>
+  <p class="desc">在 B 上加：器材面板印型号和刻度数字、计时器的点阵和斜纹带、光电门指示灯（挡光时亮，和速度同色，是此刻唯一要看的地方）、两层投影、卡片展台渐变、细体大读数、键帽式操作提示。画面定格在遮光条正挡住光束的一刻。</p>
+  <div class="card" id="card-B2"></div>
+</section>
+
+<section>
+  <h2>B+ 用在受力图上</h2>
+  <p class="desc">斜面和物块是实体（同一套明暗、投影、印字），力的箭头全部用力的颜色，分解出的分力是同色细线、降低透明度；数值放在右上角，图里只留力的符号。</p>
+  <div class="card" id="card-F"></div>
+</section>
+
+<section>
+  <h2>B+ 用在图像上</h2>
+  <p class="desc">图表不做假立体：坐标区是一块浅色面板，网格极淡，刻度用等宽小字；曲线用速度的颜色，当前时刻用竖线和空心点标出，面积表示位移。</p>
+  <div class="card" id="card-P"></div>
+</section>
+
+<section>
+  <h2>B　冷灰实体（上一版，对照）</h2>
+  <img src="shots/craft/card-B.png" width="680" alt="">
+</section>
+
+<script>
+const T = Math.PI / 180
+const TH = 11.5 * T, CS = Math.cos(TH), SN = Math.sin(TH)
+const O = [88, 243]
+const W = (x, y) => [O[0] + x * CS + y * SN, O[1] - x * SN + y * CS]
+
+const t = {
+  line: 'rgba(38,43,50,.86)', lw: 0.7, faint: 'rgba(38,43,50,.20)', print: 'rgba(38,43,50,.55)', label: '#767c85',
+  tones: {
+    lo:  { top: '#cdd1d7', f0: '#c3c8cf', f1: '#b2b8c0' },
+    mid: { top: '#eef0f3', f0: '#dfe2e7', f1: '#c8ccd3' },
+    hi:  { top: '#ffffff', f0: '#f3f5f7', f1: '#dfe3e8' },
+    dark:{ top: '#565c65', f0: '#3c4149', f1: '#2b2f35' },
+  },
+  bevel: 'rgba(255,255,255,.95)',
+  accent: '#1f4fd8',
+  screen: '#1b2026', screenText: '#d8e3ea',
+  cable: '#2e3339', cableHi: 'rgba(255,255,255,.35)',
+}
+
+const out = []
+const P = (s) => out.push(s)
+const mono = 'JetBrains Mono'
+
+function slab(x, y, w, h, top, tone, o = {}) {
+  const k = t.tones[tone]
+  const r = o.r ?? 1.5
+  let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#g-${tone})"/>`
+  if (top > 0) {
+    s += `<rect x="${x}" y="${y - top}" width="${w}" height="${top}" fill="${k.top}"/>`
+    s += `<line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}" stroke="${t.faint}" stroke-width=".55"/>`
+    s += `<line x1="${x + 1.2}" y1="${y - top + .7}" x2="${x + w - 1.2}" y2="${y - top + .7}" stroke="${t.bevel}" stroke-width=".8"/>`
+  }
+  s += `<rect x="${x}" y="${y - top}" width="${w}" height="${h + top}" rx="${r}" fill="none" stroke="${t.line}" stroke-width="${o.lw ?? t.lw}"/>`
+  return s
+}
+const dot = (x, y, r = 1.1, op = .7) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${t.line}" opacity="${op}"/>`
+const text = (x, y, s, size, o = {}) => `<text x="${x}" y="${y}" font-family="${o.font || mono}" font-size="${size}" fill="${o.fill || t.print}" text-anchor="${o.anchor || 'start'}" letter-spacing="${o.ls ?? .2}"${o.weight ? ` font-weight="${o.weight}"` : ''}>${s}</text>`
+const contact = (cx, cy, rx) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="1.6" fill="rgba(25,30,38,.38)" filter="url(#tight)"/>`
+function wheel(cx, cy, r) {
+  const d = t.tones.dark, m = t.tones.mid, h = t.tones.hi
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#g-dark)" stroke="${t.line}" stroke-width="${t.lw}"/>`
+    + `<circle cx="${cx}" cy="${cy}" r="${r * .62}" fill="url(#g-mid)" stroke="${t.line}" stroke-width=".5"/>`
+    + `<circle cx="${cx}" cy="${cy}" r="${r * .22}" fill="${h.top}"/>` + dot(cx, cy, .6)
+}
+function knob(cx, cy, r) {
+  let s = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#g-mid)" stroke="${t.line}" stroke-width="${t.lw}"/>`
+  for (let i = 0; i < 20; i++) {
+    const a = i / 20 * 2 * Math.PI
+    s += `<line x1="${cx + Math.cos(a) * (r - 1.3)}" y1="${cy + Math.sin(a) * (r - 1.3)}" x2="${cx + Math.cos(a) * r}" y2="${cy + Math.sin(a) * r}" stroke="${t.line}" stroke-width=".4" opacity=".55"/>`
+  }
+  return s + `<circle cx="${cx}" cy="${cy}" r="${r * .55}" fill="${t.tones.hi.f0}" stroke="${t.faint}" stroke-width=".5"/>`
+    + `<line x1="${cx}" y1="${cy}" x2="${cx + r * .5}" y2="${cy - r * .5}" stroke="${t.line}" stroke-width=".9"/>`
+}
+
+// defs
+P('<defs>')
+for (const [name, k] of Object.entries(t.tones)) P(`<linearGradient id="g-${name}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${k.f0}"/><stop offset="1" stop-color="${k.f1}"/></linearGradient>`)
+P(`<filter id="wide" filterUnits="userSpaceOnUse" x="0" y="250" width="640" height="110"><feGaussianBlur stdDeviation="9"/></filter>`)
+P(`<filter id="tight" x="-50%" y="-400%" width="200%" height="900%"><feGaussianBlur stdDeviation="1.4"/></filter>`)
+P(`<filter id="led" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.2"/></filter>`)
+P(`<pattern id="stripe" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.6" height="3.2" fill="${t.tones.dark.f0}"/></pattern>`)
+P(`<radialGradient id="ambient"><stop offset="0" stop-color="rgb(25,30,38)" stop-opacity=".17"/><stop offset=".55" stop-color="rgb(25,30,38)" stop-opacity=".08"/><stop offset="1" stop-color="rgb(25,30,38)" stop-opacity="0"/></radialGradient>`)
+P('</defs>')
+
+P('<g transform="translate(320 178) scale(1.07) translate(-320 -212)">')
+
+// shadows: wide ambient under the plate, tight contacts under feet
+P(`<ellipse cx="320" cy="301" rx="300" ry="15" fill="url(#ambient)"/>`)
+for (const fx of [78, 562]) P(contact(fx, 298.5, 12))
+
+// base plate on feet
+for (const fx of [78, 562]) {
+  P(slab(fx - 11, 296, 22, 2.4, 0, 'dark', { r: .8 }))
+  P(slab(fx - 7.5, 290, 15, 6, 0, 'mid', { r: .6 }))
+}
+P(slab(50, 274, 540, 16, 5, 'mid', { r: 2.5 }))
+P(`<rect x="56" y="270.4" width="528" height="2.2" rx="1.1" fill="${t.tones.lo.top}" stroke="${t.faint}" stroke-width=".5"/>`)
+for (const sx of [60, 580]) P(dot(sx, 282, 1.15))
+// label plate with printed text
+P(slab(452, 277.6, 96, 9.4, 0, 'hi', { r: 1, lw: .55 }))
+P(text(458, 283.9, 'GENUI · 力学实验导轨 · L 1.20 m', 4.1, { font: 'Noto Sans SC', ls: .3 }))
+P(dot(455, 282.3, .55) + dot(545, 282.3, .55))
+
+// hinge block
+P(contact(94, 269.5, 16))
+P(slab(76, 258, 36, 11, 3, 'lo'))
+P(dot(82, 264, 1) + dot(106, 264, 1))
+
+// timer box
+P(contact(334, 269.5, 46))
+P(slab(286, 233, 96, 36, 4, 'hi', { r: 2.5 }))
+P(text(292, 238.6, 'DT-02', 4.2, { weight: 500 }))
+P(text(312, 238.6, '数字计时器', 3.9, { font: 'Noto Sans SC' }))
+P(`<rect x="292" y="241" width="56" height="19" rx="2.2" fill="${t.screen}" stroke="#0d1013" stroke-width=".8"/>`)
+P(`<rect x="293.2" y="242.2" width="53.6" height="3" rx="1" fill="rgba(255,255,255,.06)"/>`)
+P(text(342.5, 254.4, '12.4', 10, { fill: t.screenText, anchor: 'end', weight: 500, ls: .4 }))
+P(text(344, 254.4, 'ms', 4.6, { fill: 'rgba(216,227,234,.6)' }))
+P(text(295, 245.8, 'Δt', 3.6, { fill: 'rgba(216,227,234,.55)', font: 'Source Serif 4' }))
+for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) P(dot(356 + i * 3.2, 244 + j * 3.2, .62, .5))
+P(knob(371.5, 250.5, 5.5))
+P(`<rect x="352" y="259.5" width="25" height="4.6" fill="url(#stripe)" opacity=".75"/><rect x="352" y="259.5" width="25" height="4.6" fill="none" stroke="${t.faint}" stroke-width=".5"/>`)
+P(text(292, 265.6, 'START · RESET', 3.4, { ls: .5 }))
+P(slab(382, 243, 5.5, 7.5, 0, 'dark', { r: .8 }))
+
+// high-end support
+const sup = W(440, 12)
+P(contact(sup[0], 269.5, 9))
+P(slab(sup[0] - 7, 263.5, 14, 5.5, 1.5, 'lo', { r: 1 }))
+P(slab(sup[0] - 3.5, sup[1] + 10, 7, 263.5 - sup[1] - 10, 0, 'mid', { r: .5 }))
+P(slab(sup[0] - 11, sup[1] - 1, 22, 11, 0, 'mid', { r: 1.5 }))
+P(slab(sup[0] + 11, sup[1] + 3, 4, 3, 0, 'mid', { r: .4 }))
+P(knob(sup[0] + 18.5, sup[1] + 4.5, 4))
+
+// track
+const L = 470
+P(`<g transform="translate(${O[0]} ${O[1]}) rotate(-11.5)">`)
+P(slab(0, 0, L, 12, 4, 'mid', { r: 1.5 }))
+P(`<rect x="14" y="2.6" width="${L - 28}" height="7.4" fill="${t.tones.hi.f0}" stroke="${t.faint}" stroke-width=".5"/>`)
+for (let i = 0, x = 18; x <= L - 18; i++, x += 6) {
+  const major = i % 5 === 0
+  P(`<line x1="${x}" y1="2.6" x2="${x}" y2="${2.6 + (major ? 3.4 : 1.7)}" stroke="${t.line}" stroke-width="${major ? .6 : .4}" opacity="${major ? .8 : .5}"/>`)
+  if (major && i % 10 === 0) P(text(x, 9.1, String(i / 10 * 10), 2.9, { anchor: 'middle', ls: 0 }))
+}
+P(text(L - 20, 9.1, 'cm', 2.6, { anchor: 'end', ls: 0, fill: t.faint }))
+P(slab(6, -4, 10, 6, 0, 'dark', { r: 1 }))
+P(slab(L - 14, -4, 9, 9, 0, 'mid', { r: 1 }) + dot(L - 9.5, -1.2, .6))
+P(`<circle cx="7" cy="7" r="3.2" fill="${t.tones.lo.f0}" stroke="${t.line}" stroke-width=".55"/>` + dot(7, 7, .7))
+
+// cart, flag in the beam
+const cx0 = 288
+P(contact(cx0 + 18, 0.6, 7) + contact(cx0 + 74, 0.6, 7))
+P(wheel(cx0 + 18, -8, 7.2) + wheel(cx0 + 74, -8, 7.2))
+P(slab(cx0, -31, 90, 16, 4, 'hi', { r: 3 }))
+P(`<line x1="${cx0}" y1="-21" x2="${cx0 + 90}" y2="-21" stroke="${t.faint}" stroke-width=".6"/>`)
+P(text(cx0 + 6, -16.6, 'CART-A · 0.50 kg', 3.3, { ls: .3 }))
+P(dot(cx0 + 5, -26, .7) + dot(cx0 + 85, -26, .7))
+P(slab(cx0 + 40, -64, 5, 25, 0, 'dark', { r: .6 }))
+P(slab(cx0 + 35, -39, 15, 4, 0, 'mid', { r: .6 }) + dot(cx0 + 38, -37, .55) + dot(cx0 + 47, -37, .55))
+const ax0 = cx0 - 8, ax1 = cx0 - 64, ay = -22
+P(`<line x1="${ax0}" y1="${ay}" x2="${ax1 + 7}" y2="${ay}" stroke="${t.accent}" stroke-width="2.1" stroke-linecap="round"/><polygon points="${ax1},${ay} ${ax1 + 10},${ay - 4.4} ${ax1 + 10},${ay + 4.4}" fill="${t.accent}"/>`)
+P(text((ax0 + ax1) / 2 + 4, ay - 7, 'v', 13, { font: 'Source Serif 4', fill: t.accent, anchor: 'middle' }).replace('<text', '<text font-style="italic"'))
+P('</g>')
+
+// photogate (front arm in front of the cart)
+const gx = 405
+P(contact(gx, 269.5, 9))
+P(slab(gx - 3, 202, 6, 61.5, 0, 'mid', { r: .5 }))
+P(slab(gx - 7, 263.5, 14, 5.5, 1.5, 'lo', { r: 1 }))
+P(slab(gx - 9, 112, 18, 92, 0, 'dark', { r: 2.5 }))
+P(`<rect x="${gx - 7.4}" y="113.4" width="14.8" height="2" rx="1" fill="rgba(255,255,255,.16)"/>`)
+P(text(gx, 121.5, 'PG-1', 3.6, { fill: 'rgba(230,236,242,.6)', anchor: 'middle', weight: 500 }))
+P(`<circle cx="${gx}" cy="128" r="3.4" fill="#22262c" stroke="rgba(255,255,255,.22)" stroke-width=".6"/><circle cx="${gx}" cy="128" r="1.4" fill="#0c0e11"/>`)
+P(`<circle cx="${gx}" cy="137" r="4" fill="${t.accent}" opacity=".45" filter="url(#led)"/><circle cx="${gx}" cy="137" r="1.3" fill="#6f95ff"/>`)
+for (let i = 0; i < 6; i++) P(`<line x1="${gx - 5}" y1="${150 + i * 3}" x2="${gx + 5}" y2="${150 + i * 3}" stroke="rgba(255,255,255,.10)" stroke-width=".6"/>`)
+P(`<circle cx="${gx}" cy="196" r=".8" fill="rgba(255,255,255,.35)"/>`)
+P(slab(gx + 9, 186, 5, 7, 0, 'dark', { r: .8 }))
+const cab = `M ${gx + 14} 189.5 C 436 194, 432 246.5, 387.5 246.5`
+P(`<path d="${cab}" fill="none" stroke="${t.cable}" stroke-width="2.6"/><path d="${cab}" fill="none" stroke="${t.cableHi}" stroke-width=".7" transform="translate(-.5 -.6)"/>`)
+
+// angle
+const hp = W(0, 12), R = 78
+P(`<line x1="${hp[0]}" y1="${hp[1]}" x2="${hp[0] + R + 10}" y2="${hp[1]}" stroke="${t.label}" stroke-width=".55" opacity=".7"/>`)
+P(`<path d="M ${hp[0] + R} ${hp[1]} A ${R} ${R} 0 0 0 ${hp[0] + R * CS} ${hp[1] - R * SN}" fill="none" stroke="${t.label}" stroke-width=".75"/>`)
+P(text(hp[0] + R - 16, hp[1] - 4, 'θ', 12.5, { font: 'Source Serif 4', fill: t.label }).replace('<text', '<text font-style="italic"'))
+P('</g>')
+
+document.getElementById('card-B2').innerHTML = `
+  <div class="head">
+    <div class="title"><span class="tag">图 01</span>斜面小车经过光电门</div>
+    <div class="readout">
+      <div class="ro lit"><span class="k">挡光时间<i>Δt</i></span><span class="v">12.4<small>ms</small></span></div>
+      <div class="ro"><span class="k">速度<i>v</i></span><span class="v">0.82<small>m/s</small></span></div>
+    </div>
+  </div>
+  <svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg">${out.join('')}</svg>
+  <div class="foot"><span>倾角和遮光条宽度已放大，不按比例。遮光条宽 1.0 cm。</span>
+    <span class="keys"><span><span class="kbd">拖动</span>小车</span><span><span class="kbd">空格</span>播放</span></span></div>`
+</script>
+
+<script>
+// Gradients and filters live in the first card's <defs>; ids are document-wide.
+const FORCE = '#e23d28'
+const italic = (x, y, s, size, fill, anchor = 'middle') =>
+  `<text x="${x}" y="${y}" font-family="Source Serif 4" font-style="italic" font-size="${size}" fill="${fill}" text-anchor="${anchor}">${s}</text>`
+function arrow(x0, y0, x1, y1, color, w = 2, head = 9, op = 1) {
+  const a = Math.atan2(y1 - y0, x1 - x0), c = Math.cos(a), s = Math.sin(a)
+  const bx = x1 - c * head, by = y1 - s * head
+  return `<g opacity="${op}"><line x1="${x0}" y1="${y0}" x2="${bx + c * 1}" y2="${by + s * 1}" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/>`
+    + `<polygon points="${x1},${y1} ${bx - s * head * .42},${by + c * head * .42} ${bx + s * head * .42},${by - c * head * .42}" fill="${color}"/></g>`
+}
+function card(id, svg, tag, title, readouts, foot) {
+  document.getElementById(id).innerHTML = `
+    <div class="head"><div class="title"><span class="tag">${tag}</span>${title}</div>
+      <div class="readout">${readouts.map(([k, sym, v, u, lit]) => `<div class="ro${lit ? ' lit' : ''}"><span class="k">${k}<i>${sym}</i></span><span class="v">${v}<small>${u}</small></span></div>`).join('')}</div></div>
+    <svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg">${svg}</svg>
+    <div class="foot"><span>${foot[0]}</span><span class="keys">${foot[1]}</span></div>`
+}
+
+// ---------- force diagram ----------
+{
+  const o = []
+  const P = (s) => o.push(s)
+  const th = 30 * T, c = Math.cos(th), s = Math.sin(th)
+  const x0 = 104, x1 = 520, yb = 290
+  const yTop = yb - (x1 - x0) * Math.tan(th)
+  P(`<ellipse cx="320" cy="308" rx="290" ry="13" fill="url(#ambient)"/>`)
+  for (const fx of [92, 548]) { P(contact(fx, 306, 11)); P(slab(fx - 10, 303, 20, 2.4, 0, 'dark', { r: .8 })); P(slab(fx - 7, 299, 14, 4, 0, 'mid', { r: .6 })) }
+  P(slab(66, 294, 508, 5, 3.5, 'mid', { r: 2 }))
+  P(contact((x0 + x1) / 2, 291, 200))
+  P(`<polygon points="${x0},${yb} ${x1},${yb} ${x1},${yTop}" fill="url(#g-mid)"/>`)
+  P(`<polygon points="${x0},${yb} ${x1},${yTop} ${x1},${yTop - 4} ${x0},${yb - 4}" fill="${t.tones.mid.top}"/>`)
+  P(`<line x1="${x0 + 2}" y1="${yb - 3.3}" x2="${x1 - 1}" y2="${yTop - 3.3}" stroke="${t.bevel}" stroke-width=".8"/>`)
+  P(`<line x1="${x0}" y1="${yb}" x2="${x1}" y2="${yTop}" stroke="${t.faint}" stroke-width=".55"/>`)
+  P(`<polygon points="${x0},${yb} ${x1},${yb} ${x1},${yTop - 4} ${x0},${yb - 4}" fill="none" stroke="${t.line}" stroke-width="${t.lw}" stroke-linejoin="round"/>`)
+  P(dot(x1 - 8, yb - 8, 1.1) + dot(x1 - 8, yTop + 18, 1.1))
+  P(text(x1 - 16, yb - 9, 'WEDGE-30', 7.5, { anchor: 'end' }))
+  // block on the slope (bottom-centre sits on the top strip)
+  const BW = 100, BH = 46
+  const sAt = 0.5, bx = x0 + (x1 - x0) * sAt, by = yb - (x1 - x0) * sAt * Math.tan(th) - 4
+  P(`<g transform="translate(${bx} ${by}) rotate(-30)">`)
+  P(`<ellipse cx="0" cy="0.4" rx="${BW / 2 + 2}" ry="1.6" fill="rgba(25,30,38,.38)" filter="url(#tight)"/>`)
+  P(slab(-BW / 2, -BH, BW, BH, 6, 'hi', { r: 3 }))
+  // labels sit in the two quadrants no force line crosses
+  P(text(-BW / 2 + 8, -BH + 22, 'M-1', 7.5, {}))
+  P(text(BW / 2 - 8, -7, '1.0 kg', 7.5, { anchor: 'end' }))
+  P(dot(-BW / 2 + 6, -BH + 11, .9) + dot(BW / 2 - 6, -BH + 11, .9))
+  P('</g>')
+  const cx = bx - (BH / 2) * s, cy = by - (BH / 2) * c
+  const G = 132, N = G * c, F = G * s
+  const g1 = [cx - F * c, cy + F * s]      // along the slope, down
+  const g2 = [cx + N * s, cy + N * c]      // into the slope
+  const guide = (x2, y2) => `<line x1="${cx}" y1="${cy + G}" x2="${x2}" y2="${y2}" stroke="${FORCE}" stroke-width=".7" stroke-dasharray="3 3" opacity=".45"/>`
+  P(guide(...g1) + guide(...g2))
+  P(arrow(cx, cy, ...g1, FORCE, 1.2, 7, .5))
+  P(arrow(cx, cy, ...g2, FORCE, 1.2, 7, .5))
+  P(arrow(cx, cy, cx, cy + G, FORCE))
+  P(arrow(cx, cy, cx - N * s, cy - N * c, FORCE))
+  P(arrow(cx, cy, cx + F * c, cy - F * s, FORCE))
+  P(`<circle cx="${cx}" cy="${cy}" r="2.6" fill="#fff" stroke="${FORCE}" stroke-width="1.3"/>`)
+  const faint = (str) => str.replace('<text', '<text opacity=".6"')
+  P(italic(cx + 10, cy + G + 4, 'G', 15, FORCE, 'start'))
+  P(italic(cx - N * s - 8, cy - N * c - 4, 'N', 15, FORCE, 'end'))
+  P(italic(cx + F * c + 8, cy - F * s - 6, 'f', 15, FORCE, 'start'))
+  P(faint(italic(g1[0] - 8, g1[1] + 14, 'G₁', 13, FORCE, 'end')))
+  P(faint(italic(g2[0] + 10, g2[1] + 4, 'G₂', 13, FORCE, 'start')))
+  const R = 50
+  P(`<path d="M ${x0 + R} ${yb} A ${R} ${R} 0 0 0 ${x0 + R * c} ${yb - R * s}" fill="none" stroke="${t.label}" stroke-width=".75"/>`)
+  P(italic(x0 + R + 10, yb - 9, 'θ', 13, t.label, 'start'))
+  card('card-F', o.join(''), '图 02', '斜面上静止的物块',
+    [['支持力', 'N', '8.66', 'N', true], ['摩擦力', 'f', '5.00', 'N'], ['倾角', 'θ', '30', '°']],
+    ['G₁ 沿斜面向下，G₂ 垂直斜面；N 与 G₂ 平衡，f 与 G₁ 平衡。', '<span><span class="kbd">拖动</span>改倾角</span>'])
+}
+
+// ---------- v–t plot ----------
+{
+  const o = []
+  const P = (s) => o.push(s)
+  const X0 = 78, X1 = 578, Y0 = 292, Y1 = 34
+  const tx = (tt) => X0 + (tt / 4) * (X1 - X0), vy = (v) => Y0 - (v / 8) * (Y0 - Y1)
+  const V = '#1f4fd8'
+  P(`<rect x="${X0 - 16}" y="${Y1 - 18}" width="${X1 - X0 + 62}" height="${Y0 - Y1 + 40}" rx="8" fill="#fbfcfd" stroke="#e1e4e8" stroke-width=".8"/>`)
+  for (let v = 2; v <= 8; v += 2) P(`<line x1="${X0}" y1="${vy(v)}" x2="${X1}" y2="${vy(v)}" stroke="rgba(38,43,50,.08)" stroke-width=".7"/>`)
+  for (let tt = 1; tt <= 4; tt++) P(`<line x1="${tx(tt)}" y1="${Y0}" x2="${tx(tt)}" y2="${Y1}" stroke="rgba(38,43,50,.08)" stroke-width=".7"/>`)
+  // displacement area up to t = 2
+  P(`<polygon points="${tx(0)},${vy(0)} ${tx(2)},${vy(4)} ${tx(2)},${vy(0)}" fill="${V}" opacity=".09"/>`)
+  P(text((tx(0) + tx(2)) / 2 + 30, vy(0.9), 'x = 4.0 m', 9, { fill: 'rgba(31,79,216,.75)', anchor: 'middle', ls: 0 }))
+  // axes, arrows end on their own heads
+  P(`<line x1="${X0}" y1="${Y0}" x2="${X1 + 10}" y2="${Y0}" stroke="${t.line}" stroke-width=".8"/><polygon points="${X1 + 16},${Y0} ${X1 + 9},${Y0 - 3} ${X1 + 9},${Y0 + 3}" fill="${t.line}"/>`)
+  P(`<line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1 - 8}" stroke="${t.line}" stroke-width=".8"/><polygon points="${X0},${Y1 - 14} ${X0 - 3},${Y1 - 7} ${X0 + 3},${Y1 - 7}" fill="${t.line}"/>`)
+  for (let tt = 0; tt <= 4; tt++) { P(`<line x1="${tx(tt)}" y1="${Y0}" x2="${tx(tt)}" y2="${Y0 + 4}" stroke="${t.line}" stroke-width=".7"/>`); P(text(tx(tt), Y0 + 15, tt.toFixed(1), 9.5, { anchor: 'middle', fill: '#8a9099', ls: 0 })) }
+  for (let v = 2; v <= 8; v += 2) { P(`<line x1="${X0 - 4}" y1="${vy(v)}" x2="${X0}" y2="${vy(v)}" stroke="${t.line}" stroke-width=".7"/>`); P(text(X0 - 8, vy(v) + 3.3, v.toFixed(0), 9.5, { anchor: 'end', fill: '#8a9099', ls: 0 })) }
+  P(italic(X1 + 24, Y0 + 4.5, 't', 13, '#5d636c', 'start') + text(X1 + 33, Y0 + 4, '/ s', 9, { fill: '#8a9099', ls: 0 }))
+  P(italic(X0 + 12, Y1 - 6, 'v', 13, '#5d636c', 'start') + text(X0 + 24, Y1 - 6, '/ (m·s⁻¹)', 9, { fill: '#8a9099', ls: 0 }))
+  // series
+  P(`<polyline points="${tx(0)},${vy(0)} ${tx(3)},${vy(6)} ${tx(4)},${vy(6)}" fill="none" stroke="${V}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`)
+  // cursor at t = 2
+  P(`<line x1="${tx(2)}" y1="${Y0}" x2="${tx(2)}" y2="${Y1}" stroke="${t.line}" stroke-width=".6" opacity=".35"/>`)
+  P(`<line x1="${X0}" y1="${vy(4)}" x2="${tx(2)}" y2="${vy(4)}" stroke="${V}" stroke-width=".6" opacity=".35"/>`)
+  P(`<circle cx="${tx(2)}" cy="${vy(4)}" r="7" fill="${V}" opacity=".12"/><circle cx="${tx(2)}" cy="${vy(4)}" r="3.4" fill="#fff" stroke="${V}" stroke-width="1.6"/>`)
+  P(`<rect x="${tx(2) - 15}" y="${Y1 - 13}" width="30" height="13" rx="3" fill="#fff" stroke="#d6d9de" stroke-width=".7"/>`)
+  P(text(tx(2), Y1 - 3.6, '2.0 s', 8.5, { anchor: 'middle', fill: '#5d636c', ls: 0 }))
+  card('card-P', o.join(''), '图 03', '小车的 v–t 图像',
+    [['时间', 't', '2.0', 's'], ['速度', 'v', '4.0', 'm/s', true], ['位移', 'x', '4.0', 'm']],
+    ['前 3 s 匀加速，a = 2.0 m/s²；之后匀速。阴影面积是 0–2 s 内的位移。', '<span><span class="kbd">拖动</span>时刻</span>'])
+}
+</script>
+</body>
+</html>

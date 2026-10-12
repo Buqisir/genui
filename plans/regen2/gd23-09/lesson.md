@@ -1,0 +1,194 @@
+---
+id: gd23-09
+title: 电子墨水像素的颜色迁移
+source: 2023 广东卷 第 9 题（多选，6 分）
+question: 电子墨水是一种无光源显示技术，它利用电场调控带电颜料微粒的分布，使之在自然光的照射下呈现出不同颜色．透明面板下有一层胶囊，其中每个胶囊都是一个像素．如图所示，胶囊中有带正电的白色微粒和带负电的黑色微粒．当胶囊下方的电极极性由负变正时，微粒在胶囊内迁移（每个微粒电量保持不变），像素由黑色变成白色．下列说法正确的有（　　）
+choice: AC
+answers:
+  - { name: phiWhiteBlack, value: 20, unit: V }
+  - { name: phiBlackWhite, value: 20, unit: V }
+  - { name: Wwhite, value: 2, unit: "×10⁻¹⁸ J" }
+  - { name: Wblack, value: 2, unit: "×10⁻¹⁸ J" }
+---
+
+胶囊夹在上方透明面板与下方电极之间，近似一对平行板。题目没有给数值，下面取代表值说明方向：板间距 $d = 40\,\mu\mathrm{m}$，电极电势幅值 $\varphi_E = 20\,\mathrm{V}$（面板一直取 $0$ 为参考），每颗微粒电量大小 $|q| = 1 \times 10^{-19}\,\mathrm{C}$。电场指向下方为正。
+
+像素呈黑色时，带负电的黑色微粒靠近面板，带正电的白色微粒靠近电极，电极极性为负。电极由负变正后，电场反向，白色微粒上移、黑色微粒下移，面板下看到白色。
+
+## 完整解答
+
+取面板电势为 $0$。像素呈黑色时电极为负，电场指向下方；呈白色时电极为正，电场指向上方。滑块上的 $s$ 是迁移进度：$s = 0$ 为黑态，$s = 1$ 为白态。
+
+**A. 正确。** 呈黑色时黑色微粒靠近面板，白色微粒靠近电极，电极为负。电场指向下方，沿电场线电势降低，下方电势更低：
+
+$$
+\varphi_黑 - \varphi_白 = -\varphi_\text{电极} = 20\,\mathrm{V} > 0
+$$
+
+代表值下 $\varphi_黑 = 0$、$\varphi_白 = -20\,\mathrm{V}$，黑色微粒所在区域的电势高于白色微粒所在区域。
+
+**B. 错误。** 呈白色时电极为正，电场指向上方，电势沿向上降低，所以下方电势更高。黑色微粒已经在电极一侧，白色微粒在面板一侧：
+
+$$
+\boxed{\varphi_黑 - \varphi_白 = \varphi_E = 20\,\mathrm{V} > 0}
+$$
+
+代表值下 $\varphi_黑 = 20\,\mathrm{V}$、$\varphi_白 = 0$。黑色微粒所在区域的电势仍然更高，选项说成「低于」，把高低说反了。
+
+**C. 正确。** 由黑变白时电极由负变正，电场指向上方。白色微粒带正电，电场力与电场同向，也指向上方；它从电极一侧迁到面板一侧，位移与电场力同向，电场力做正功：
+
+$$
+W_白 = q(\varphi_下 - \varphi_上) = q\,\varphi_E
+$$
+
+代表值下 $\boxed{W_白 = 2.0 \times 10^{-18}\,\mathrm{J} > 0}$。
+
+**D. 错误。** 由白变黑是电极由正变负，电场指向下方。黑色微粒带负电，受力与电场反向，指向上方；它从电极一侧迁回面板一侧，位移与电场力同向，电场力做正功，不是负功：
+
+$$
+\boxed{W_黑 = |q|\,\varphi_E = 2.0 \times 10^{-18}\,\mathrm{J} > 0}
+$$
+
+结论：$\boxed{\mathrm{AC}}$。
+
+## 交互演示
+
+拖动「迁移进度」：$0$ 是电极为负的黑态，$1$ 是电极为正的白态。电场线只画在胶囊里，两粒微粒随进度上下交换。微粒尺寸相对胶囊做了放大，不按比例。
+
+<Param name="s" label="迁移进度" value={0} min={0} max={1} step={0.01} />
+
+<Param name="d" label="板间距" value={40} min={20} max={80} step={1} unit="μm" hidden />
+
+<Param name="phiE0" label="电极电势幅值" symbol="φ_E" value={20} min={5} max={40} step={1} unit="V" hidden />
+
+<Param name="qAbs" label="微粒电量" symbol="|q|" value={1} min={0.2} max={5} step={0.1} unit="×10⁻¹⁹ C" hidden />
+
+<Define name="phiE" expr="phiE0*(2*s - 1)" />
+
+<Define name="E" expr="-phiE/(d*1e-6)" />
+
+<Define name="yWhite" expr="(1 - s)*0.22 + s*0.78" />
+
+<Define name="yBlack" expr="s*0.22 + (1 - s)*0.78" />
+
+<Define name="phiWhite" expr="phiE*(1 - s)" />
+
+<Define name="phiBlack" expr="phiE*s" />
+
+<Define name="phiWhiteBlack" expr="phiE0" />
+
+<Define name="phiBlackWhite" expr="phiE0" />
+
+<Define name="Wwhite" expr="qAbs*1e-19*phiE0*1e18" />
+
+<Define name="Wblack" expr="qAbs*1e-19*phiE0*1e18" />
+
+<Preset label="黑态：电极为负" set={{s: 0}} />
+
+<Preset label="白态：电极为正" set={{s: 1}} />
+
+<Question text="A. 像素呈黑色时，黑色微粒所在区域的电势高于白色微粒所在区域的电势" set={{s: 0}} hint="黑态电极为负，黑粒在上，φ_黑 > φ_白" />
+
+<Question text="B. 像素呈白色时，黑色微粒所在区域的电势低于白色微粒所在区域的电势" set={{s: 1}} hint="白态电极为正，黑粒在下方，电势仍更高" />
+
+<Question text="C. 像素由黑变白的过程中，电场力对白色微粒做正功" set={{s: 1}} hint="白色微粒带正电，上移与电场力同向" />
+
+<Question text="D. 像素由白变黑的过程中，电场力对黑色微粒做负功" set={{s: 0}} hint="黑色微粒带负电，上移仍与电场力同向" />
+
+<Status cases={[
+  {when: "s < 0.02", label: "黑态：电极为负，黑粒在上", tone: "neutral"},
+  {when: "s > 0.98", label: "白态：电极为正，白粒在上", tone: "success"},
+  {when: "phiE < 0", label: "电极仍为负，电场指向下方", tone: "info"},
+  {label: "电极为正，电场指向上方", tone: "info"}
+]} />
+
+<Readout items={[
+  {label: "电极电势", symbol: "φ_E", expr: "phiE", unit: "V", digits: 1, color: "field"},
+  {label: "白粒电势", symbol: "φ_白", expr: "phiWhite", unit: "V", digits: 1, color: "field"},
+  {label: "黑粒电势", symbol: "φ_黑", expr: "phiBlack", unit: "V", digits: 1, color: "field"},
+  {label: "黑减白", symbol: "φ_黑−φ_白", expr: "phiBlack - phiWhite", unit: "V", digits: 1, color: "field"},
+  {label: "由黑变白白粒做功", symbol: "W_白", expr: "Wwhite", unit: "×10⁻¹⁸ J", digits: 2, color: "force"},
+  {label: "由白变黑黑粒做功", symbol: "W_黑", expr: "Wblack", unit: "×10⁻¹⁸ J", digits: 2, color: "force"}
+]} />
+
+<Answer items={[
+  {label: "答案", text: "AC"},
+  {label: "黑态 φ_黑 − φ_白", symbol: "φ_黑−φ_白", expr: "phiWhiteBlack", value: 20, unit: "V", digits: 0},
+  {label: "白态 φ_黑 − φ_白", symbol: "φ_黑−φ_白", expr: "phiBlackWhite", value: 20, unit: "V", digits: 0},
+  {label: "由黑变白，电场力对白粒做功", symbol: "W_白", expr: "Wwhite", value: 2, unit: "×10⁻¹⁸ J", digits: 1},
+  {label: "由白变黑，电场力对黑粒做功", symbol: "W_黑", expr: "Wblack", value: 2, unit: "×10⁻¹⁸ J", digits: 1}
+]} />
+
+<Figure title="像素胶囊" height={480} size="narrow" params={["s", "phiE", "yWhite", "yBlack"]} note="微粒尺寸相对胶囊做了放大，不按比例。面板电势取 0。" hud={[
+  {symbol: "φ_E", label: "电极", expr: "phiE", unit: "V", digits: 1},
+  {symbol: "φ_白", label: "白粒", expr: "phiWhite", unit: "V", digits: 1},
+  {symbol: "φ_黑", label: "黑粒", expr: "phiBlack", unit: "V", digits: 1}
+]} legend={[
+  {kind: "field", label: "电场线"},
+  {kind: "force", label: "电场力"}
+]}>
+figure({
+  draw(ctx, p, v) {
+    const m = v.view({ xmin: -1.15, xmax: 1.85, ymin: -0.55, ymax: 1.72, equal: true })
+    const cx = 0.28
+    const cy = 0.5
+    const R = 0.5
+    const topY = cy + R
+    const botY = cy - R
+    const positive = p.phiE >= 0
+    const clip = []
+    for (let i = 0; i <= 64; i++) {
+      const a = (Math.PI * 2 * i) / 64
+      clip.push([cx + (R - 0.04) * Math.cos(a), cy + (R - 0.04) * Math.sin(a)])
+    }
+    v.vessel(m, [{ flask: { cx, cy, r: R, neck: { w: 0.02, h: 0.02 }, open: false } }])
+    v.block(m, cx, topY + 0.05, R * 1.55, 0.05, { pivot: 'center', angle: 0 })
+    v.bar(m, cx - R * 0.62, botY - 0.08, cx + R * 0.62, botY - 0.08, { thick: 8 })
+    v.efield(
+      m,
+      [
+        { x1: cx - R * 0.42, y1: topY - 0.04, x2: cx + R * 0.42, y2: topY - 0.04, q: positive ? -1 : 1 },
+        { x1: cx - R * 0.42, y1: botY + 0.04, x2: cx + R * 0.42, y2: botY + 0.04, q: positive ? 1 : -1 },
+      ],
+      { clip, density: 0.55, arrows: true },
+    )
+    const span = topY - botY
+    const yw = botY + p.yWhite * span
+    const yk = botY + p.yBlack * span
+    const fDir = positive ? 0.22 : -0.22
+    v.ball(m, cx - 0.16, yw, 0.055, { charge: true })
+    v.ball(m, cx + 0.16, yk, 0.055, { charge: true })
+    v.vec(m, cx - 0.46, yw, 0, fDir, { kind: 'force', label: 'F白' })
+    v.vec(m, cx + 0.46, yk, 0, -fDir, { kind: 'force', label: 'F黑' })
+    v.label(m, cx - 0.78, yw, '白 +')
+    v.label(m, cx + 0.78, yk, '黑 −')
+    v.label(m, cx - 0.28, topY + 0.3, p.s > 0.5 ? '白' : '黑')
+    v.label(m, cx - R - 0.24, cy, '胶囊')
+    v.label(m, cx + R + 0.22, cy + 0.12, '面板')
+    v.label(m, cx + R + 0.3, botY - 0.1, positive ? '电极 +' : '电极 −')
+    v.photon(m, 1.35, topY + 0.62, cx + 0.55, topY + 0.16, { still: true, label: '自然光' })
+  },
+})
+</Figure>
+
+<Plot title="两粒电势随迁移进度" size="narrow" x={{name: "s", min: 0, max: 1, label: "迁移进度"}} y={{label: "φ", min: -22, max: 22, unit: "V"}} cursor="s" series={[
+  {expr: "phiE0*(2*s - 1)*(1 - s)", color: "field", label: "φ_白"},
+  {expr: "phiE0*(2*s - 1)*s", color: "ink", label: "φ_黑"}
+]} marks={[{x: 0, label: "黑"}, {x: 1, label: "白"}]} />
+
+<Ledger title="电场力做功" unit="×10⁻¹⁸ J" digits={2} size="narrow" parts={[
+  {label: "对白色微粒", symbol: "W_白", expr: "Wwhite", color: "force"},
+  {label: "对黑色微粒", symbol: "W_黑", expr: "Wblack", color: "charge"}
+]} caption="两次迁移电场力都做正功，大小相等" />
+
+## 结合图像
+
+黑态（$s = 0$ 或按选项 A）：电场指向下方，电势从上到下降低。黑色微粒在上、白色微粒在下，$\varphi_黑 > \varphi_白$，A 成立。
+
+白态（$s = 1$ 或按选项 B）：电场指向上方，下方电势更高。黑色微粒在下、白色微粒在上，$\varphi_黑 > \varphi_白$，B 不成立。由黑变白时白色微粒向上走，与电场力同向，C 成立。由白变黑时黑色微粒也向上走，电场力同样做正功，D 不成立。
+
+电势曲线上，$s = 0$ 时 $\varphi_白$（场色）在 $-20\,\mathrm{V}$、$\varphi_黑$ 在 $0$；$s = 1$ 时电极变正，$\varphi_白$ 在 $0$、$\varphi_黑$ 在 $+20\,\mathrm{V}$，黑粒仍在更高的电势。做功条两段一样长，都是正的。
+
+## 答案汇总
+
+A 正确，B 错误，C 正确，D 错误。选 $\boxed{\mathrm{AC}}$。

@@ -1,0 +1,206 @@
+---
+id: gd24-08
+title: 污泥絮体的电泳
+source: 2024 广东卷 第 8 题（多选，6 分）
+question: 污水中的污泥絮体经处理后带负电，可利用电泳技术对其进行沉淀去污，基本原理如图所示。涂有绝缘层的金属圆盘和金属棒分別接电源正、负极、金属圆盘置于底部、金属棒插入污水中，形成如图所示的电场分布，其中实线为电场线，虚线为等势面。M 点和 N 点在同一电场线上，M 点和 P 点在同一等势面上。下列说法正确的有（　　）
+choice: AC
+answers: []
+---
+
+涂有绝缘层的金属圆盘接电源正极、金属棒接负极，两者都是导体，所以各自是一个等势体：圆盘整个表面电势最高，金属棒整根电势最低。电场线从正电极出发、止于负电极，实线从圆盘附近向上弯向金属棒；等势面与电场线正交，围绕金属棒成弧形。污泥絮体带负电，受力方向与场强方向相反，会沿电场线朝圆盘运动并沉淀。
+
+题目没有给容器尺寸和电压，下面取代表性数值：圆盘电势比金属棒高 $U = 12\,\mathrm{V}$，絮体电量 $q = -1\,\mathrm{nC}$。画面按这个比例画，不按真实污水池的尺寸。
+
+## 完整解答
+
+沿电场线电势降低。M、N 在同一条电场线上，线的方向从圆盘指向金属棒，先过 N 再过 M，所以
+
+$$
+\varphi_M < \varphi_N
+$$
+
+两点又都在污水里，不在导体上。
+
+**A 正确。** M 点比 N 点更靠近负极，沿电场线方向电势降低，$\varphi_M < \varphi_N$。
+
+**B 错误。** 电场线的疏密表示场强大小。P 点靠近金属棒，电场线密；N 点靠近容器左壁，电场线疏。所以 $E_N < E_P$，不是 N 点的场强更大。
+
+**C 正确。** 絮体带负电，电势能 $E_\mathrm{p} = q\varphi$，$q < 0$。从 M 移到 N，电势升高，负电荷的电势能降低，电场力做正功：
+
+$$
+W_{MN} = q(\varphi_M - \varphi_N) > 0
+$$
+
+$q < 0$ 且 $\varphi_M - \varphi_N < 0$，两负相乘才得正。这也和受力方向一致：电场线从圆盘指向金属棒，负电荷受力与场强反向、指向圆盘。N 比 M 更靠近圆盘，从 M 到 N 是顺着电场力走，位移与力同向，做的是正功。
+
+**D 错误。** M 与 P 在同一等势面上，$\varphi_M = \varphi_P$；再由 A 得 $\varphi_N > \varphi_M = \varphi_P$。同一絮体 $q < 0$，电势越高电势能越低：
+
+$$
+E_{\mathrm{p}N} - E_{\mathrm{p}P} = q(\varphi_N - \varphi_P) < 0
+$$
+
+所以 N 点的电势能比 P 点的小，不是更大。
+
+结论：A、C 正确，答案为 $\boxed{\mathrm{AC}}$。
+
+## 交互演示
+
+拖动电压，看电场线怎样从圆盘弯向金属棒、等势面怎样围着棒。点侧栏的选项，画面会切到能直接比出该选项对错的两个点。
+
+<Param name="U" label="圆盘相对金属棒的电势差" symbol="U" value={12} min={4} max={24} step={1} unit="V" color="field" />
+
+<Param name="q" label="絮体电量" symbol="q" value={-1} min={-3} max={-0.2} step={0.1} unit="nC" color="charge" />
+
+<Param name="focus" label="对比的两点" value={1} options={[{value: 1, label: "M 与 N：电势"}, {value: 2, label: "N 与 P：场强"}, {value: 3, label: "M 到 N：做功"}, {value: 4, label: "N 与 P：电势能"}]} />
+
+<Define name="phiM" expr="0.62*U" />
+
+<Define name="phiN" expr="0.91*U" />
+
+<Define name="phiP" expr="0.62*U" />
+
+<Define name="EN" expr="0.55*U" />
+
+<Define name="EP" expr="1.1*U" />
+
+<Define name="WMN" expr="q*(phiM - phiN)*1e-9" />
+
+<Define name="EpN" expr="q*phiN*1e-9" />
+
+<Define name="EpP" expr="q*phiP*1e-9" />
+
+<Question text="A. M 点的电势比 N 点的低" set={{focus: 1}} hint="沿电场线电势降低，M 比 N 更靠近负极" />
+
+<Question text="B. N 点的电场强度比 P 点的大" set={{focus: 2}} hint="靠近金属棒的地方电场线更密" />
+
+<Question text="C. 污泥絮体从 M 点移到 N 点，电场力对其做正功" set={{focus: 3}} hint="负电荷从低电势到高电势，电势能降低，电场力做正功" />
+
+<Question text="D. 污泥絮体在 N 点的电势能比其在 P 点的大" set={{focus: 4}} hint="N 电势更高，负电荷在那里电势能更低" />
+
+<Preset label="题目情形：U = 12 V" set={{U: 12, q: -1, focus: 1}} />
+
+<Status cases={[
+  {when: "focus == 1", label: "沿电场线电势降低：φ_M < φ_N，A 正确", tone: "success"},
+  {when: "focus == 2", label: "P 靠近金属棒，电场线更密：E_N < E_P，B 错误", tone: "warning"},
+  {when: "focus == 3", label: "负电荷电势能降低：W_MN > 0，C 正确", tone: "success"},
+  {label: "φ_N > φ_P 且 q < 0：E_pN < E_pP，D 错误", tone: "warning"}
+]} />
+
+<Readout items={[
+  {label: "M 点电势", symbol: "φ_M", expr: "phiM", unit: "V", digits: 2, color: "field"},
+  {label: "N 点电势", symbol: "φ_N", expr: "phiN", unit: "V", digits: 2, color: "field"},
+  {label: "P 点电势", symbol: "φ_P", expr: "phiP", unit: "V", digits: 2, color: "field"},
+  {label: "N 点场强", symbol: "E_N", expr: "EN", unit: "V/m", digits: 1, color: "field"},
+  {label: "P 点场强", symbol: "E_P", expr: "EP", unit: "V/m", digits: 1, color: "field"},
+  {label: "M 到 N 电场力做功", symbol: "W_{MN}", expr: "WMN", unit: "J", digits: 2, format: "sci", color: "force"},
+  {label: "N 点电势能", symbol: "E_{pN}", expr: "EpN", unit: "J", digits: 2, format: "sci", color: "field"},
+  {label: "P 点电势能", symbol: "E_{pP}", expr: "EpP", unit: "J", digits: 2, format: "sci", color: "field"}
+]} />
+
+<Answer items={[{label: "答案", text: "AC"}]} />
+
+<Figure title="电泳沉淀" height={440} params={["focus"]} note="容器尺寸不按比例。圆盘和金属棒都涂有绝缘层，按有限长带电体画场；电势读数另取代表性数值" legend={[{kind: "field", label: "电场线"}, {kind: "field-dash", label: "等势面"}, {kind: "charge", label: "正在对比的点"}]} hud={[{symbol: "U", label: "电势差", expr: "U", unit: "V", digits: 0}]}>
+figure({
+  draw(ctx, p, v) {
+    const m = v.view({ xmin: -2.15, xmax: 3.05, ymin: -0.55, ymax: 3.25, equal: true })
+    const x1 = -1.5, x2 = 1.5, yb = 0, yt = 2.5
+    v.vessel(m, [{ x1, y1: yb, x2, y2: yt, open: 'top' }], {
+      fills: [{ x1: x1 + 0.05, y1: 0.1, x2: x2 - 0.05, y2: 2.22, kind: 'water' }],
+    })
+    v.bar(m, -1.2, 0.08, 1.2, 0.08, { thick: 8 })
+    v.bar(m, 0, 0.4, 0, 2.62, { thick: 7 })
+    const segs = []
+    const nD = 7
+    for (let i = 0; i < nD; i++) {
+      const a = -1.15 + 2.3 * i / nD
+      const b = -1.15 + 2.3 * (i + 1) / nD
+      segs.push({ x1: a, y1: 0.08, x2: b, y2: 0.08, q: 0.6 })
+    }
+    const nR = 6
+    for (let i = 0; i < nR; i++) {
+      const a = 0.5 + 1.95 * i / nR
+      const b = 0.5 + 1.95 * (i + 1) / nR
+      segs.push({ x1: 0, y1: a, x2: 0, y2: b, q: -0.7 })
+    }
+    const field = v.efield(m, segs, {
+      equipotentials: [-8, -4, -1, 2, 6],
+      through: [[-1.02, 0.55]],
+      density: 1,
+      charges: false,
+      clip: [x1 + 0.1, 0.18, x2 - 0.1, 2.16],
+    })
+    const line = field.line(-1.02, 0.55).filter((pt) => pt[0] < -0.12 && pt[0] > x1 && pt[1] > 0.2 && pt[1] < 2.05)
+    const nearest = (y) => {
+      let best = line[0]
+      for (const pt of line) if (Math.abs(pt[1] - y) < Math.abs(best[1] - y)) best = pt
+      return best
+    }
+    const N = nearest(0.48)
+    const M = nearest(1.05)
+    const eq = field.phi(M[0], M[1])
+    let Px = 0.85, Py = 0.7, best = 1e9
+    for (let x = 0.45; x <= 1.25; x += 0.03) {
+      for (let y = 0.35; y <= 1.15; y += 0.03) {
+        const dPhi = Math.abs(field.phi(x, y) - eq)
+        const e = field.E(x, y)
+        const Em = Math.hypot(e[0], e[1])
+        const eN = field.E(N[0], N[1])
+        const rank = dPhi + (Em > Math.hypot(eN[0], eN[1]) ? 0 : 5) + 0.15 * Math.abs(y - 0.75)
+        if (rank < best) { best = rank; Px = x; Py = y }
+      }
+    }
+    const mark = (x, y, name, on) => {
+      v.circle(m, x, y, 0.045, { fill: on ? v.color.charge : v.color.ink })
+      v.label(m, x, y, name)
+    }
+    const showMN = p.focus === 1 || p.focus === 3
+    const showNP = p.focus === 2 || p.focus === 4
+    mark(M[0], M[1], 'M', showMN)
+    mark(N[0], N[1], 'N', showMN || showNP)
+    mark(Px, Py, 'P', showNP)
+    if (p.focus === 2) {
+      const eN = field.E(N[0], N[1])
+      const eP = field.E(Px, Py)
+      const nN = Math.hypot(eN[0], eN[1]) || 1
+      const nP = Math.hypot(eP[0], eP[1]) || 1
+      v.vec(m, N[0], N[1], 0.42 * eN[0] / nN, 0.42 * eN[1] / nN, { kind: 'field', label: 'E_N' })
+      v.vec(m, Px, Py, 0.42 * eP[0] / nP, 0.42 * eP[1] / nP, { kind: 'field', label: 'E_P' })
+    }
+    if (p.focus === 3) {
+      const eM = field.E(M[0], M[1])
+      const n = Math.hypot(eM[0], eM[1]) || 1
+      v.vec(m, M[0], M[1], -0.46 * eM[0] / n, -0.46 * eM[1] / n, { kind: 'force', label: 'F' })
+    }
+    const bx = 2.28, by = 1.3
+    v.line(m, 1.2, 0.08, bx, 0.08, { color: v.color.ink })
+    v.line(m, bx, 0.08, bx, by - 0.16, { color: v.color.ink })
+    v.line(m, bx - 0.13, by - 0.16, bx + 0.13, by - 0.16, { color: v.color.ink, width: 3.2 })
+    v.line(m, bx - 0.07, by + 0.16, bx + 0.07, by + 0.16, { color: v.color.ink, width: 1.4 })
+    v.line(m, bx, by + 0.16, bx, 2.95, { color: v.color.ink })
+    v.line(m, 0, 2.62, 0, 2.95, { color: v.color.ink })
+    v.line(m, 0, 2.95, bx, 2.95, { color: v.color.ink })
+    v.label(m, -1.1, 2.36, '污水')
+    v.label(m, bx + 0.3, by - 0.16, '+')
+    v.label(m, bx + 0.3, by + 0.16, '−')
+  },
+})
+</Figure>
+
+## 结合图像理解
+
+加粗的那条电场线就是过 M、N 的那条：箭头从圆盘弯向金属棒，N 靠近圆盘和左壁，M 在同一条线上更靠近棒。虚线等势面围着金属棒；越靠近棒电势越低，越靠近圆盘电势越高。P 落在过 M 的那条等势面上，离棒更近，所以那里的电场线更密、场强更大。
+
+侧栏电势以金属棒为零、圆盘为 $+U$。在这个代表性比例下，$\varphi_N \approx 0.91U$、$\varphi_M = \varphi_P \approx 0.62U$，场强大致是 $E_P \approx 2E_N$。比例随容器形状略有变化，不影响四个选项的大小关系。
+
+絮体电量始终为负。把 $q$ 调得更负，$W_{MN}$ 和两点的电势能都按比例变，正负号不变：从 M 到 N 电场力一直做正功，N 点的电势能一直比 P 点的低。
+
+## 答案汇总
+
+| 选项 | 结论 | 理由 |
+|---|---|---|
+| A | 正确 | 沿电场线电势降低，$\varphi_M < \varphi_N$ |
+| B | 错误 | P 靠近金属棒，电场线更密，$E_N < E_P$ |
+| C | 正确 | $q < 0$ 且 $\varphi_M < \varphi_N$，两负相乘 $W_{MN} > 0$ |
+| D | 错误 | $\varphi_N > \varphi_P$，负电荷在 N 点电势能更低 |
+
+答案：$\boxed{\mathrm{AC}}$。

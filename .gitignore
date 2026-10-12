@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+*.log
+
+# Exam originals: large binaries kept locally, not versioned.
+2008-2025·*/
+浙江高考题/
+
+# Raw page and conversation captures may hold session data.
+captures/
+
+# Screenshots and captures are regenerable evidence; keep text records only.
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mp4
+*.pdf

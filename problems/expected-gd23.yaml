@@ -1,0 +1,45 @@
+# 2023 广东卷答案键。不发给模型。
+gd23-01:
+  - { q: "选项", choice: "D" }
+gd23-02:
+  - { q: "选项", choice: "C" }
+gd23-03:
+  - { q: "选项", choice: "D" }
+gd23-04:
+  - { q: "选项", choice: "B" }
+gd23-05:
+  - { q: "选项", choice: "C" }
+gd23-06:
+  - { q: "选项", choice: "A" }
+gd23-07:
+  - { q: "选项", choice: "B" }
+gd23-08:
+  - { q: "选项", choice: "BCD" }
+gd23-09:
+  - { q: "选项", choice: "AC" }
+gd23-10:
+  - { q: "选项", choice: "BD" }
+gd23-11:
+  - { q: "(2)③ d_1", any: [2.25, 0.0225] }
+  - { q: "(3) 折射率表达式", text: "d_2/d_1", manual: true }
+  - { q: "(3) 折射率", any: [1.51] }
+  - { q: "(4) 入射角", text: "稍小一些", manual: true }
+gd23-12:
+  - { q: "(1) R_4 接到 R_3 的哪端", text: "右", manual: true }
+  - { q: "(2)② 开关 S_2", text: "断开", manual: true }
+  - { q: "(2)② 电流 I_1", any: [40, 0.04] }
+  - { q: "(2)③ 开关 S_2", text: "闭合", manual: true }
+  - { q: "(2)③ 电流 I_2", any: [60, 0.06] }
+  - { q: "(3) 盐水电阻", any: [100] }
+gd23-13:
+  - { q: "(1) p_B", text: "p_0/5", manual: true }
+  - { q: "(2) T_C", text: "1.9T_0", manual: true }
+  - { q: "(3) 内能变化", text: "W", manual: true }
+gd23-14:
+  - { q: "(1) 安培力", text: "9B_0^2 h^2 v/R，方向水平向左", manual: true }
+  - { q: "(2) 磁通量", text: "3B_0 h^2/10", manual: true }
+  - { q: "(3) 热量", text: "B_0^2 h^4/(4τR)", manual: true }
+gd23-15:
+  - { q: "(1) 时间 t", text: "v_0/(μg)", manual: true }
+  - { q: "(2) 克服阻力做功", text: "6mgL - 3mv_0^2", manual: true }
+  - { q: "(3) 水平距离 s", text: "(3v_0/2)√(2L/g)", manual: true }

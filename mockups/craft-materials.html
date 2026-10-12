@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>B+ 材质对照（样张）</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 32px; background: #e4e6e9; font-family: 'Noto Sans SC', sans-serif; color: #222; }
+  section { margin: 0 0 40px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  p.desc { font-size: 13px; color: #555; margin: 0 0 12px; max-width: 1100px; line-height: 1.6; }
+  .row { display: flex; gap: 24px; align-items: flex-start; }
+  svg { display: block; width: 640px; height: 340px; }
+  .card { width: 680px; box-sizing: border-box; padding: 18px 20px 14px; border-radius: 16px; color: #23272d;
+          background: linear-gradient(180deg, #f7f8fa 0%, #f1f2f5 62%, #e9ebef 100%);
+          box-shadow: 0 0 40px rgba(51,51,51,.08), 0 0 0 1px #e1e4e8; }
+  .title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #7d838c; border: 1px solid #d6d9de; border-radius: 4px; padding: 1px 6px; background: #f8f9fa; }
+  .foot { font-size: 11.5px; color: #8b9098; margin-top: 4px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<section>
+  <h2>同一组物体：左边是现在的 B+，右边是材质版</h2>
+  <p class="desc">视角不变（正视图加一条顶面，角度和长度可量）。右边改了四处：按材质区分表面（铝拉丝、喷漆钢哑光、橡胶、玻璃、铜），大物体轮廓线变浅、小零件保持清楚，大面上加端盖和螺丝，明暗加交界（顶面最亮、近地压暗、底边一道反光）。颜色仍然只有冷灰，铜是唯一的暖色。</p>
+  <div class="row">
+    <div class="card" id="card-MB"></div>
+    <div class="card" id="card-MM"></div>
+  </div>
+</section>
+
+<section>
+  <h2>特写：小车、玻璃砖、接线柱</h2>
+  <div class="row">
+    <div class="card" id="zoom-MB"></div>
+    <div class="card" id="zoom-MM"></div>
+  </div>
+</section>
+
+<section>
+  <h2>特写：斜面和物块</h2>
+  <div class="row">
+    <div class="card" id="zoom2-MB"></div>
+    <div class="card" id="zoom2-MM"></div>
+  </div>
+</section>
+
+<script>
+const T = Math.PI / 180
+const mono = 'JetBrains Mono'
+const text = (x, y, s, size, fill, o = {}) => `<text x="${x}" y="${y}" font-family="${o.font || mono}" font-size="${size}" fill="${fill}" text-anchor="${o.anchor || 'start'}" letter-spacing="${o.ls ?? .2}"${o.weight ? ` font-weight="${o.weight}"` : ''}>${s}</text>`
+const grad = (id, stops, horiz) => `<linearGradient id="${id}" x1="0" y1="0" x2="${horiz ? 1 : 0}" y2="${horiz ? 0 : 1}">${stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`
+const sharedDefs = `
+  <filter id="tight" x="-50%" y="-400%" width="200%" height="900%"><feGaussianBlur stdDeviation="1.4"/></filter>
+  <radialGradient id="ambient"><stop offset="0" stop-color="rgb(25,30,38)" stop-opacity=".17"/><stop offset=".55" stop-color="rgb(25,30,38)" stop-opacity=".08"/><stop offset="1" stop-color="rgb(25,30,38)" stop-opacity="0"/></radialGradient>`
+const contact = (cx, cy, rx, op = .38) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="1.6" fill="rgba(25,30,38,${op})" filter="url(#tight)"/>`
+
+// ---------------------------------------------------------------- kit B: current B+
+const B = (() => {
+  const line = 'rgba(38,43,50,.86)', faint = 'rgba(38,43,50,.20)', print = 'rgba(38,43,50,.55)', bevel = 'rgba(255,255,255,.95)'
+  const tones = {
+    lo: { top: '#cdd1d7', f0: '#c3c8cf', f1: '#b2b8c0' },
+    mid: { top: '#eef0f3', f0: '#dfe2e7', f1: '#c8ccd3' },
+    hi: { top: '#ffffff', f0: '#f3f5f7', f1: '#dfe3e8' },
+    dark: { top: '#565c65', f0: '#3c4149', f1: '#2b2f35' },
+  }
+  const toneOf = { steel: 'mid', steelHi: 'hi', alu: 'mid', rubber: 'dark', brass: 'mid', insul: 'dark' }
+  const defs = Object.entries(tones).map(([n, k]) => grad(`b-${n}`, [[0, k.f0], [1, k.f1]])).join('')
+  function box(x, yb, w, h, top, mat, o = {}) {
+    const tn = toneOf[mat], k = tones[tn], y = yb - h
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#b-${tn})"/>`
+    if (top > 0) s += `<rect x="${x}" y="${y - top}" width="${w}" height="${top}" fill="${k.top}"/><line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}" stroke="${faint}" stroke-width=".55"/><line x1="${x + 1.2}" y1="${y - top + .7}" x2="${x + w - 1.2}" y2="${y - top + .7}" stroke="${bevel}" stroke-width=".8"/>`
+    return s + `<rect x="${x}" y="${y - top}" width="${w}" height="${h + top}" rx="${o.r ?? 1.5}" fill="none" stroke="${line}" stroke-width=".7"/>`
+  }
+  function wedge(x0, x1, yb, th, mat) {
+    const k = tones[toneOf[mat]], yt = yb - (x1 - x0) * Math.tan(th)
+    return `<polygon points="${x0},${yb} ${x1},${yb} ${x1},${yt}" fill="url(#b-${toneOf[mat]})"/>`
+      + `<polygon points="${x0},${yb} ${x1},${yt} ${x1},${yt - 4} ${x0},${yb - 4}" fill="${k.top}"/>`
+      + `<line x1="${x0 + 2}" y1="${yb - 3.3}" x2="${x1 - 1}" y2="${yt - 3.3}" stroke="${bevel}" stroke-width=".8"/>`
+      + `<polygon points="${x0},${yb} ${x1},${yb} ${x1},${yt - 4} ${x0},${yb - 4}" fill="none" stroke="${line}" stroke-width=".7" stroke-linejoin="round"/>`
+  }
+  function wheel(cx, cy, r) {
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#b-dark)" stroke="${line}" stroke-width=".7"/>`
+      + `<circle cx="${cx}" cy="${cy}" r="${r * .62}" fill="url(#b-mid)" stroke="${line}" stroke-width=".5"/>`
+      + `<circle cx="${cx}" cy="${cy}" r="${r * .22}" fill="#fff"/>`
+  }
+  function glass(x, yb, w, h, top) {
+    const y = yb - h
+    return `<rect x="${x}" y="${y - top}" width="${w}" height="${h + top}" rx="1" fill="${tones.hi.f0}" opacity=".55"/>`
+      + `<rect x="${x}" y="${y - top}" width="${w}" height="${top}" fill="#fff" opacity=".6"/>`
+      + `<rect x="${x}" y="${y - top}" width="${w}" height="${h + top}" rx="1" fill="none" stroke="${line}" stroke-width=".7"/>`
+  }
+  function post(cx, yb) {
+    return box(cx - 7, yb, 14, 6, 2, 'insul', { r: 1 }) + box(cx - 3, yb - 8, 6, 12, 0, 'steel', { r: .5 })
+      + box(cx - 6, yb - 18, 12, 8, 0, 'brass', { r: 1 }) + box(cx - 4, yb - 26, 8, 6, 0, 'brass', { r: 2 })
+  }
+  function cable(d) { return `<path d="${d}" fill="none" stroke="#2e3339" stroke-width="2.6"/><path d="${d}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".7" transform="translate(-.5 -.6)"/>` }
+  const screw = (x, y) => `<circle cx="${x}" cy="${y}" r="1.1" fill="${line}" opacity=".7"/>`
+  return { name: 'B', defs, box, wedge, wheel, glass, post, cable, screw, print, line, faint, rich: false }
+})()
+
+// ---------------------------------------------------------------- kit M: materials
+const M = (() => {
+  const strong = 'rgba(38,43,50,.82)', soft = 'rgba(38,43,50,.40)', print = 'rgba(38,43,50,.52)'
+  const mats = {
+    steel:   { top: '#f2f4f6', g: [[0, '#e8ebee'], [.5, '#dce0e5'], [.84, '#cbd0d6'], [1, '#b6bcc4']] },
+    steelHi: { top: '#ffffff', g: [[0, '#f8f9fa'], [.5, '#eef0f3'], [.86, '#dde1e6'], [1, '#c8cdd4']] },
+    alu:     { top: '#f6f7f8', g: [[0, '#eef0f2'], [.4, '#d8dce1'], [.5, '#e9ecef'], [.6, '#d2d7dc'], [1, '#bcc2c9']] },
+    rubber:  { top: '#4c5159', g: [[0, '#3f444b'], [.6, '#2c3036'], [1, '#1c1f23']] },
+    insul:   { top: '#41464d', g: [[0, '#353a40'], [1, '#1d2024']] },
+    brass:   { top: '#f1dfae', g: [[0, '#8a6526'], [.3, '#d9b867'], [.42, '#f6e6b8'], [.62, '#c79d4c'], [1, '#7f5c22']], horiz: true },
+  }
+  const defs = Object.entries(mats).map(([n, k]) => grad(`m-${n}`, k.g, k.horiz)).join('')
+    + `<pattern id="m-brush" width="60" height="2.2" patternUnits="userSpaceOnUse"><line x1="0" y1=".5" x2="60" y2=".5" stroke="#fff" stroke-width=".35" opacity=".55"/><line x1="12" y1="1.6" x2="44" y2="1.6" stroke="#20252b" stroke-width=".3" opacity=".08"/></pattern>`
+    + grad('m-glass', [[0, 'rgba(232,242,246,.55)'], [.55, 'rgba(206,224,231,.32)'], [1, 'rgba(180,204,212,.42)']])
+    + grad('m-cap', [[0, '#d3d7dc'], [1, '#b4bac2']], true)
+  const outline = (w, h) => (w * h > 1600 ? [soft, .6] : [strong, .7])
+  // light model: bright top, bevel on the top edge, soft highlight under it, bounce rim near the floor
+  function box(x, yb, w, h, top, mat, o = {}) {
+    const k = mats[mat], y = yb - h, [lc, lw] = o.line ?? outline(w, h + top)
+    const dark = mat === 'rubber' || mat === 'insul'
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#m-${mat})"/>`
+    if (mat === 'alu') s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#m-brush)"/>`
+    if (top > 0) {
+      s += `<rect x="${x}" y="${y - top}" width="${w}" height="${top}" fill="${k.top}"/>`
+      if (mat === 'alu') s += `<rect x="${x}" y="${y - top}" width="${w}" height="${top}" fill="url(#m-brush)"/>`
+      s += `<line x1="${x + 1}" y1="${y - top + .6}" x2="${x + w - 1}" y2="${y - top + .6}" stroke="#fff" stroke-width="${dark ? .5 : .9}" opacity="${dark ? .25 : 1}"/>`
+      s += `<line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}" stroke="rgba(38,43,50,.16)" stroke-width=".6"/>`
+      s += `<line x1="${x + 1}" y1="${y + .9}" x2="${x + w - 1}" y2="${y + .9}" stroke="#fff" stroke-width=".6" opacity="${dark ? .12 : .7}"/>`
+    }
+    if (h > 8 && !o.noRim) s += `<line x1="${x + 1.5}" y1="${yb - 1}" x2="${x + w - 1.5}" y2="${yb - 1}" stroke="#fff" stroke-width=".55" opacity="${dark ? .14 : .45}"/>`
+    return s + `<rect x="${x}" y="${y - top}" width="${w}" height="${h + top}" rx="${o.r ?? 1.5}" fill="none" stroke="${lc}" stroke-width="${lw}"/>`
+  }
+  function wedge(x0, x1, yb, th, mat) {
+    const k = mats[mat], yt = yb - (x1 - x0) * Math.tan(th), capW = 9
+    let s = `<polygon points="${x0},${yb} ${x1},${yb} ${x1},${yt}" fill="url(#m-${mat})"/>`
+    s += `<polygon points="${x0},${yb} ${x1},${yt} ${x1},${yt - 5} ${x0},${yb - 5}" fill="${k.top}"/>`
+    s += `<line x1="${x0 + 2}" y1="${yb - 4.3}" x2="${x1 - 1}" y2="${yt - 4.3}" stroke="#fff" stroke-width=".9"/>`
+    s += `<line x1="${x0 + 4}" y1="${yb + .9}" x2="${x1}" y2="${yt + .9}" stroke="#fff" stroke-width=".6" opacity=".7"/>`
+    s += `<line x1="${x0}" y1="${yb}" x2="${x1}" y2="${yt}" stroke="rgba(38,43,50,.16)" stroke-width=".6"/>`
+    // end cap on the vertical face, with two screws
+    s += `<rect x="${x1 - capW}" y="${yt + 1}" width="${capW}" height="${yb - yt - 1}" fill="url(#m-cap)"/>`
+    s += `<line x1="${x1 - capW}" y1="${yt + 1}" x2="${x1 - capW}" y2="${yb}" stroke="rgba(38,43,50,.3)" stroke-width=".55"/>`
+    s += `<line x1="${x1 - capW + .9}" y1="${yt + 3}" x2="${x1 - capW + .9}" y2="${yb - 1}" stroke="#fff" stroke-width=".55" opacity=".6"/>`
+    s += screw(x1 - capW / 2, yt + 12) + screw(x1 - capW / 2, yb - 10)
+    s += `<line x1="${x0 + 6}" y1="${yb - 1}" x2="${x1 - capW - 1}" y2="${yb - 1}" stroke="#fff" stroke-width=".55" opacity=".45"/>`
+    s += `<polygon points="${x0},${yb} ${x1},${yb} ${x1},${yt - 5} ${x0},${yb - 5}" fill="none" stroke="${soft}" stroke-width=".6" stroke-linejoin="round"/>`
+    return s
+  }
+  function wheel(cx, cy, r) {
+    let s = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#m-rubber)" stroke="${strong}" stroke-width=".6"/>`
+    s += `<path d="M ${cx - r * .8} ${cy - r * .55} A ${r * .97} ${r * .97} 0 0 1 ${cx + r * .55} ${cy - r * .82}" fill="none" stroke="#fff" stroke-width=".6" opacity=".22"/>`
+    s += `<circle cx="${cx}" cy="${cy}" r="${r * .6}" fill="url(#m-alu)" stroke="rgba(20,24,28,.6)" stroke-width=".5"/>`
+    for (let i = 0; i < 5; i++) {
+      const a = i / 5 * 2 * Math.PI - Math.PI / 2
+      s += `<circle cx="${cx + Math.cos(a) * r * .36}" cy="${cy + Math.sin(a) * r * .36}" r="${r * .09}" fill="#8e959e"/>`
+    }
+    return s + `<circle cx="${cx}" cy="${cy}" r="${r * .15}" fill="#f4f5f7" stroke="rgba(38,43,50,.5)" stroke-width=".4"/>`
+  }
+  function glass(x, yb, w, h, top) {
+    const y = yb - h
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#m-glass)"/>`
+    s += `<rect x="${x}" y="${y - top}" width="${w}" height="${top}" fill="rgba(236,246,248,.75)"/>`
+    s += `<line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}" stroke="rgba(120,160,168,.55)" stroke-width=".6"/>`
+    s += `<polygon points="${x + w * .18},${y + 2} ${x + w * .34},${y + 2} ${x + w * .12},${yb - 2} ${x + 3},${yb - 2} ${x + 3},${yb - 10}" fill="#fff" opacity=".28"/>`
+    s += `<polygon points="${x + w * .42},${y + 2} ${x + w * .47},${y + 2} ${x + w * .3},${yb - 2} ${x + w * .25},${yb - 2}" fill="#fff" opacity=".18"/>`
+    s += `<line x1="${x + 1.2}" y1="${y - top + 1}" x2="${x + 1.2}" y2="${yb - 1}" stroke="#fff" stroke-width="1.2" opacity=".9"/>`
+    s += `<line x1="${x + 1}" y1="${y - top + .6}" x2="${x + w - 1}" y2="${y - top + .6}" stroke="#fff" stroke-width="1" opacity=".95"/>`
+    s += `<line x1="${x + w - 1}" y1="${y + 1}" x2="${x + w - 1}" y2="${yb - 1}" stroke="rgba(110,150,158,.45)" stroke-width="1.2"/>`
+    s += `<line x1="${x + 1}" y1="${yb - 1}" x2="${x + w - 1}" y2="${yb - 1}" stroke="rgba(120,170,170,.6)" stroke-width="1.4"/>`
+    return s + `<rect x="${x}" y="${y - top}" width="${w}" height="${h + top}" rx="1" fill="none" stroke="rgba(70,100,108,.55)" stroke-width=".6"/>`
+  }
+  function post(cx, yb) {
+    let s = box(cx - 8, yb, 16, 6, 2.2, 'insul', { r: 1.2, line: [strong, .6] })
+    s += box(cx - 2.6, yb - 8, 5.2, 9, 0, 'brass', { r: .4, line: ['rgba(90,62,20,.6)', .5], noRim: true })
+    for (let i = 0; i < 4; i++) s += `<line x1="${cx - 2.6}" y1="${yb - 15 + i * 2}" x2="${cx + 2.6}" y2="${yb - 14 + i * 2}" stroke="rgba(90,62,20,.45)" stroke-width=".4"/>`
+    s += box(cx - 6.5, yb - 17, 13, 7.5, 0, 'brass', { r: 1.2, line: ['rgba(90,62,20,.65)', .55], noRim: true })
+    for (let i = 1; i < 9; i++) s += `<line x1="${cx - 6.5 + i * 1.45}" y1="${yb - 23.8}" x2="${cx - 6.5 + i * 1.45}" y2="${yb - 18.2}" stroke="rgba(90,62,20,.35)" stroke-width=".4"/>`
+    s += box(cx - 4, yb - 24.5, 8, 5.5, 0, 'brass', { r: 2.4, line: ['rgba(90,62,20,.65)', .55], noRim: true })
+    return s + `<ellipse cx="${cx - 1}" cy="${yb - 28.2}" rx="1.8" ry=".7" fill="#fff" opacity=".7"/>`
+  }
+  function cable(d) {
+    return `<path d="${d}" fill="none" stroke="#1f2328" stroke-width="3"/><path d="${d}" fill="none" stroke="#3a4048" stroke-width="2"/><path d="${d}" fill="none" stroke="rgba(255,255,255,.4)" stroke-width=".6" transform="translate(-.4 -.7)"/>`
+  }
+  function screw(x, y) {
+    return `<circle cx="${x}" cy="${y}" r="1.9" fill="#eef0f2" stroke="rgba(38,43,50,.55)" stroke-width=".5"/><line x1="${x - 1.2}" y1="${y + .7}" x2="${x + 1.2}" y2="${y - .7}" stroke="rgba(38,43,50,.6)" stroke-width=".5"/>`
+  }
+  return { name: 'M', defs, box, wedge, wheel, glass, post, cable, screw, print, line: strong, faint: soft, rich: true }
+})()
+
+// ---------------------------------------------------------------- one scene, two kits
+function scene(K) {
+  const o = [], P = (s) => o.push(s)
+  const YB = 284
+  P(`<defs>${sharedDefs}${K.defs}</defs>`)
+  P(`<ellipse cx="320" cy="308" rx="300" ry="14" fill="url(#ambient)"/>`)
+  for (const fx of [62, 578]) { P(contact(fx, 306, 10)); P(K.box(fx - 9, 305.5, 18, 2.6, 0, 'rubber', { r: .8 })); P(K.box(fx - 6, 303, 12, 5, 0, 'steel', { r: .6 })) }
+  P(K.box(28, 298, 584, 12, 4, 'steel', { r: 2.2 }))
+  if (K.rich) P(K.screw(36, 292) + K.screw(604, 292))
+  P(text(46, 294.6, 'GENUI · BENCH-1', 5.4, K.print, { ls: .5 }))
+
+  // incline and block
+  const x0 = 42, x1 = 232, th = 30 * T, yt = YB - (x1 - x0) * Math.tan(th)
+  P(contact((x0 + x1) / 2, YB + .6, 96))
+  P(K.wedge(x0, x1, YB, th, 'steel'))
+  // the middle of a large face stays empty for force arrows; details go to the corners
+  if (K.rich) P(`<rect x="${x1 - 60}" y="${YB - 14}" width="47" height="10" rx="1.5" fill="rgba(255,255,255,.5)" stroke="rgba(38,43,50,.28)" stroke-width=".5"/><line x1="${x1 - 59}" y1="${YB - 4.6}" x2="${x1 - 14}" y2="${YB - 4.6}" stroke="#fff" stroke-width=".5"/>`)
+  P(text(x1 - (K.rich ? 16 : 6), YB - 6.6, 'INCLINE 30°', 5.4, K.print, { anchor: 'end' }))
+  const sAt = .5, bx = x0 + (x1 - x0) * sAt, by = YB - (x1 - x0) * sAt * Math.tan(th) - (K.rich ? 5 : 4)
+  P(`<g transform="translate(${bx} ${by}) rotate(-30)">`)
+  P(contact(0, .3, 33))
+  P(K.box(-32, 0, 64, 26, 5, 'steelHi', { r: 2.5 }))
+  if (K.rich) {
+    P(K.screw(-26, -21) + K.screw(26, -21))
+  }
+  P(text(-25, -6, 'M-1 · 1.0 kg', 5.2, K.print))
+  P('</g>')
+
+  // rail and cart
+  P(contact(347, YB + .6, 94))
+  P(K.box(254, YB, 186, 10, 4, 'alu', { r: 1.2 }))
+  P(`<rect x="262" y="276.5" width="170" height="5" fill="${K.rich ? 'rgba(255,255,255,.55)' : '#f3f5f7'}" stroke="${K.rich ? 'rgba(38,43,50,.18)' : K.faint}" stroke-width=".5"/>`)
+  for (let i = 0, x = 266; x <= 428; i++, x += 4) P(`<line x1="${x}" y1="276.5" x2="${x}" y2="${276.5 + (i % 5 ? 1.5 : 3)}" stroke="${K.line}" stroke-width="${i % 5 ? .35 : .5}" opacity="${i % 5 ? .45 : .75}"/>`)
+  P(K.box(432, 270, 7, 12, 0, K.rich ? 'rubber' : 'steel', { r: 1 }))
+  for (const wx of [304, 376]) P(contact(wx, 272.4, 6))
+  P(K.wheel(304, 263, 9) + K.wheel(376, 263, 9))
+  P(K.box(286, 257, 108, 22, 5, 'steelHi', { r: 3 }))
+  if (K.rich) {
+    P(`<rect x="294" y="243" width="70" height="4.2" rx="2.1" fill="rgba(38,43,50,.08)" stroke="rgba(38,43,50,.22)" stroke-width=".45"/><line x1="296" y1="247" x2="362" y2="247" stroke="#fff" stroke-width=".5" opacity=".8"/>`)
+    P(K.screw(292, 252) + K.screw(388, 252))
+    P(K.box(394, 254, 5, 14, 0, 'rubber', { r: 1.4 }))
+  }
+  P(text(K.rich ? 298 : 294, 254.2, 'CART-A · 0.50 kg', 5.2, K.print))
+
+  // terminal board behind the glass
+  P(contact(558, YB + .6, 50))
+  P(K.box(508, YB, 100, 18, 4, 'steelHi', { r: 2 }))
+  P(text(548, 279, 'TB-2 接线板', 5.4, K.print, { font: 'Noto Sans SC', ls: .4 }))
+  P(text(522, 279, '−', 7, K.print, { anchor: 'middle' }) + text(586, 279, '+', 7, K.print, { anchor: 'middle' }))
+  P(K.post(522, 264) + K.post(586, 264))
+  P(K.cable(`M 592 252 C 606 254, 618 262, 624 278`))
+
+  // glass block in front
+  P(contact(496, YB + .6, 36, .26))
+  P(K.glass(462, YB, 68, 58, 6))
+  P(text(468, YB - 6, 'n = 1.50', 5.2, K.print))
+  return o.join('')
+}
+
+function card(id, K, title, foot, viewBox = '0 150 640 170') {
+  const [, , vw, vh] = viewBox.split(' ').map(Number)
+  document.getElementById(id).innerHTML = `
+    <div class="title"><span class="tag">${K.name === 'B' ? 'B+' : '材质'}</span>${title}</div>
+    <svg viewBox="${viewBox}" style="height:${Math.round(640 * vh / vw)}px" xmlns="http://www.w3.org/2000/svg">${scene(K)}</svg>
+    <div class="foot">${foot}</div>`
+}
+card('card-MB', B, '现在的 B+', '所有物体同一种灰，统一 0.7 深色描边，大面是平的渐变。')
+card('card-MM', M, '材质版', '铝导轨有拉丝和反光带，橡胶轮和脚垫无高光，玻璃只画边缘高光和反光条，接线柱是铜。')
+card('zoom-MB', B, '现在的 B+（放大）', '', '276 176 340 150')
+card('zoom-MM', M, '材质版（放大）', '', '276 176 340 150')
+card('zoom2-MB', B, '现在的 B+（放大）', '', '30 150 240 140')
+card('zoom2-MM', M, '材质版（放大）', '', '30 150 240 140')
+</script>
+</body>
+</html>

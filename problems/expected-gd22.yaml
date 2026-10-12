@@ -1,0 +1,53 @@
+# 2022 广东卷答案键。不送给模型。
+gd22-01:
+  - { q: "选项", choice: "D" }
+gd22-02:
+  - { q: "选项", choice: "D" }
+gd22-03:
+  - { q: "选项", choice: "C" }
+gd22-04:
+  - { q: "选项", choice: "B" }
+gd22-05:
+  - { q: "选项", choice: "A" }
+gd22-06:
+  - { q: "选项", choice: "B" }
+gd22-07:
+  - { q: "选项", choice: "A" }
+gd22-08:
+  - { q: "选项", choice: "BC" }
+gd22-09:
+  - { q: "选项", choice: "ABD" }
+gd22-10:
+  - { q: "选项", choice: "AC" }
+gd22-11:
+  - { q: "(2) 直径", any: [7.883, 7.884] }
+  - { q: "(3) 操作顺序", text: "B", manual: true }
+  - { q: "(4) 机械能损失", text: "(1/2)m(d/t_1)^2-(1/2)m(d/t_2)^2", manual: true }
+  - { q: "(5) 空气阻力引起的误差", text: "增大", manual: true }
+gd22-12:
+  - { q: "(2)③ 电压表示数", text: "变小", manual: true }
+  - { q: "(2)③ 电阻 R_x", text: "U/(I_2-I_1)", manual: true }
+  - { q: "(3) 电压表内阻有无影响", text: "无", manual: true }
+  - { q: "(4) 拉伸后的长度", any: [51.8, 0.518, 518] }
+gd22-13:
+  - { q: "(1) 静止时支持力 N_1", any: [8] }
+  - { q: "(1) 上滑时支持力 N_2", any: [5] }
+  - { q: "(2) 碰前速度 v_1", any: [8] }
+  - { q: "(3) 最大高度 h", any: [0.2, 20] }
+gd22-14:
+  - { q: "(1) 比例系数 k", text: "m^(2/3)*g*t/h_1", manual: true }
+  - { q: "(2) A、B 的电性和电荷量", text: "A 不带电；B 带负电，q = m*g*d*(h_1+h_2)/(h_1*U)", manual: true }
+  - { q: "(2) B 上升 h_2 的电势能变化量", text: "-m*g*h_2*(h_1+h_2)/h_1", manual: true }
+  - { q: "(3) 新油滴匀速速度", text: "h_2>h_1 时大小 (h_2-h_1)/(2^(1/3)*t)、方向向上；h_1>h_2 时大小 (h_1-h_2)/(2^(1/3)*t)、方向向下", manual: true }
+gd22-15:
+  - { q: "是否自发过程", text: "不是", manual: true }
+  - { q: "排放热量与吸收热量比较", text: "大于", manual: true }
+gd22-16:
+  - { q: "水底压强 p", any: [2.0e5] }
+  - { q: "水深 h", any: [10] }
+gd22-17:
+  - { q: "半个周期后 M 处质点的位置", text: "P", manual: true }
+  - { q: "频率增大时的波速", text: "不变", manual: true }
+gd22-18:
+  - { q: "折射率 n", text: "√2", manual: true }
+  - { q: "激光在液体中的速度 v", text: "(√2/2)c", manual: true }

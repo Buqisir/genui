@@ -1,0 +1,242 @@
+---
+id: gd24-13
+title: 差压阀两侧的气缸
+source: 2024 广东卷 第 13 题（计算）
+question: 差压阀可控制气体进行单向流动，广泛应用于减震系统。如图所示，A、B 两个导热良好的气缸通过差压阀连接，A 内轻质活塞的上方与大气连通，B 内气体体积不变。当 A 内气体压强减去 B 内气体压强大于 Δp 时差压阀打开，A 内气体缓慢进入 B 中；当该差值小于或等于 Δp 时差压阀关闭。当环境温度 T_1 = 300 K 时，A 内气体体积 V_{A1} = 4.0×10^2 m^3，B 内气体压强 p_{B1} 等于大气压强 p_0，已知活塞的横截面积 S = 0.10 m^2，Δp = 0.11 p_0，p_0 = 1.0×10^5 Pa，重力加速度大小取 g = 10 m/s^2，A、B 内的气体可视为理想气体，忽略活塞与气缸间的摩擦、差压阀与连接管内的气体体积不计。当环境温度降到 T_2 = 270 K 时：
+  （1）求 B 内气体压强 p_{B2}；
+  （2）求 A 内气体体积 V_{A2}；
+  （3）在活塞上缓慢倒入铁砂，若 B 内气体压强回到 p_0 并保持不变，求已倒入铁砂的质量 m。
+answers:
+  - { name: pB2, value: 90000, unit: Pa }
+  - { name: VA2, value: 360, unit: m^3 }
+  - { name: m, value: 110, unit: kg }
+---
+
+## 题目条件分析
+
+两只气缸都导热良好，气体始终跟环境同温。差压阀是单向的：只有 $p_A - p_B > \Delta p$ 时才打开，气体从 A 流向 B；差值小于或等于 $\Delta p$ 时关闭，两侧各自独立。
+
+活塞轻质、上方与大气连通，没有铁砂时 $p_A = p_0$ 始终成立，A 只能做等压变化。B 被封住，阀门一关闭体积就不变，只能做等容变化。阀门与连接管的体积不计。
+
+关键是先判断阀门开没开。降温时假设阀门一直关着：B 等容降温，压强从 $p_0$ 降到 $p_0 T_2/T_1$；A 等压，压强仍是 $p_0$。两者之差是 $p_0(1 - T_2/T_1)$，比一下它和 $\Delta p = 0.11p_0$ 的大小，就知道假设成不成立。
+
+气缸画面按高度比例画，不按横截面积比例：题目没给 B 的体积，也没给两只气缸的截面积。
+
+<Param name="T" label="环境温度" symbol="T" value={270} min={270} max={300} step={1} unit="K" color="force" />
+
+<Param name="mSand" label="铁砂质量" symbol="m" value={0} min={0} max={200} step={1} unit="kg" />
+
+<Param name="T1" label="初温" value={300} hidden />
+
+<Param name="T2" label="终温" value={270} hidden />
+
+<Param name="p0" label="大气压强" value={100000} hidden />
+
+<Param name="dpRatio" label="差压阀阈值" value={0.11} hidden />
+
+<Param name="VA1" label="A 初体积" value={400} hidden />
+
+<Param name="S" label="活塞面积" value={0.1} hidden />
+
+<Param name="g" label="重力加速度" value={10} hidden />
+
+<Define name="dp" expr="dpRatio*p0" />
+
+<Define name="pA" expr="p0 + mSand*g/S" />
+
+<Define name="pB" expr="p0*T/T1" />
+
+<Define name="VA" expr="VA1*T/T1" />
+
+<Define name="diff" expr="pA - pB" />
+
+<Define name="open" expr="diff > dp ? 1 : 0" />
+
+<Define name="pB2" expr="p0*T2/T1" />
+
+<Define name="VA2" expr="VA1*T2/T1" />
+
+<Define name="m" expr="dp*S/g" />
+
+<Define name="pA2" expr="p0 + m*g/S" />
+
+<Question text="（1）温度降到 T_2 时，B 内气体压强 p_{B2}" set={{T: 270, mSand: 0}} hint="先确认差压阀没有打开，B 才是等容降温" />
+
+<Question text="（2）温度降到 T_2 时，A 内气体体积 V_{A2}" set={{T: 270, mSand: 0}} hint="活塞轻质，上方通大气，A 是等压降温" />
+
+<Question text="（3）倒入铁砂使 B 的压强回到 p_0 并保持不变，铁砂质量 m" set={{T: 270, mSand: 110}} hint="阀门刚好要打开又没打开：差值等于 Δp" />
+
+<Preset label="初态：T_1，没有铁砂" set={{T: 300, mSand: 0}} />
+
+<Preset label="降到 T_2，还没倒铁砂" set={{T: 270, mSand: 0}} />
+
+<Preset label="答案：铁砂 110 kg" set={{T: 270, mSand: 110}} />
+
+<Status cases={[
+  {when: "open > 0.5", label: "差压阀打开：气体从 A 流向 B", tone: "warning"},
+  {when: "abs(diff - dp) < 1", label: "差压阀刚好关闭：差值等于 Δp", tone: "success"},
+  {label: "差压阀关闭：差值小于 Δp", tone: "info"}
+]} />
+
+<Readout items={[
+  {label: "A 的压强", symbol: "p_A", expr: "pA", unit: "Pa", format: "sci"},
+  {label: "B 的压强", symbol: "p_B", expr: "pB", unit: "Pa", format: "sci"},
+  {label: "压强差", symbol: "p_A − p_B", expr: "diff", unit: "Pa", format: "sci", color: "force"},
+  {label: "开阀阈值", symbol: "Δp", expr: "dp", unit: "Pa", format: "sci"},
+  {label: "A 的体积", symbol: "V_A", expr: "VA", unit: "m³", digits: 0, color: "velocity"}
+]} />
+
+<Figure title="两只气缸与差压阀" height={420} params={["VA", "pA", "p0", "pB", "open", "mSand"]} note="气柱高度按体积比例，横截面积不按比例" hud={[
+  {symbol: "T", expr: "T", unit: "K", digits: 0},
+  {symbol: "p_A − p_B", expr: "pA - pB", unit: "Pa", format: "sci"},
+  {symbol: "V_A", expr: "VA", unit: "m³", digits: 0}
+]}>
+figure({
+  draw(ctx, p, v) {
+    const m = v.view({ xmin: -1.1, xmax: 7.7, ymin: -1.05, ymax: 6.35 })
+    const ax = 1.15
+    const wA = 1.7
+    const bx = 5.05
+    const wB = 1.7
+    const base = 0.45
+    const hA = p.VA / 100
+    const hB = 3.15
+    const topA = base + 4.9
+    const cxA = ax + wA / 2
+    const cxB = bx + wB / 2
+    const valveX = (cxA + cxB) / 2
+    const pipeY = 0.14
+    const ph = 0.11
+    const gap = 0.5
+    const stub = 0.15
+    v.vessel(m, [
+      { x1: ax, y1: base, x2: ax + wA, y2: topA, open: 'top' },
+      { x1: cxA - stub, y1: pipeY - ph, x2: cxA + stub, y2: base + 0.06, open: 'top' },
+      { x1: cxA - stub, y1: pipeY - ph, x2: valveX - gap, y2: pipeY + ph },
+      { x1: valveX + gap, y1: pipeY - ph, x2: cxB + stub, y2: pipeY + ph },
+      { x1: cxB - stub, y1: pipeY - ph, x2: cxB + stub, y2: base + 0.06, open: 'top' },
+      { x1: bx, y1: base, x2: bx + wB, y2: base + hB },
+    ], {
+      fills: [
+        { kind: 'gas', x1: ax, y1: base, x2: ax + wA, y2: base + hA, density: p.pA / p.p0, count: 24 },
+        { kind: 'gas', x1: cxA - stub, y1: pipeY - ph, x2: valveX - gap, y2: base, density: p.pA / p.p0, count: 5 },
+        { kind: 'gas', x1: bx, y1: base, x2: bx + wB, y2: base + hB, density: p.pB / p.p0, count: 26 },
+        { kind: 'gas', x1: valveX + gap, y1: pipeY - ph, x2: cxB + stub, y2: base, density: p.pB / p.p0, count: 5 },
+      ],
+    })
+    const pistonH = 0.34
+    v.block(m, cxA, base + hA, wA - 0.1, pistonH, { label: 'P' })
+    if (p.mSand > 1) {
+      const pile = 0.18 + 0.36 * Math.min(p.mSand, 200) / 200
+      v.block(m, cxA, base + hA + pistonH, wA * 0.58, pile, { label: 'm' })
+    }
+    v.element(m, valveX, pipeY, 'switch', { closed: p.open > 0.5 })
+    v.label(m, cxA, topA + 0.34, 'A')
+    v.label(m, cxB, base + hB + 0.46, 'B')
+    v.label(m, valveX, pipeY - 0.5, p.open > 0.5 ? '差压阀 开' : '差压阀 关')
+    v.dim(m, ax - 0.46, base, ax - 0.46, base + hA, 'V_A')
+  },
+})
+</Figure>
+
+<Plot title="压强随温度变化（阀门关闭）" size="wide" caption="没有铁砂时 A 等压、B 等容；虚线是刚好开阀的压强" x={{name: "s", label: "T", unit: "K", min: 270, max: 300}} y={{label: "p", unit: "Pa", min: 80000, max: 120000}} series={[
+  {label: "p_A", expr: "p0", color: "force"},
+  {label: "p_B", expr: "p0*s/T1", color: "field"},
+  {label: "p_B + Δp", expr: "p0*s/T1 + dp", color: "steel", dash: true}
+]} marks={[
+  {x: 300, label: "T_1：两侧都是 p_0"},
+  {x: 270, label: "T_2：差值仍小于 Δp"}
+]} cursor="T" />
+
+<Plot title="A 的体积（等压）" size="narrow" x={{name: "s", label: "T", unit: "K", min: 270, max: 300}} y={{label: "V_A", unit: "m³", min: 300, max: 450}} series={[
+  {label: "V_A", expr: "VA1*s/T1", color: "velocity"}
+]} marks={[
+  {x: 300, label: "V_{A1}"},
+  {x: 270, label: "V_{A2}"}
+]} cursor="T" />
+
+## 完整解答
+
+### （1）B 内气体的压强
+
+先假设降温过程中差压阀一直关闭，再回头检查。
+
+B 体积不变，做等容变化，初态压强 $p_{B1} = p_0$、温度 $T_1$：
+
+$$
+\frac{p_{B2}}{T_2} = \frac{p_0}{T_1}
+$$
+
+$$
+p_{B2} = p_0 \frac{T_2}{T_1} = 1.0\times 10^5 \times \frac{270}{300} = \boxed{9.0\times 10^{4}\ \mathrm{Pa}}
+$$
+
+此时 A 的压强仍是 $p_0$（活塞轻质，上方通大气），压强差
+
+$$
+p_A - p_{B2} = p_0 - p_0\frac{T_2}{T_1} = p_0\times\frac{30}{300} = 0.10\,p_0
+$$
+
+而开阀阈值 $\Delta p = 0.11\,p_0$，$0.10\,p_0 < 0.11\,p_0$，差值没有超过阈值，差压阀确实一直关闭，假设成立，气体没有从 A 进入 B。
+
+### （2）A 内气体的体积
+
+阀门关闭，A 中气体的质量不变；活塞轻质且上方通大气，压强始终为 $p_0$，做等压变化：
+
+$$
+\frac{V_{A2}}{T_2} = \frac{V_{A1}}{T_1}
+$$
+
+$$
+V_{A2} = V_{A1}\frac{T_2}{T_1} = 4.0\times 10^{2}\times\frac{270}{300} = \boxed{3.6\times 10^{2}\ \mathrm{m}^{3}}
+$$
+
+### （3）已倒入铁砂的质量
+
+铁砂缓慢倒在活塞上，活塞受重力、大气压力和 A 中气体的压力。平衡时
+
+$$
+p_A' S = p_0 S + mg \qquad p_A' = p_0 + \frac{mg}{S}
+$$
+
+B 的压强要回到 $p_0$ 并保持不变。B 是等容的，温度已经是 $T_2$，压强要从 $p_{B2}$ 升回 $p_0$，只能靠有气体从 A 流进来。而气体一流进来压强就会继续升，要它“回到 $p_0$ 并保持不变”，就是差压阀刚好要打开又没有打开：气体刚开始流入的一瞬间阀门重新关闭，压强停在 $p_0$。阈值条件取等号
+
+$$
+p_A' - p_0 = \Delta p
+$$
+
+$$
+\frac{mg}{S} = \Delta p = 0.11\,p_0
+$$
+
+$$
+m = \frac{\Delta p\, S}{g} = \frac{0.11\times 1.0\times 10^{5}\times 0.10}{10} = \boxed{1.1\times 10^{2}\ \mathrm{kg}}
+$$
+
+此时 $p_A' = p_0 + \Delta p = 1.11\times 10^{5}\ \mathrm{Pa}$。
+
+## 交互演示
+
+拖动温度：没有铁砂时 A 的气柱随温度按比例缩短，B 的体积不动、分子变稀，压强差从 0 增到 $1.0\times 10^{4}\ \mathrm{Pa}$，始终比 $\Delta p = 1.1\times 10^{4}\ \mathrm{Pa}$ 小，差压阀一直关闭。
+
+再拖动铁砂质量：活塞上的铁砂堆变高，$p_A$ 升高。到 $110\ \mathrm{kg}$ 时压强差刚好等于 $\Delta p$，阀门仍然关闭，B 的压强停在 $p_0$。再多倒一点，差值超过 $\Delta p$，阀门打开，气体开始从 A 流向 B。
+
+## 结合图像理解
+
+压强图上，$p_A$ 是一条水平线，$p_B$ 随温度直线下降。虚线 $p_B + \Delta p$ 是刚好开阀的压强：实线 $p_A$ 始终在它下方，两线在 $T_2$ 处还差 $0.01\,p_0$，所以阀门没有打开。
+
+体积图上，$V_A$ 过原点的直线是等压线，从 $4.0\times 10^{2}\ \mathrm{m}^{3}$ 降到 $3.6\times 10^{2}\ \mathrm{m}^{3}$。B 的体积题目没有给，也不需要求。
+
+## 答案汇总
+
+| 小问 | 结果 |
+|---|---|
+| （1）$p_{B2}$ | $9.0\times 10^{4}\ \mathrm{Pa}$ |
+| （2）$V_{A2}$ | $3.6\times 10^{2}\ \mathrm{m}^{3}$ |
+| （3）$m$ | $1.1\times 10^{2}\ \mathrm{kg}$ |
+
+<Answer items={[
+  {label: "B 的压强", symbol: "p_{B2}", expr: "pB2", value: 90000, unit: "Pa", format: "sci"},
+  {label: "A 的体积", symbol: "V_{A2}", expr: "VA2", value: 360, unit: "m³"},
+  {label: "铁砂质量", symbol: "m", expr: "m", value: 110, unit: "kg"}
+]} />

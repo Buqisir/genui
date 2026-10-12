@@ -1,0 +1,360 @@
+---
+id: gd24-14
+title: 安全带锁定与气囊
+source: 2024 广东卷 第 14 题（计算）
+question: |
+  汽车的安全带和安全气囊是有效保护乘客的装置。
+
+  （1）安全带能通过感应车的加速度自动锁定，其原理的简化模型如图甲所示。在水平路面上刹车的过程中，敏感球由于惯性沿底座斜面上滑直到与车达到共同的加速度 a，同时顶起敏感臂，使之处于水平状态，并卡住卷轴外齿轮，锁定安全带。此时敏感臂对敏感球的压力大小为 F_N，敏感球的质量为 m，重力加速度为 g。忽略敏感球受到的摩擦力。求斜面倾角的正切值 tanθ。
+
+  （2）如图乙所示，在安全气囊的性能测试中，可视为质点的头锤从离气囊表面高度为 H 处做自由落体运动。与正下方的气囊发生碰撞。以头锤到气囊表面为计时起点，气囊对头锤竖直方向作用力 F 随时间 t 的变化规律，可近似用图丙所示的图像描述。已知头锤质量 M = 30 kg，H = 3.2 m，重力加速度大小取 g = 10 m/s^2。求：
+
+  ①碰撞过程中 F 的冲量大小和方向；
+
+  ②碰撞结束后头锤上升的最大高度。
+answers:
+  - { name: tanTh, value: 0.6667, unit: "" }
+  - { name: I, value: 330, unit: N·s }
+  - { name: hMax, value: 0.2, unit: m }
+---
+
+题目给出的数值只有第（2）问：头锤质量 $M = 30\,\mathrm{kg}$，落下高度 $H = 3.2\,\mathrm{m}$，$g = 10\,\mathrm{m/s^2}$，气囊作用力由 $0$ 线性升到 $6600\,\mathrm{N}$ 再降回 $0$，碰撞持续 $0.1\,\mathrm{s}$。第（1）问只给字母，下面取代表性数值 $m = 0.2\,\mathrm{kg}$、$F_N = 1\,\mathrm{N}$、$a = 10\,\mathrm{m/s^2}$，方便看出比例；字母结果不依赖这些取值。
+
+## 题目条件分析
+
+第（1）问是水平刹车。敏感球沿底座斜面滑到最高处后，与车有共同的水平加速度 $a$，相对车静止，敏感臂正好被顶成水平并卡住卷轴外齿轮。此时球受三个力：重力 $mg$ 竖直向下，敏感臂的压力 $F_N$ 竖直向下，斜面的支持力 $N$ 垂直斜面向上。题目要求忽略摩擦，所以没有沿斜面的力。斜面向右上方升高，汽车向右前进、向左刹车，惯性才会把球顶到斜面上端。
+
+第（2）问分三段。头锤从气囊上方 $H$ 处自由落下，刚接触气囊时速度向下。接触后的 $0.1\,\mathrm{s}$ 内，气囊的作用力 $F$ 是三角形脉冲，比重力大得多，头锤先减速到零再向上加速。碰撞结束后只剩重力，头锤竖直上抛，再求上升的最大高度。
+
+## 完整解答
+
+### （1）斜面倾角的正切值
+
+以汽车为参考系，水平向右为正。汽车加速度向左，敏感球与车共加速，所以它的加速度也是水平向左、大小为 $a$，竖直方向加速度为零。
+
+竖直方向只有三个力的分量：
+
+$$
+N\cos\theta - mg - F_N = 0
+$$
+
+水平方向只有支持力的分量提供向左的加速度：
+
+$$
+N\sin\theta = ma
+$$
+
+两式相除，消去 $N$：
+
+$$
+\boxed{\tan\theta = \dfrac{ma}{mg + F_N} = \dfrac{a}{g + F_N/m}}
+$$
+
+用上面取的代表性数值，$\tan\theta = 10 / (10 + 1/0.2) = 2/3 \approx 0.667$，对应倾角约 $33.7^\circ$。拖动 $a$、$F_N$、$m$ 时这个比值一直成立；$F_N$ 越大、$a$ 越小，所需的斜面越缓。
+
+### （2）① 气囊作用力的冲量
+
+图丙是一个三角形：底 $t_c = 0.1\,\mathrm{s}$，高 $F_m = 6600\,\mathrm{N}$。冲量是 $F\text{--}t$ 图下的面积，方向与 $F$ 一致，竖直向上：
+
+$$
+\boxed{I = \dfrac{1}{2} F_m t_c = \dfrac{1}{2}\times 6600\times 0.1 = 330\,\mathrm{N\cdot s}}
+$$
+
+方向竖直向上。重力的冲量 $Mgt_c = 30\times 10\times 0.1 = 30\,\mathrm{N\cdot s}$ 向下，不要并进 $I$ 里：题目要的是 $F$ 本身的冲量。
+
+### （2）② 上升的最大高度
+
+自由落下刚接触气囊时，速度向下：
+
+$$
+v_0 = \sqrt{2gH} = \sqrt{2\times 10\times 3.2} = 8\,\mathrm{m/s}
+$$
+
+取向上为正。碰撞过程中合外力的冲量等于动量变化：
+
+$$
+I - Mgt_c = Mv_1 - M(-v_0)
+$$
+
+$$
+v_1 = \dfrac{I - Mgt_c}{M} - v_0 = \dfrac{330 - 30}{30} - 8 = 2\,\mathrm{m/s}
+$$
+
+碰撞结束时头锤速度向上 $2\,\mathrm{m/s}$。此后气囊不再施力，头锤只受重力，做竖直上抛。题目所求的上升最大高度，是从碰撞结束位置再向上移动的距离：
+
+$$
+\boxed{h = \dfrac{v_1^2}{2g} = \dfrac{2^2}{2\times 10} = 0.2\,\mathrm{m}}
+$$
+
+即 $20\,\mathrm{cm}$。不要把碰撞过程中压进气囊的位移算进这个高度。取向上为正、气囊表面为 $y = 0$，三角形冲量对时间再积一次，碰撞结束时的位置是
+
+$$
+y_1 = -v_0 t_c - \dfrac{1}{2}gt_c^2 + \dfrac{F_m t_c^2}{4M}
+$$
+
+$$
+= -8\times 0.1 - 5\times 0.01 + \dfrac{6600\times 0.01}{120} = -0.8 - 0.05 + 0.55 = -0.3\,\mathrm{m}
+$$
+
+头锤这时仍在表面以下，随后再上升 $0.2\,\mathrm{m}$，最高点在表面以下 $0.1\,\mathrm{m}$。题目问的是这段上升高度 $0.2\,\mathrm{m}$，不是最高点相对表面的位置。
+
+## 交互演示
+
+左侧上方是锁止机构的侧视图，齿轮、敏感臂和斜面的尺寸是示意，不按比例。拖动斜面倾角，可以对照「正好锁止」和「题目所求」两个角：两者重合时，敏感臂正好卡进齿间。右侧是同一个球的受力，支持力由水平和竖直两个方程解出。
+
+下方是头锤的下落、碰撞和上抛。碰撞过程的速度由冲量积分得到，不用手算分段公式。$F\text{--}t$ 图下的阴影就是冲量，游标跟随动画。
+
+<Param name="part" label="演示" value={1} options={[{value: 1, label: "（1）锁止机构"}, {value: 2, label: "（2）气囊碰撞"}]} />
+
+<Param name="m" label="敏感球质量" symbol="m" value={0.2} min={0.1} max={0.5} step={0.05} unit="kg" />
+
+<Param name="FN" label="敏感臂压力" symbol="F_N" color="force" value={1} min={0} max={4} step={0.1} unit="N" />
+
+<Param name="a" label="共同加速度" symbol="a" color="accel" value={10} min={2} max={20} step={0.5} unit="m/s²" />
+
+<Param name="theta" label="斜面倾角" symbol="θ" value={33.69} min={10} max={60} step={0.1} unit="°" digits={1} />
+
+<Param name="g" value={10} hidden />
+
+<Param name="M" label="头锤质量" symbol="M" value={30} hidden />
+
+<Param name="H" label="落下高度" symbol="H" value={3.2} hidden />
+
+<Param name="Fm" label="最大作用力" symbol="F_m" color="force" value={6600} hidden />
+
+<Param name="tc" label="碰撞时间" symbol="t_c" value={0.1} hidden />
+
+<Param name="t" label="时间" value={0} min={0} max={1.2} step={0.01} unit="s" hidden />
+
+<Define name="tanTh" expr="a/(g + FN/m)" />
+
+<Define name="thetaStar" expr="atan(tanTh)*180/pi" />
+
+<Define name="I" expr="0.5*Fm*tc" />
+
+<Define name="v0" expr="sqrt(2*g*H)" />
+
+<Define name="v1" expr="(I - M*g*tc)/M - v0" />
+
+<Define name="y1" expr="-v0*tc - 0.5*g*tc^2 + Fm*tc^2/(4*M)" />
+
+<Define name="hMax" expr="v1^2/(2*g)" />
+
+<Define name="tFall" expr="sqrt(2*H/g)" />
+
+<Define name="tEnd" expr="tFall + tc" />
+
+<Define name="tTop" expr="tEnd + v1/g" />
+
+<Question text="（1）斜面倾角的正切值 tanθ 是多少？" set={{part: 1, theta: "thetaStar"}} hint="水平方向 N sinθ = ma，竖直方向 N cosθ = mg + F_N" />
+
+<Question text="（2）碰撞中 F 的冲量，以及碰撞结束后上升的最大高度" set={{part: 2, t: "tTop"}} hint="冲量读三角形面积；上升高度是碰撞结束后的 v₁²/(2g)" />
+
+<Preset label="题目所求的倾角" set={{part: 1, m: 0.2, FN: 1, a: 10, theta: "thetaStar"}} />
+
+<Preset label="刚接触气囊" set={{part: 2, t: "tFall"}} />
+
+<Preset label="碰撞结束" set={{part: 2, t: "tEnd"}} />
+
+<Preset label="上升到最高点" set={{part: 2, t: "tTop"}} />
+
+<Status cases={[
+  {when: "part == 2", label: "正在演示气囊碰撞", tone: "info"},
+  {when: "abs(theta - thetaStar) < 0.3", label: "倾角正好使敏感臂卡住齿轮", tone: "success"},
+  {when: "theta < thetaStar", label: "斜面偏缓，敏感臂还卡不住", tone: "warning"},
+  {label: "斜面偏陡，球还没滑到锁止位置", tone: "neutral"}
+]} />
+
+<Readout items={[
+  {label: "所求 tanθ", symbol: "tanθ", expr: "tanTh", digits: 3},
+  {label: "对应倾角", symbol: "θ", expr: "thetaStar", unit: "°", digits: 1},
+  {label: "支持力", symbol: "N", color: "force", expr: "m*sqrt(a^2 + (g + FN/m)^2)", unit: "N", digits: 2},
+  {label: "F 的冲量", symbol: "I", color: "force", expr: "I", unit: "N·s", digits: 0},
+  {label: "离开速度", symbol: "v_1", color: "velocity", expr: "v1", unit: "m/s", digits: 2},
+  {label: "碰撞段位移", symbol: "y_1", expr: "y1", unit: "m", digits: 3},
+  {label: "上升最大高度", symbol: "h", expr: "hMax", unit: "m", digits: 3}
+]} />
+
+<Figure title="安全带锁止机构" size="wide" height={340} params={["theta", "thetaStar", "tanTh", "a", "m", "FN", "g"]} note="齿轮、敏感臂与底座的尺寸不按比例；敏感臂左端绕轴转动，倾角越大越接近水平。" hud={[{symbol: "tanθ", expr: "tan(deg(theta))", digits: 3}, {symbol: "所求", expr: "tanTh", digits: 3}]}>
+figure({
+  draw(ctx, p, v) {
+    const m = v.view({ xmin: -0.4, xmax: 5.6, ymin: -1.15, ymax: 3.55, equal: true })
+    const th = p.theta * Math.PI / 180
+    const locked = Math.abs(p.theta - p.thetaStar) < 0.3
+    const arm = Math.max(0, Math.min(1, (p.theta - 10) / (p.thetaStar - 10)))
+    const armDeg = 24 * (1 - arm)
+    const armRad = armDeg * Math.PI / 180
+    const ax = 0.55, ay = 2.55
+    const L = 3.15
+    const tipX = ax + L * Math.cos(armRad)
+    const tipY = ay - L * Math.sin(armRad)
+    const ballR = 0.3
+    const bx = tipX - ballR * Math.sin(armRad)
+    const by = tipY - ballR * Math.cos(armRad)
+    const footX = bx - ballR * Math.sin(th)
+    const footY = by - ballR * Math.cos(th)
+    const run = 2.5
+    const rise = run * Math.tan(th)
+    const toeX = footX - 0.35
+    const toeY = footY - 0.35 * Math.tan(th)
+
+    v.ground(m, -0.2, 5.4, 0)
+    v.arrow(m, 0.3, -0.72, 2.5, -0.72, { color: v.color.velocity })
+    v.label(m, 1.4, -0.98, '汽车前进方向')
+
+    v.incline(m, toeX, toeY, run, rise, { angleLabel: 'θ' })
+    v.label(m, toeX + 0.55, toeY - 0.55, '底座')
+
+    v.circle(m, 2.05, 2.72, 0.62, { color: v.color.steel, width: 5 })
+    const teeth = 14
+    for (let i = 0; i < teeth; i++) {
+      const a0 = (i / teeth) * Math.PI * 2 - Math.PI / 2
+      if (locked && i === 2) continue
+      const px = 2.05 + 0.74 * Math.cos(a0)
+      const py = 2.72 + 0.74 * Math.sin(a0)
+      v.bar(m, px, py, px + 0.16 * Math.cos(a0), py + 0.16 * Math.sin(a0), { thick: 5 })
+    }
+    v.label(m, 2.05, 2.72, '卷轴')
+    v.bar(m, 2.67, 3.28, 4.7, 3.28, { thick: 4 })
+    v.label(m, 4.55, 3.5, '安全带')
+
+    v.circle(m, ax, ay, 0.09, { fill: v.color.ink })
+    v.bar(m, ax, ay, tipX, tipY, { thick: 7 })
+    v.label(m, ax + 0.85, ay + 0.38, '敏感臂')
+    if (locked) {
+      v.bar(m, tipX, tipY, tipX, tipY + 0.32, { thick: 6 })
+    }
+
+    v.ball(m, bx, by - ballR, ballR)
+    v.label(m, bx + 0.62, by - ballR, '敏感球')
+
+    const down = Math.max(0.42, Math.min(0.7, (p.m * p.g + p.FN) * 0.16))
+    v.vec(m, bx - 0.34, by + 0.34, 0, -down, { kind: 'force', label: 'G' })
+    v.vec(m, bx + 0.34, by + 0.5, 0, -down * 0.55, { kind: 'force', label: 'F_N', dash: true })
+    v.vec(m, bx, by, -Math.sin(th) * 0.85, Math.cos(th) * 0.85, { kind: 'force', label: 'N' })
+  },
+})
+</Figure>
+
+<ForceDiagram
+  title="敏感球受力"
+  size="narrow"
+  surface={{type: "incline", angle: "theta", angleLabel: "θ"}}
+  body={{shape: "ball", label: "m"}}
+  mass="m"
+  accel={{angle: 180, magnitude: "a"}}
+  forces={[
+    {label: "mg+F_N", angle: -90, magnitude: "m*g + FN", showValue: true, unit: "N"},
+    {label: "N", angle: "90 + theta", solve: "N", showValue: true, unit: "N"}
+  ]}
+  guides={[{label: "a", angle: 180, color: "accel"}]}
+  decompose={{force: 1, axes: "xy", labels: ["N sinθ", "N cosθ"]}}
+/>
+
+<Sim title="头锤与气囊碰撞" height={300} duration={1.1} time="t" playSeconds={8} params={["g", "H", "M", "Fm", "tc", "tFall", "tEnd", "tTop", "v0", "v1", "y1", "hMax", "I"]} marks={[{t: 0, label: "开始下落"}, {t: "tFall", label: "接触气囊"}, {t: "tEnd", label: "碰撞结束"}, {t: "tTop", label: "上升到最高"}]} hud={[{symbol: "v", expr: "t < tFall ? -g*t : (t < tEnd ? -v0 + ((t - tFall) < tc/2 ? (Fm*(t - tFall)*(t - tFall)/tc) : (I - Fm*(tEnd - t)*(tEnd - t)/tc)) / M - g*(t - tFall) : v1 - g*(t - tEnd))", unit: "m/s", digits: 2}, {symbol: "F", expr: "(t > tFall and t < tEnd) ? (t - tFall < tc/2 ? Fm*2*(t - tFall)/tc : Fm*2*(tEnd - t)/tc) : 0", unit: "N", digits: 0}]} note="气囊的鼓起是示意，不按头锤的压入深度画；速度向上为正。">
+sim({
+  at(t, p) {
+    const tf = p.tFall
+    const te = p.tEnd
+    let y, vy, F
+    if (t <= tf) {
+      y = p.H - 0.5 * p.g * t * t
+      vy = -p.g * t
+      F = 0
+    } else if (t <= te) {
+      const u = t - tf
+      const frac = u / p.tc
+      const up = frac <= 0.5
+      F = up ? p.Fm * 2 * frac : p.Fm * 2 * (1 - frac)
+      const J = up ? p.Fm * u * frac : p.I - p.Fm * (p.tc - u) * (1 - frac)
+      vy = -p.v0 + (J - p.M * p.g * u) / p.M
+      const half = p.tc / 2
+      if (up) {
+        y = -p.v0 * u - 0.5 * p.g * u * u + (p.Fm * u * u * u) / (3 * p.tc * p.M)
+      } else {
+        const yHalf = -p.v0 * half - 0.5 * p.g * half * half + (p.Fm * half * half) / (6 * p.M)
+        const vHalf = -p.v0 + (p.I / 2) / p.M - p.g * half
+        const w = u - half
+        y = yHalf + vHalf * w - 0.5 * p.g * w * w + (p.Fm * w * w) / (2 * p.M) - (p.Fm * w * w * w) / (3 * p.tc * p.M)
+      }
+    } else {
+      const w = t - te
+      vy = p.v1 - p.g * w
+      y = p.y1 + p.v1 * w - 0.5 * p.g * w * w
+      F = 0
+    }
+    return { y: y, vy: vy, F: F }
+  },
+  draw(ctx, s, v) {
+    const m = v.view({ xmin: -1.35, xmax: 2.05, ymin: -0.85, ymax: 3.7, equal: true })
+    const sink = Math.max(0, Math.min(0.55, -Math.min(0, s.y)))
+    const top = 0.5 - sink
+    v.ground(m, -1.2, 1.9, -0.12, { thick: 14 })
+    v.block(m, 1.15, -0.12, 1.05, 0.3)
+    v.label(m, 1.15, 0.38, '试验台')
+    v.path(m, [[-0.42, -0.1], [-0.3, top], [0.3, top], [0.42, -0.1]], {
+      close: true, fill: v.color.enamel, color: v.color.steel,
+    })
+    v.label(m, -0.95, Math.max(0.15, top - 0.35), '安全气囊')
+    const headY = Math.max(top + 0.34, s.y)
+    v.ball(m, 0, headY, 0.28)
+    v.label(m, -0.72, headY + 0.42, '头锤')
+    if (s.y > 0.55) v.dim(m, 0.62, 0, 0.62, s.y - 0.28, 'H')
+    const sc = 0.28 / Math.max(Math.abs(s.vy), 1)
+    const vSign = s.vy < 0 ? -1 : 1
+    v.vec(m, 0.85, headY + 0.45, 0, vSign * Math.max(0.42, Math.abs(s.vy) * sc), { kind: 'velocity', label: 'v' })
+    if (s.F > 1) v.vec(m, -0.95, 0.15, 0, 0.28 + 0.4 * (s.F / v.p.Fm), { kind: 'force', label: 'F' })
+    v.event(m, 1.35, 2.7, '接触气囊', { at: v.p.tFall, kind: 'force' })
+    v.event(m, 1.35, 2.05, '碰撞结束', { at: v.p.tEnd, kind: 'force' })
+    v.event(m, -1.3, 2.3, '最高点', { at: v.p.tTop, kind: 'velocity' })
+  },
+})
+</Sim>
+
+<Plot
+  title="气囊作用力随时间变化"
+  size="wide"
+  x={{name: "t", label: "t", unit: "s", min: 0, max: 0.12}}
+  y={{label: "F", unit: "N", min: 0, max: 7600}}
+  series={[
+    {label: "F", color: "force", over: {name: "u", min: 0, max: 0.1}, x: "u", expr: "u < tc/2 ? Fm*2*u/tc : Fm*2*(tc - u)/tc"}
+  ]}
+  marks={[{x: 0.05, label: "F_m = 6600 N"}, {x: 0.1, label: "碰撞结束"}]}
+  areas={[{series: 0, from: 0, until: 0.1, label: "冲量 I"}]}
+  cursor="t"
+/>
+
+<Plot
+  title="头锤速度随时间变化"
+  size="narrow"
+  caption="向上为正；碰撞段由冲量积分得到"
+  x={{name: "t", label: "t", unit: "s", min: 0, max: 1.1}}
+  y={{label: "v", unit: "m/s", min: -9, max: 4}}
+  series={[
+    {label: "v", color: "velocity", expr: "t < tFall ? -g*t : (t < tEnd ? -v0 + ((t - tFall) < tc/2 ? (Fm*(t - tFall)*(t - tFall)/tc) : (I - Fm*(tEnd - t)*(tEnd - t)/tc)) / M - g*(t - tFall) : v1 - g*(t - tEnd))"}
+  ]}
+  marks={[{x: "tFall", label: "接触"}, {x: "tEnd", label: "离开，v_1"}, {x: "tTop", label: "最高点"}]}
+  cursor="t"
+/>
+
+## 结合图像看关键时刻
+
+锁止机构里，拖动斜面倾角，敏感臂从下斜逐渐抬成水平。倾角到达题目所求的值时，臂的右端卡进外齿轮的齿间，卷轴不能再转，安全带锁住。受力图上把支持力分解到水平和竖直：水平分力就是 $ma$，竖直分力抵消 $mg + F_N$，两者之比是 $\tan\theta$。
+
+气囊过程拖动时间，对照两张图：
+
+- $0$ 到接触：头锤自由落下，$F = 0$，速度从 $0$ 变到 $-8\,\mathrm{m/s}$。
+- 接触到 $0.1\,\mathrm{s}$：$F$ 先升后降，图下面积 $330\,\mathrm{N\cdot s}$。合冲量向上 $300\,\mathrm{N\cdot s}$，动量从 $-240\,\mathrm{kg\cdot m/s}$ 变成 $+60\,\mathrm{kg\cdot m/s}$，离开时速度 $2\,\mathrm{m/s}$。
+- 碰撞结束之后：只剩重力。头锤此时在气囊表面以下 $0.3\,\mathrm{m}$，速度向上 $2\,\mathrm{m/s}$，再上升的最大高度是 $v_1^2/(2g) = 0.2\,\mathrm{m}$。
+
+## 答案汇总
+
+（1）$\tan\theta = \dfrac{a}{g + F_N/m}$。
+
+（2）① $F$ 的冲量大小 $330\,\mathrm{N\cdot s}$，方向竖直向上。②碰撞结束后上升的最大高度 $0.2\,\mathrm{m}$（$20\,\mathrm{cm}$）。
+
+<Answer items={[
+  {label: "斜面倾角的正切值", symbol: "tanθ", expr: "tanTh", value: 0.6667, digits: 3},
+  {label: "F 的冲量（向上）", symbol: "I", expr: "I", value: 330, unit: "N·s", digits: 0},
+  {label: "上升最大高度", symbol: "h", expr: "hMax", value: 0.2, unit: "m", digits: 2}
+]} />

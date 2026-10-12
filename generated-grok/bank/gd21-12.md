@@ -1,0 +1,227 @@
+---
+id: gd21-12
+title: 热敏电阻随温度的替代法测量
+source: 2021 广东卷 第 12 题（实验；必考题共 42 分，原卷未单列本题分值）
+question: "某小组研究热敏电阻阻值随温度的变化规律。根据实验需要已选用了规格和量程合适的器材。\n\n（1）先用多用电表预判热敏电阻阻值随温度的变化趋势。选择适当倍率的欧姆挡，将两表笔 ______，调节欧姆调零旋钮，使指针指向右边“0Ω”处。测量时观察到热敏电阻温度越高，相同倍率下多用电表指针向右偏转角度越大，由此可判断热敏电阻阻值随温度的升高而 __________。\n\n（2）再按图连接好电路进行测量。\n\n【图】左端黑点分出两支。上支经过电压表 V 后向右：实线向下接到接线柱 C，虚线再向右向下接到接线柱 D。下支从黑点向右，经电流表 A、带斜箭头的电阻箱 R_0 后也接到 C。C、D 是方框中画有十字的接线柱，C 在左、D 在右，各有箭头从上指向接线柱。温控室是斜线边框的方框，框内灰色矩形标“热敏电阻”，左端引线向上接到 C，右端引线向上接到 D。D 向右的导线沿图的右侧向下，接到下方的黑点。下方从左到右：开关 S（断开）、电源 E（电池符号长线在左、短线在右）、滑动变阻器 R_1。R_1 为矩形，左端接电源，右端接到黑点；矩形上方有滑片箭头指向下，箭头左边标 a、右边标 b，滑片经上方导线与右侧黑点相连。\n\n①闭合开关 S 前，将滑动变阻器 R_1 的滑片滑到 _______ 端（选填“a”或“b”）。\n\n将温控室的温度设置为 T，电阻箱 R_0 调为某一阻值 R_{01}。闭合开关 S，调节滑动变阻器 R_1，使电压表和电流表的指针偏转到某一位置。记录此时电压表和电流表的示数、T 和 R_{01}。断开开关 S。\n\n再将电压表与热敏电阻 C 端间的导线改接到 D 端，闭合开关 S。反复调节 R_0 和 R_1，使电压表和电流表的示数与上述记录的示数相同。记录此时电阻箱的阻值 R_{02}。断开开关 S。\n\n②实验中记录的阻值 R_{01} _____ R_{02}（选填“大于”、“小于”或“等于”）。此时热敏电阻阻值 R_T = _____ 。"
+answers:
+  - { name: cmp, value: 1 }
+  - { name: RT, value: 120, unit: Ω }
+---
+
+题目没有给电源、电表示数和电阻箱的数值。下面取一组代表值说明测量原理：电源电动势 $E = 3\,\mathrm{V}$，滑动变阻器总阻值 $R_1 = 50\,\Omega$，第一次电阻箱取 $R_{01} = 200\,\Omega$。热敏电阻取 $20\,^\circ\mathrm{C}$ 时 $200\,\Omega$，温度升高则按指数下降；到题目代表状态 $T = 40\,^\circ\mathrm{C}$ 时 $R_T = 120\,\Omega$。电流表、电压表和电源内阻按理想情况处理。
+
+## 题目条件分析
+
+（1）欧姆挡的调零是把两表笔短接，让指针指向右端的 $0\,\Omega$。欧姆刻度左端是 $\infty$、右端是 $0$，相同倍率下指针越靠右，测得的阻值越小。
+
+（2）电源、开关、滑动变阻器、电流表和电阻箱串联；电压表左端接在电流表与电阻箱之间，右端先接 C，再改接 D。滑片经上方导线接到右侧黑点，线圈右端也接到这个黑点，所以 $R_1$ 是限流接法。滑片在 b 端时，电流经过整个线圈，电路电流最小。
+
+第一次电压表接 C：它并在电阻箱与热敏电阻的串联体上，读数
+
+$$
+U = I(R_{01} + R_T)
+$$
+
+第二次改接 D：电压表只并在电阻箱上，热敏电阻仍串在干路中。调节后两表示数不变，所以
+
+$$
+U = I R_{02}
+$$
+
+两次的 $U$、$I$ 相同，比较就得 $R_{01} + R_T = R_{02}$，因而 $R_{01} < R_{02}$，并且
+
+$$
+R_T = R_{02} - R_{01}
+$$
+
+## 完整解答
+
+（1）两表笔**短接**（短路）；指针向右偏转越大，读数越接近 $0\,\Omega$，所以阻值随温度升高而**减小**。
+
+（2）① 闭合开关前滑片应滑到**b** 端，使限流电阻最大、电路电流最小。
+
+② 两次读数相同时 $R_{01} + R_T = R_{02}$，所以 $R_{01}$ **小于** $R_{02}$，并且
+
+$$
+\boxed{R_T = R_{02} - R_{01}}
+$$
+
+代表值下 $T = 40\,^\circ\mathrm{C}$，$R_T = 120\,\Omega$。第二次电压表只测电阻箱，要保持 $U/I$ 不变，电阻箱必须从 $200\,\Omega$ 调到
+
+$$
+R_{02} = R_{01} + R_T = 200\,\Omega + 120\,\Omega = 320\,\Omega
+$$
+
+回代验算
+
+$$
+R_T = 320\,\Omega - 200\,\Omega = \boxed{120\,\Omega}
+$$
+
+## 交互演示
+
+拖动温度可以看到欧姆挡指针向右偏、热敏电阻变小。切换两次接法时，电压表和电流表的示数保持不变；第二次电阻箱比第一次大出的部分就是 $R_T$。
+
+<Question text="（1）欧姆挡怎样调零？指针向右偏越大说明什么？" set={{probe: 1, T: 40}} hint="两表笔短接后指针才能指到右端 0；越靠右阻值越小" />
+
+<Question text="（2）闭合 S 前滑片在哪端？两次记录的电阻箱怎样比？" set={{probe: 2, link: 1, R01: 200, T: 40}} hint="b 端限流电阻最大；第二次要补上热敏电阻，所以 R02 更大" />
+
+<Param name="probe" label="步骤" value={2} options={[{value: 1, label: "欧姆挡预判"}, {value: 2, label: "替代法测量"}]} />
+
+<Param name="link" label="电压表右端" value={1} options={[{value: 1, label: "接 C：测 R0 与 RT"}, {value: 2, label: "接 D：只测 R0"}]} />
+
+<Param name="T" label="温控室温度" symbol="T" value={40} min={20} max={80} step={1} unit="°C" color="force" />
+
+<Param name="R01" label="第一次电阻箱" symbol="R_{01}" value={200} min={50} max={500} step={10} unit="Ω" />
+
+<Param name="E" label="电源电动势" value={3} hidden />
+
+<Param name="R1" label="滑动变阻器总阻值" value={50} hidden />
+
+<Define name="RT" expr="200*exp(-log(200/120)/20*(T - 20))" />
+
+<Define name="R02" expr="R01 + RT" />
+
+<Define name="Rbox" expr="link == 1 ? R01 : R02" />
+
+<Define name="Rc" expr="260" />
+
+<Define name="Rd" expr="Rc - RT" />
+
+<Define name="U" expr="link == 1 ? Uc : Ud" />
+
+<Define name="I" expr="link == 1 ? Ic : Id" />
+
+<Define name="cmp" expr="R01 < R02 ? 1 : 0" />
+
+<Preset label="题目状态：T = 40 °C" set={{probe: 2, link: 1, T: 40, R01: 200}} />
+
+<Preset label="改接到 D，两表不变" set={{probe: 2, link: 2, T: 40, R01: 200}} />
+
+<Preset label="温度升高到 70 °C" set={{probe: 1, T: 70}} />
+
+<Status cases={[
+  {when: "probe == 1", label: "欧姆挡：温度越高，指针越靠右，阻值越小", tone: "info"},
+  {when: "link == 1", label: "电压表接 C：U = I(R01 + RT)", tone: "neutral"},
+  {label: "电压表接 D：U = I·R02，两表示数与接 C 时相同", tone: "success"}
+]} />
+
+<Readout items={[
+  {label: "热敏电阻", symbol: "R_T", expr: "RT", unit: "Ω", digits: 1, color: "force"},
+  {label: "电阻箱现在", symbol: "R_0", expr: "Rbox", unit: "Ω", digits: 1},
+  {label: "电压表", symbol: "U", expr: "U", unit: "V", digits: 3, color: "field"},
+  {label: "电流表", symbol: "I", expr: "I", unit: "A", digits: 4, color: "charge"}
+]} />
+
+<Answer items={[
+  {label: "欧姆调零", text: "两表笔短接（短路）"},
+  {label: "阻值随温度", text: "减小"},
+  {label: "闭合前滑片", text: "b 端"},
+  {label: "两次阻值比较", text: "R01 小于 R02"},
+  {label: "热敏电阻", symbol: "R_T", expr: "RT", value: 120, unit: "Ω", digits: 1},
+  {label: "用两次记录表示", symbol: "R_T", text: "R02 − R01"}
+]} />
+
+<Instrument title="多用电表欧姆挡" type="multimeter" mode="ohm" range={10} value="RT" note="相同倍率下，指针越靠右阻值越小" size="wide" />
+
+<Circuit title="电压表接 C" size="narrow"
+  source={{series: [
+    {type: "battery", label: "E", emf: "E", positive: "left"},
+    {type: "switch", label: "S", closed: "probe == 2"},
+    {type: "rheostat", label: "R_1", R: "Rc"}
+  ]}}
+  load={{series: [
+    {type: "ammeter", label: "A"},
+    {parallel: [
+      {series: [
+        {type: "resistor", label: "R_0", R: "R01", read: "Ic"},
+        {type: "thermistor", label: "R_T", R: "RT"}
+      ]},
+      {type: "voltmeter", label: "V", r: 1e9, read: {U: "Uc"}}
+    ]}
+  ]}}
+  note="电压表并在 R0 与 RT 的串联体两端"
+/>
+
+<Circuit title="电压表改接 D" size="narrow"
+  source={{series: [
+    {type: "battery", label: "E", emf: "E", positive: "left"},
+    {type: "switch", label: "S", closed: "probe == 2"},
+    {type: "rheostat", label: "R_1", R: "Rd"}
+  ]}}
+  load={{series: [
+    {type: "ammeter", label: "A"},
+    {parallel: [
+      {type: "resistor", label: "R_0", R: "R02", read: "Id"},
+      {type: "voltmeter", label: "V", r: 1e9, read: {U: "Ud"}}
+    ]},
+    {type: "thermistor", label: "R_T", R: "RT"}
+  ]}}
+  note="电压表只并在 R0 两端，R0 已调到 R02"
+/>
+
+<Plot title="热敏电阻随温度降低" size="wide"
+  x={{name: "Tc", label: "T", unit: "°C", min: 20, max: 80}}
+  y={{label: "R_T", unit: "Ω", min: 0, max: 220}}
+  series={[{label: "R_T", expr: "200*exp(-log(200/120)/20*(Tc - 20))", color: "force"}]}
+  cursor="T"
+  caption="代表值：20 °C 时 200 Ω，温度升高则阻值减小"
+/>
+
+<Figure title="温控室与热敏电阻" height={280} params={["T", "RT", "link"]} note="温控室没有现成器材，斜线边框用细线示意；引线不按比例">
+figure({
+  draw(ctx, p, v) {
+    const m = v.view({ xmin: 0, xmax: 10, ymin: 0, ymax: 6.2 })
+    const x1 = 2.2
+    const x2 = 7.8
+    const y1 = 1.3
+    const y2 = 4.7
+    const span = y2 - y1
+    const rise = (x2 - x1) * 0.42
+    for (let x = x1 - span; x < x2; x += 0.34) {
+      const a = Math.max(x1, x)
+      const b = Math.min(x2, x + rise)
+      if (b - a < 0.08) continue
+      const ya = y1 + ((a - x) / rise) * span
+      const yb = y1 + ((b - x) / rise) * span
+      v.line(m, a, ya, b, yb, { color: v.color.steel, width: 1 })
+    }
+    v.rect(m, x1, y1, x2 - x1, y2 - y1, { color: v.color.ink, width: 1.5 })
+    v.vessel(m, [{ x1: 3.7, y1: 2.35, x2: 6.3, y2: 3.35 }], { wall: 3 })
+    v.label(m, 5, 5.15, "温控室")
+    v.label(m, 5, 2.85, "热敏电阻")
+    v.line(m, 3.7, 3.35, 3.7, 5.35, { color: v.color.ink, width: 1.5 })
+    v.line(m, 6.3, 3.35, 6.3, 5.35, { color: v.color.ink, width: 1.5 })
+    v.circle(m, 3.7, 5.45, 0.13, { fill: v.color.ink })
+    v.circle(m, 6.3, 5.45, 0.13, { fill: v.color.ink })
+    v.label(m, 3.35, 5.55, "C", { place: "left" })
+    v.label(m, 6.65, 5.55, "D", { place: "right" })
+    v.line(m, 3.7, 5.45, 1.5, 5.45, { color: v.color.ink, width: 1.5 })
+    if (p.link < 1.5) {
+      v.line(m, 1.5, 5.45, 1.5, 4.35, { color: v.color.field, width: 2.5 })
+      v.line(m, 6.3, 5.45, 8.6, 5.45, { color: v.color.steel, width: 1, dash: true })
+    } else {
+      v.line(m, 1.5, 5.45, 1.5, 4.35, { color: v.color.steel, width: 1, dash: true })
+      v.line(m, 6.3, 5.45, 8.6, 5.45, { color: v.color.field, width: 2.5 })
+      v.line(m, 8.6, 5.45, 8.6, 4.35, { color: v.color.field, width: 2.5 })
+    }
+    v.label(m, 1.15, 4.9, "V", { place: "left" })
+  },
+})
+</Figure>
+
+## 结合图像理解
+
+欧姆挡的指针随 $T$ 向右移动，曲线也随 $T$ 下降，两者说的是同一件事：这只热敏电阻的阻值随温度升高而减小。
+
+电路里两次接法的电压、电流都不变。接 C 时电压表测的是 $R_{01} + R_T$，接 D 时测的是 $R_{02}$，所以两者相等，$R_T$ 就是电阻箱增大的部分。
+
+## 答案汇总
+
+| 空 | 答案 |
+|---|---|
+| （1）两表笔 | 短接 |
+| （1）阻值随温度升高 | 减小 |
+| （2）① 滑片 | b 端 |
+| （2）② 比较 | $R_{01}$ 小于 $R_{02}$ |
+| （2）② 热敏电阻 | $R_T = R_{02} - R_{01}$ |

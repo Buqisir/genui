@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>二维画面风格方向（样张）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 32px; background: #e9e9e7; font-family: 'Noto Sans SC', sans-serif; color: #222; }
+  section { margin: 0 0 40px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  p.desc { font-size: 13px; color: #555; margin: 0 0 12px; max-width: 680px; line-height: 1.6; }
+  .card { width: 680px; box-sizing: border-box; padding: 18px 20px 14px; border-radius: 14px; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; }
+  .title { font-size: 14px; }
+  .fig { opacity: .55; margin-right: 8px; font-size: 12px; letter-spacing: .06em; }
+  .readout { display: flex; gap: 18px; font-size: 13px; }
+  .sym { font-family: 'Source Serif 4', serif; font-style: italic; margin-right: 6px; }
+  .num { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+  .unit { opacity: .6; margin-left: 3px; font-size: 11px; }
+  .foot { display: flex; justify-content: space-between; font-size: 11.5px; margin-top: 6px; }
+  svg { display: block; width: 640px; height: 340px; }
+
+  .A { background: #f6f2e9; color: #2b2723; box-shadow: 0 0 0 1px #e2dccf; }
+  .A .title { font-family: 'Noto Serif SC', serif; font-weight: 600; }
+  .A .foot { color: #8a8174; }
+  .B { background: #f3f4f6; color: #2a2f36; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 0 0 1px #e3e5e9; }
+  .B .title { font-weight: 600; }
+  .B .foot { color: #8b9098; }
+  .C { background: #171a1f; color: #dfe3e8; box-shadow: 0 0 0 1px #262a31; }
+  .C .title { font-weight: 500; }
+  .C .foot { color: #7c838d; }
+</style>
+</head>
+<body>
+
+<section>
+  <h2>A　纸本墨线</h2>
+  <p class="desc">暖白纸面，深褐墨线（1.1 px），三档平涂灰，不用渐变；地面用剖面阴影线。像精印的教科书插图。</p>
+  <div class="card A" id="card-A"></div>
+</section>
+
+<section>
+  <h2>B　冷灰实体</h2>
+  <p class="desc">冷浅灰卡片，实体按四档明暗着色，顶面更亮、边缘有倒角高光，底下一圈柔和投影；细线（0.7 px）。最接近 Anatomy 浅色主题，三维可以直接沿用。</p>
+  <div class="card B" id="card-B"></div>
+</section>
+
+<section>
+  <h2>C　暗色实验台</h2>
+  <p class="desc">深色卡片，实体是深灰金属，顶边有冷色轮廓光；强调色带微光。和现在的三棱镜样稿同一路，适合光学、场线。</p>
+  <div class="card C" id="card-C"></div>
+</section>
+
+<script>
+const T = Math.PI / 180
+const TH = 11.5 * T, CS = Math.cos(TH), SN = Math.sin(TH)
+const O = [88, 243]                       // track origin: low end, top surface
+const W = (x, y) => [O[0] + x * CS + y * SN, O[1] - x * SN + y * CS]
+
+const THEMES = {
+  A: {
+    line: '#2b2723', lw: 1.1, faint: 'rgba(43,39,35,.28)', label: '#6d655a',
+    tones: {
+      lo:  { top: '#cfc8ba', f0: '#d9d2c4', f1: '#d9d2c4' },
+      mid: { top: '#ece6da', f0: '#e3dccf', f1: '#e3dccf' },
+      hi:  { top: '#fbf8f1', f0: '#f4efe5', f1: '#f4efe5' },
+      dark:{ top: '#6f675c', f0: '#5b544a', f1: '#5b544a' },
+    },
+    bevel: null, halo: null, hatch: true,
+    accent: '#1f4fd8', glow: false,
+    screen: '#c9cdb9', screenText: '#2b2d24', screenEdge: '#8e917f',
+    cable: '#3b3631', cableHi: null,
+  },
+  B: {
+    line: 'rgba(42,47,54,.88)', lw: 0.7, faint: 'rgba(42,47,54,.22)', label: '#7b818a',
+    tones: {
+      lo:  { top: '#cfd3d9', f0: '#c4c9d0', f1: '#b4bac2' },
+      mid: { top: '#eceef1', f0: '#dde0e5', f1: '#c9cdd4' },
+      hi:  { top: '#ffffff', f0: '#f1f3f5', f1: '#dfe2e7' },
+      dark:{ top: '#545a63', f0: '#3e434b', f1: '#2e3238' },
+    },
+    bevel: 'rgba(255,255,255,.95)', halo: 'rgba(30,36,46,.30)', hatch: false,
+    accent: '#1f4fd8', glow: false,
+    screen: '#1c2127', screenText: '#d6e2ea', screenEdge: '#0e1114',
+    cable: '#2f343b', cableHi: 'rgba(255,255,255,.35)',
+  },
+  C: {
+    line: 'rgba(170,180,192,.75)', lw: 0.7, faint: 'rgba(170,180,192,.20)', label: '#8a929c',
+    tones: {
+      lo:  { top: '#2c3139', f0: '#22262c', f1: '#1b1e23' },
+      mid: { top: '#3d434d', f0: '#2e333b', f1: '#23272d' },
+      hi:  { top: '#59616d', f0: '#454c56', f1: '#353a42' },
+      dark:{ top: '#20242a', f0: '#14171b', f1: '#0f1114' },
+    },
+    bevel: 'rgba(150,175,205,.55)', halo: 'rgba(0,0,0,.55)', hatch: false,
+    accent: '#6e9bff', glow: true,
+    screen: '#07090b', screenText: '#cfe0ea', screenEdge: '#000',
+    cable: '#0d0f12', cableHi: 'rgba(150,175,205,.35)',
+  },
+}
+
+function build(id) {
+  const t = THEMES[id]
+  const out = []
+  const P = (s) => out.push(s)
+  const pts = (a) => a.map((p) => p.map((v) => v.toFixed(2)).join(',')).join(' ')
+
+  function slab(x, y, w, h, top, tone, o = {}) {
+    const k = t.tones[tone]
+    const g = `${id}-${tone}`
+    const r = o.r ?? 1.5
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${g})"/>`
+    if (top > 0) s += `<rect x="${x}" y="${y - top}" width="${w}" height="${top}" fill="${k.top}"/>`
+    if (top > 0) s += `<line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}" stroke="${t.faint}" stroke-width="${t.lw * .8}"/>`
+    if (t.bevel && top > 0) s += `<line x1="${x + 1.2}" y1="${y - top + .7}" x2="${x + w - 1.2}" y2="${y - top + .7}" stroke="${t.bevel}" stroke-width=".8"/>`
+    s += `<rect x="${x}" y="${y - top}" width="${w}" height="${h + top}" rx="${r}" fill="none" stroke="${t.line}" stroke-width="${o.lw ?? t.lw}"/>`
+    return s
+  }
+  const dot = (x, y, r = 1.1) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${t.line}" opacity=".7"/>`
+  const screw = (x, y) => t.hatch
+    ? `<circle cx="${x}" cy="${y}" r="1.8" fill="none" stroke="${t.line}" stroke-width=".7"/><line x1="${x - 1.2}" y1="${y}" x2="${x + 1.2}" y2="${y}" stroke="${t.line}" stroke-width=".6"/>`
+    : dot(x, y, 1.15)
+  function wheel(cx, cy, r) {
+    const d = t.tones.dark, m = t.tones.mid, h = t.tones.hi
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${d.f0}" stroke="${t.line}" stroke-width="${t.lw}"/>`
+      + `<circle cx="${cx}" cy="${cy}" r="${r * .6}" fill="${m.f0}" stroke="${t.line}" stroke-width="${t.lw * .7}"/>`
+      + `<circle cx="${cx}" cy="${cy}" r="${r * .22}" fill="${h.top}"/>` + dot(cx, cy, .7)
+  }
+  function knob(cx, cy, r) {
+    let s = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${id}-mid)" stroke="${t.line}" stroke-width="${t.lw}"/>`
+    for (let i = 0; i < 18; i++) {
+      const a = i / 18 * 2 * Math.PI
+      s += `<line x1="${cx + Math.cos(a) * (r - 1.4)}" y1="${cy + Math.sin(a) * (r - 1.4)}" x2="${cx + Math.cos(a) * r}" y2="${cy + Math.sin(a) * r}" stroke="${t.line}" stroke-width=".45" opacity=".6"/>`
+    }
+    return s + `<line x1="${cx}" y1="${cy}" x2="${cx + r * .55}" y2="${cy - r * .55}" stroke="${t.line}" stroke-width="1"/>`
+  }
+
+  // defs
+  P('<defs>')
+  for (const [name, k] of Object.entries(t.tones)) {
+    P(`<linearGradient id="${id}-${name}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${k.f0}"/><stop offset="1" stop-color="${k.f1}"/></linearGradient>`)
+  }
+  P(`<filter id="${id}-blur" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="5"/></filter>`)
+  P(`<filter id="${id}-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`)
+  P(`<pattern id="${id}-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="${t.line}" stroke-width=".6" opacity=".45"/></pattern>`)
+  P(`<linearGradient id="${id}-hatchfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`)
+  P(`<mask id="${id}-hmask"><rect x="40" y="298" width="560" height="14" fill="url(#${id}-hatchfade)"/></mask>`)
+  P('</defs>')
+
+  // ground
+  if (t.halo) P(`<ellipse cx="320" cy="300" rx="284" ry="6" fill="${t.halo}" filter="url(#${id}-blur)"/>`)
+  if (t.hatch) {
+    P(`<line x1="40" y1="298" x2="600" y2="298" stroke="${t.line}" stroke-width="${t.lw}"/>`)
+    P(`<rect x="40" y="298" width="560" height="14" fill="url(#${id}-hatch)" mask="url(#${id}-hmask)"/>`)
+  }
+
+  // base plate on feet
+  for (const fx of [78, 562]) {
+    P(slab(fx - 11, 295.5, 22, 2.5, 0, 'lo', { r: .6 }))
+    P(slab(fx - 7.5, 290, 15, 5.5, 0, 'mid', { r: .6 }))
+  }
+  P(slab(50, 274, 540, 16, 5, 'mid', { r: 2.5 }))
+  P(`<line x1="56" y1="271.5" x2="584" y2="271.5" stroke="${t.faint}" stroke-width="${t.lw * .8}"/>`)
+  for (const sx of [60, 580]) P(screw(sx, 282))
+  // label plate on the plate front
+  P(slab(470, 278, 72, 8.5, 0, 'hi', { r: 1, lw: t.lw * .8 }))
+  P(`<line x1="480" y1="281" x2="514" y2="281" stroke="${t.faint}" stroke-width=".9"/><line x1="480" y1="283.8" x2="504" y2="283.8" stroke="${t.faint}" stroke-width=".9"/>`)
+  P(dot(474, 282.2, .7) + dot(538, 282.2, .7))
+
+  // hinge block at the low end
+  P(slab(76, 258, 36, 11, 3, 'lo'))
+  P(screw(82, 264) + screw(106, 264))
+
+  // timer box (drawn before the gate post)
+  P(slab(286, 233, 96, 36, 4, 'hi', { r: 2.5 }))
+  P(`<rect x="296" y="240" width="56" height="19" rx="2" fill="${t.screen}" stroke="${t.screenEdge}" stroke-width=".8"/>`)
+  P(`<text x="346" y="253.5" text-anchor="end" font-family="JetBrains Mono" font-size="10" font-weight="500" fill="${t.screenText}">12.4 ms</text>`)
+  P(knob(368, 249.5, 6))
+  P(dot(292, 237.5, .7) + dot(376, 237.5, .7))
+  P(slab(382, 243, 6, 7, 0, 'dark', { r: .8 }))
+
+  // high-end support: collar, post, saddle clamp, thumb screw
+  const sup = W(440, 12)
+  P(slab(sup[0] - 7, 263.5, 14, 5.5, 1.5, 'lo', { r: 1 }))
+  P(slab(sup[0] - 3.5, sup[1] + 10, 7, 263.5 - sup[1] - 10, 0, 'mid', { r: .5 }))
+  P(`<line x1="${sup[0] - 3.5}" y1="${sup[1] + 40}" x2="${sup[0] + 3.5}" y2="${sup[1] + 40}" stroke="${t.faint}" stroke-width=".8"/>`)
+  P(slab(sup[0] - 11, sup[1] - 1, 22, 11, 0, 'mid', { r: 1.5 }))
+  P(slab(sup[0] + 11, sup[1] + 3, 4, 3, 0, 'mid', { r: .4 }))
+  P(knob(sup[0] + 19, sup[1] + 4.5, 4))
+
+  // track (rotated group)
+  const L = 470
+  P(`<g transform="translate(${O[0]} ${O[1]}) rotate(${-11.5})">`)
+  P(slab(0, 0, L, 12, 4, 'mid', { r: 1.5 }))
+  // ruler strip on the front face, ticks rooted on its top edge
+  P(`<rect x="14" y="3" width="${L - 28}" height="6" fill="${t.tones.hi.f0}" stroke="${t.faint}" stroke-width=".6"/>`)
+  for (let i = 0, x = 18; x <= L - 18; i++, x += 6) {
+    const major = i % 5 === 0
+    P(`<line x1="${x}" y1="3" x2="${x}" y2="${3 + (major ? 3.6 : 1.8)}" stroke="${t.line}" stroke-width="${major ? .7 : .45}" opacity="${major ? .8 : .55}"/>`)
+  }
+  // stops
+  P(slab(6, -4, 10, 6, 0, 'dark', { r: 1 }))
+  P(slab(L - 14, -4, 9, 9, 0, 'mid', { r: 1 }) + dot(L - 9.5, -1.5, .7))
+  // hinge pin
+  P(`<circle cx="7" cy="7" r="3.2" fill="${t.tones.lo.f0}" stroke="${t.line}" stroke-width="${t.lw * .8}"/>` + dot(7, 7, .8))
+
+  // cart: wheels, body, flag
+  P(wheel(166, -8, 7.2) + wheel(222, -8, 7.2))
+  P(slab(148, -31, 90, 16, 4, 'hi', { r: 3 }))
+  P(`<line x1="148" y1="-21" x2="238" y2="-21" stroke="${t.faint}" stroke-width=".8"/>`)
+  P(dot(153, -26, .8) + dot(233, -26, .8))
+  P(slab(190, -64, 5, 25, 0, 'dark', { r: .6 }))
+  P(slab(185, -39, 15, 4, 0, 'mid', { r: .6 }) + dot(188, -37, .6) + dot(197, -37, .6))
+  // velocity arrow (the one accent), along the track, down-slope
+  const ax0 = 140, ax1 = 84, ay = -22
+  const arrow = `<line x1="${ax0}" y1="${ay}" x2="${ax1 + 7}" y2="${ay}" stroke="${t.accent}" stroke-width="2.2" stroke-linecap="round"/>`
+    + `<polygon points="${ax1},${ay} ${ax1 + 10},${ay - 4.6} ${ax1 + 10},${ay + 4.6}" fill="${t.accent}"/>`
+  P(t.glow ? `<g filter="url(#${id}-glow)">${arrow}</g>` : arrow)
+  P(`<text x="${(ax0 + ax1) / 2 + 4}" y="${ay - 7}" text-anchor="middle" font-family="Source Serif 4" font-style="italic" font-size="13" fill="${t.accent}">v</text>`)
+  P('</g>')
+
+  // photogate: front arm, lens, post, collar, connector, cable
+  const gx = 405
+  P(slab(gx - 3, 200, 6, 63.5, 0, 'mid', { r: .5 }))
+  P(slab(gx - 7, 263.5, 14, 5.5, 1.5, 'lo', { r: 1 }))
+  P(slab(gx - 9, 112, 18, 90, 0, 'dark', { r: 2.5 }))
+  P(`<rect x="${gx - 6}" y="116" width="12" height="4" rx="1" fill="${t.tones.dark.top}"/>`)
+  P(`<circle cx="${gx}" cy="128" r="3.3" fill="${t.tones.lo.f0}" stroke="${t.line}" stroke-width=".7"/><circle cx="${gx}" cy="128" r="1.3" fill="${t.tones.dark.f1}"/>`)
+  P(dot(gx, 194, .8))
+  P(slab(gx + 9, 186, 5, 7, 0, 'dark', { r: .8 }))
+  const cab = `M ${gx + 14} 189.5 C 436 194, 432 246.5, 388 246.5`
+  P(`<path d="${cab}" fill="none" stroke="${t.cable}" stroke-width="2.6" stroke-linecap="butt"/>`)
+  if (t.cableHi) P(`<path d="${cab}" fill="none" stroke="${t.cableHi}" stroke-width=".7" transform="translate(-.5 -.6)"/>`)
+
+  // angle: from the hinge block's top edge to the track underside
+  const hp = W(0, 12)
+  const R = 78
+  P(`<line x1="${hp[0]}" y1="${hp[1]}" x2="${hp[0] + R + 10}" y2="${hp[1]}" stroke="${t.label}" stroke-width=".6" stroke-dasharray="none" opacity=".7"/>`)
+  P(`<path d="M ${hp[0] + R} ${hp[1]} A ${R} ${R} 0 0 0 ${hp[0] + R * CS} ${hp[1] - R * SN}" fill="none" stroke="${t.label}" stroke-width=".8"/>`)
+  P(`<text x="${hp[0] + R - 16}" y="${hp[1] - 4}" font-family="Source Serif 4" font-style="italic" font-size="12.5" fill="${t.label}">θ</text>`)
+
+  const svg = `<svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg">${out.join('')}</svg>`
+  document.getElementById('card-' + id).innerHTML = `
+    <div class="head">
+      <div class="title"><span class="fig">图 1</span>斜面小车经过光电门</div>
+      <div class="readout">
+        <span><span class="sym">v</span><span class="num">0.82</span><span class="unit">m/s</span></span>
+        <span><span class="sym">Δt</span><span class="num">12.4</span><span class="unit">ms</span></span>
+      </div>
+    </div>
+    ${svg}
+    <div class="foot"><span>倾角和遮光条宽度已放大，不按比例。遮光条宽 1.0 cm。</span><span>拖动小车 · 空格播放</span></div>`
+}
+for (const id of ['A', 'B', 'C']) build(id)
+</script>
+</body>
+</html>

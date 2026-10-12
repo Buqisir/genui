@@ -1,0 +1,50 @@
+# 2024 广东卷。模型看不到本文件。
+gd24-01:
+  - { q: "选项", choice: "D" }
+gd24-02:
+  - { q: "选项", choice: "C" }
+gd24-03:
+  - { q: "选项", choice: "B" }
+gd24-04:
+  - { q: "选项", choice: "D" }
+gd24-05:
+  - { q: "选项", choice: "A" }
+gd24-06:
+  - { q: "选项", choice: "B" }
+gd24-07:
+  - { q: "选项", choice: "B" }
+gd24-08:
+  - { q: "选项", choice: "AC" }
+gd24-09:
+  - { q: "选项", choice: "AC" }
+gd24-10:
+  - { q: "选项", choice: "ABD" }
+gd24-11:
+  - { q: "(1) 木板右端垫高的目的", text: "平衡摩擦力", manual: true }
+  - { q: "(1) 加速度", any: [2.86] }
+  - { q: "(2) 游标卡尺读数", any: [4.108, 41.08] }
+  - { q: "(3) 打开并调节", text: "光源", manual: true }
+  - { q: "(3) 目镜中观察到", text: "干涉条纹", manual: true }
+gd24-12:
+  - { q: "(1) 实物连线", text: "E 与 S 串联后接到 R 两端（a 接正极一侧，b 接负极一侧）；滑片接 R_G1 与 R_G2 的连接点；V1 并联在 R_G1 两端，V2 并联在 R_G2 两端", manual: true }
+  - { q: "(2) 滑片置于", text: "b", manual: true }
+  - { q: "(2) U1", any: [1.6] }
+  - { q: "(2) 光照较弱时光敏电阻阻值", text: "较大", manual: true }
+  - { q: "(3) 转动方向", text: "顺时针", manual: true }
+  - { q: "(3) 停止条件", text: "转过 90°", manual: true }
+gd24-13:
+  - { q: "(1) p_B2", any: [9.0e4, 90000] }
+  # 本版卷面印的是 V_A1 = 4.0×10^2 m^3（原卷应为 10^-2），模型若按 10^-2 订正，0.036 也算对。
+  - { q: "(2) V_A2", any: [360, 0.036] }
+  - { q: "(3) 铁砂质量 m", any: [110, 1.1e2] }
+gd24-14:
+  - { q: "(1) tanθ", text: "ma/(mg+F_N)", manual: true }
+  - { q: "(2)① F 的冲量大小", any: [330] }
+  - { q: "(2)① 冲量方向", text: "竖直向上", manual: true }
+  - { q: "(2)② 上升最大高度", any: [0.2, 20] }
+gd24-15:
+  - { q: "(1) 电性", text: "正电", manual: true }
+  - { q: "(1) 电荷量 q", text: "πm/(B t_0)", manual: true }
+  - { q: "(2) 板间距离 D", text: "√(3π t_0 U_0/(8B))", manual: true }
+  - { q: "(2) t_0 时刻速度 v", text: "π√(π U_0/(24 B t_0))", manual: true }
+  - { q: "(3) 电场力做功 W", text: "π m U_0 (π^2+16)/(48 B t_0)", manual: true }

@@ -1,0 +1,44 @@
+[
+ {
+  "id": "_demo-gaokao",
+  "frames": 14,
+  "top": 0,
+  "bottom": 0,
+  "playedAway": 1130
+ },
+ {
+  "id": "_demo-e",
+  "frames": 3,
+  "top": 420,
+  "bottom": 0,
+  "playedAway": 0
+ },
+ {
+  "id": "_demo-track",
+  "frames": 1,
+  "top": 1064,
+  "bottom": 925,
+  "playedAway": 848
+ },
+ {
+  "id": "_demo-vessel-wave",
+  "frames": 6,
+  "top": 106,
+  "bottom": 0,
+  "playedAway": 0
+ },
+ {
+  "id": "_demo-radial",
+  "frames": 1,
+  "top": 670,
+  "bottom": 711,
+  "playedAway": 837
+ },
+ {
+  "id": "grok-bank-gd24-10",
+  "frames": 1,
+  "top": 796,
+  "bottom": 0,
+  "playedAway": 0
+ }
+]

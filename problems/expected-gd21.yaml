@@ -1,0 +1,49 @@
+gd21-01:
+  - { q: "选项", choice: "C" }
+gd21-02:
+  - { q: "选项", choice: "D" }
+gd21-03:
+  - { q: "选项", choice: "B" }
+gd21-04:
+  - { q: "选项", choice: "A" }
+gd21-05:
+  - { q: "选项", choice: "C" }
+gd21-06:
+  - { q: "选项", choice: "D" }
+gd21-07:
+  - { q: "选项", choice: "B" }
+gd21-08:
+  - { q: "选项", choice: "BD" }
+gd21-09:
+  - { q: "选项", choice: "BC" }
+gd21-10:
+  - { q: "选项", choice: "AD" }
+gd21-11:
+  - { q: "(1) ΔL_3", any: [6.04, 0.0604] }
+  - { q: "(1) 压缩量平均值 ΔL", any: [6.05, 0.0605] }
+  - { q: "(2) 增加的钢球个数", any: [3] }
+  - { q: "(3) 劲度系数 k", any: [48.6] }
+gd21-12:
+  - { q: "(1) 两表笔", text: "短接", manual: true }
+  - { q: "(1) 阻值随温度", text: "减小", manual: true }
+  - { q: "(2)① 滑片端", text: "b", manual: true }
+  - { q: "(2)② R_01 与 R_02", text: "大于", manual: true }
+  - { q: "(2)② 热敏电阻阻值 R_T", text: "R_{01}-R_{02}", manual: true }
+gd21-13:
+  - { q: "(1) 乙能否滑到边框 a", text: "能", manual: true }
+  - { q: "(2) 甲运动时间", any: [0.2] }
+gd21-14:
+  - { q: "(1) I区磁感应强度", text: "5√(eUm)/(eR)", manual: true }
+  - { q: "(1) I区运动时间", text: "πR√(meU)/(4eU)", manual: true }
+  - { q: "(1) Q点动能", text: "8eU", manual: true }
+  - { q: "(2) k 的最大值", any: [2.1666666667] }
+gd21-15:
+  - { q: "高空客舱压强与地面", text: "小于", manual: true }
+  - { q: "分子平均动能", text: "不变", manual: true }
+gd21-16:
+  - { q: "药瓶内气体压强", any: [130000, 1.3e5, 1.3] }
+gd21-17:
+  - { q: "T/8 时上升距离与 A/2", text: "小于", manual: true }
+  - { q: "T/4 时动能", text: "最大", manual: true }
+gd21-18:
+  - { q: "临界角正弦", text: "sin α/sin β", manual: true }
