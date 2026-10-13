@@ -135,7 +135,8 @@ describe('registry', () => {
 describe('lessons/', () => {
   const dir = join(__dirname, '../../../lessons')
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.md'))) {
-    it(`${file} passes validation`, () => {
+    // Validation runs every sim; _demo-gaokao takes ~3 s alone and more on a 2-core CI runner.
+    it(`${file} passes validation`, { timeout: 30_000 }, () => {
       const r = validateLesson(readFileSync(join(dir, file), 'utf8'))
       expect(r.errors).toEqual([])
     })
