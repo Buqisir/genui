@@ -205,8 +205,8 @@ describe('doc pointers', () => {
     }
     const files = [
       ...mdFiles(join(repoRoot, 'lessons')),
-      ...mdFiles(join(repoRoot, 'generated-grok/zj-final')),
-      ...mdFiles(join(repoRoot, 'generated-grok/bank')),
+      ...mdFiles(join(repoRoot, 'archive/generated-grok/zj-final')),
+      ...mdFiles(join(repoRoot, 'archive/generated-grok/bank')),
     ]
     for (const file of files) {
       const report = validateLesson(readFileSync(file, 'utf8'))

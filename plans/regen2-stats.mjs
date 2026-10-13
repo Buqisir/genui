@@ -6,11 +6,11 @@ import { join } from 'node:path'
 
 const root = new URL('..', import.meta.url).pathname
 const genui = join(root, 'bin/genui')
-const ids = readdirSync(join(root, 'generated-grok/bank')).filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, '')).sort()
+const ids = readdirSync(join(root, 'archive/generated-grok/bank')).filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, '')).sort()
 
 function oldFile(id) {
   const backup = join(root, 'plans/regen', id, 'old/lesson.md')
-  return existsSync(backup) ? backup : join(root, 'generated-grok/bank', `${id}.md`)
+  return existsSync(backup) ? backup : join(root, 'archive/generated-grok/bank', `${id}.md`)
 }
 function newFile(id) {
   for (const dir of ['plans/regen2', 'plans/regen']) {

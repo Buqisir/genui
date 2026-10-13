@@ -116,12 +116,12 @@ DeepSeek 接法（2026-10-11 与用户约定）：OpenAI 兼容接口 `https://a
 - 发现与后续：
   - 单轮首次输出常漏头信息结尾的 `---`、漏 `title`，或把题目原文直接写进 YAML。可以考虑在输出要求里给出头信息模板。
   - 排版检查会把落在大块实心物体（如地球圆盘）上、但仍清楚可读的小标签也报出来，阶段 4 再看是否降级。
-  - Grok agent 不再继续（2026-10-11 与用户约定：以后接 API 只接 DeepSeek）。`--engine grok --mode agent` 的代码保留，但不再测试、不再调优。阶段 4 改为 DeepSeek agent 对照已有的 Grok 全文单轮基线（`generated-grok/zj-final`），Grok 不重跑。
+  - Grok agent 不再继续（2026-10-11 与用户约定：以后接 API 只接 DeepSeek）。`--engine grok --mode agent` 的代码保留，但不再测试、不再调优。阶段 4 改为 DeepSeek agent 对照已有的 Grok 全文单轮基线（`archive/generated-grok/zj-final`），Grok 不重跑。
   - 转录现在记下 `get_doc` 的 id、`search_docs` 的搜索词和各检查结果的第一行，便于阶段 4 分析。
 
 ### 阶段 4 验收：广东盲测抽样（2026-10-11）
 
-范围按用户决定缩小为只跑广东抽样：15 题（实验 2、计算 3、单选 9、多选 1），`--engine deepseek --mode agent --rounds 3 --jobs 4 --blind`，结果在 `generated-deepseek/gd-sample/`（报告 `reports/eval-report.md`）。对照的是 `generated-grok/bank` 里同 15 题的 Grok 全文单轮结果，Grok 不重跑。
+范围按用户决定缩小为只跑广东抽样：15 题（实验 2、计算 3、单选 9、多选 1），`--engine deepseek --mode agent --rounds 3 --jobs 4 --blind`，结果在 `archive/generated-deepseek/gd-sample/`（报告 `reports/eval-report.md`）。对照的是 `archive/generated-grok/bank` 里同 15 题的 Grok 全文单轮结果，Grok 不重跑。
 
 | 指标 | DeepSeek agent | Grok 全文单轮 |
 |---|---|---|
@@ -138,7 +138,7 @@ DeepSeek 接法（2026-10-11 与用户约定）：OpenAI 兼容接口 `https://a
 - 校验、答案、排版：DeepSeek agent 达到或超过 Grok 基线，费用约为 1/5。排版为 0 是因为 agent 在提交前用了排版检查，Grok 单轮没有这个工具。
 - gd21-11 第 (2) 问模型答对了（3 个），但只写在 `<Answer>` 的 `text` 里，没进头信息 `answers`，所以自动核对没找到。已在 `docs/cards/structure.md` 的常见错误里补一条：计数或常数结果也要先 `<Define>` 再写进 `answers`。
 - 内容深度变浅：课件长度约为 Grok 的 57%，预制组件明显少用（受力图 1 题对 8 题，没用 Dial、Circuit）。其中一部分是 Grok 滥用（gd22-16 把倒置玻璃瓶套进水平的 GasTube），但也有该用没用的。
-- 抽查 3 对截图（gd22-04、24-08、22-16，在 `generated-deepseek/gd-sample/shots/`）：
+- 抽查 3 对截图（gd22-04、24-08、22-16，在 `archive/generated-deepseek/gd-sample/shots/`）：
   - gd22-04：两边都对，Grok 画得更细（线圈画成线匝、电流流动点、ω 箭头）。
   - gd24-08：DeepSeek 画面和原图不符。原图是圆盘在容器底部、棒从上方插入、M 和 N 在同一条电场线上；DeepSeek 没画底部圆盘，N 点画到了容器外，电场线也和电极无关。答案仍然对，但图错了。Grok 的电场线和等势面都对。
   - gd22-16：DeepSeek 的倒置瓶比 Grok 的 GasTube 更贴近原图。

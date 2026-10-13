@@ -1,6 +1,6 @@
 # 真题课件整体验收（2026-10-12）
 
-范围：应用里能打开的 `lessons/` 19 课 + `generated-grok/bank/` 75 课，共 94 课、262 个场景。其他 grok 目录（zj-*、calib 等）是同一批题的重复生成，没纳入。
+范围：应用里能打开的 `lessons/` 19 课 + `archive/generated-grok/bank/` 75 课，共 94 课、262 个场景。其他 grok 目录（zj-*、calib 等）是同一批题的重复生成，没纳入。
 
 ## 怎么跑的
 

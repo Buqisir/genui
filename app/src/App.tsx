@@ -15,12 +15,19 @@ function previewSource(): string | null {
 }
 
 // Lazy: the lesson sources together are several MB, so each one loads only when picked.
-const files = import.meta.glob(['../../lessons/*.md', '../../generated/*.md', '../../generated-grok/*/*.md'], {
+const current = import.meta.glob(['../../lessons/*.md', '../../generated/*.md', '../../generated-grok/*/*.md'], {
   query: '?raw',
   import: 'default',
 }) as Record<string, () => Promise<string>>
+// Old runs under archive/ stay out of the picker unless VITE_GENUI_ARCHIVE=1; they keep their old ids.
+const archived = (
+  import.meta.env.VITE_GENUI_ARCHIVE === '1'
+    ? import.meta.glob(['../../archive/generated/*.md', '../../archive/generated-grok/*/*.md'], { query: '?raw', import: 'default' })
+    : {}
+) as Record<string, () => Promise<string>>
+const files = { ...current, ...archived }
 
-// Ids keep runs apart: gen-<name> for generated/, grok-<run>-<name> for generated-grok/<run>/.
+// Ids keep runs apart: gen-<name> for generated/, grok-<run>-<name> for generated-grok/<run>/ (archived or not).
 function idOf(path: string): string {
   const parts = path.split('/')
   const name = parts.pop()!.replace(/\.md$/, '')

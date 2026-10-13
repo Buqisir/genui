@@ -225,7 +225,7 @@
 
 ### 真题课件整体验收（2026-10-12）
 
-- 94 课（`lessons/` + `generated-grok/bank/`）、262 个场景，脚本筛查 + 逐页看总览。详细结论和内容问题清单在 `plans/audit/README.md`，排序表 `plans/audit/summary.md`。
+- 94 课（`lessons/` + `archive/generated-grok/bank/`）、262 个场景，脚本筛查 + 逐页看总览。详细结论和内容问题清单在 `plans/audit/README.md`，排序表 `plans/audit/summary.md`。
 - B+ 材质已在所有组件里统一，没发现旧样式组件；控制台报错 0。
 - 修了 4 处组件 / 检查问题：自带标签画在自己实体上不再误报（`layout.ts`）；`v.dim` 文字没登记名字导致后续标签名字错位（`runtime.js`）；矩形 `v.vessel` 只登记四面壁，空腔里可以放标签；空标签不占位。`layout.test.ts` 加 3 条测试。排版问题 58 条 / 27 课 → 55 条 / 23 课。
 - 剩下的都是课件内容问题（用通用图元画实物、标签拥挤、出界、1 处参数没声明），按约定只记录不改。
@@ -251,7 +251,7 @@
 
 ### 整库重新生成、器材补齐、按需加载（2026-10-13）
 
-- 换入新版：5 道试做题（gd23-11、gd24-13、gd24-06、gd24-12、gd21-12）的新版放进 `generated-grok/bank/`，旧版备份在 `plans/regen/<id>/old/lesson.md`。
+- 换入新版：5 道试做题（gd23-11、gd24-13、gd24-06、gd24-12、gd21-12）的新版放进 `archive/generated-grok/bank/`，旧版备份在 `plans/regen/<id>/old/lesson.md`。
 - 器材：`v.block` 加 `pivot:'center'`（x、y 是中心，配合 `angle` 绕中心转，默认不画阴影），gd24-12 的斜电池板改用它；`v.ruler` 加 `angle`（绕起点转，包围盒按旋转后登记）。测试在 `app/src/lesson/apparatus.test.ts`。`docs/ref/sim-craft.md` 对照表补了：旋转板、斜尺、轨迹（`v.trail`/`v.strobe`）、弧形导轨和管道（`v.track` 圆弧）。
 - 按需加载：`App.tsx` 的课件改为按需导入，只加载选中的那一课。主包 5.85 MB → 2.1 MB（gzip 626 KB）。
 - 整库重新生成：剩下 70 道用 Worker（Grok 4.7）按 `app/scripts/regen-prompt.ts` 的提示重做（盲做：只给 SKILL.md、输出要求、题目原文，不给参考答案），结果在 `plans/regen2/<id>/`，进度和每道的说明在 `plans/regen2-status.md`。75 道新版合在 `generated-grok/bank2/`（旧的 `bank/` 保留，两套都能在应用里打开）。

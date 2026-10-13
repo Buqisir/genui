@@ -13,7 +13,7 @@ const parse = (s) => {
     return null
   }
 }
-const idOf = (file) => (file.startsWith('generated-grok/bank/') ? `grok-bank-${basename(file, '.md')}` : basename(file, '.md'))
+const idOf = (file) => (file.includes('generated-grok/bank/') ? `grok-bank-${basename(file, '.md')}` : basename(file, '.md'))
 
 const rows = new Map()
 for (const l of lines('screen.jsonl')) {

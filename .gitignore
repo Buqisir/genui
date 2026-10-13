@@ -20,3 +20,6 @@ captures/
 *.webp
 *.mp4
 *.pdf
+
+# Per-attempt drafts and agent transcripts from generate.ts; the final lesson and run log are kept.
+.attempts/
