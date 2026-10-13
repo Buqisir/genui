@@ -1,0 +1,15 @@
+# 2010 山东卷 答案键（机器导入草稿，计算题未核）。不发给模型。
+sd10-01:
+  - { q: "TODO", text: "C", manual: true }
+sd10-02:
+  - { q: "选项", choice: "AC" }
+sd10-03:
+  - { q: "选项", choice: "BC" }
+sd10-04:
+  - { q: "选项", choice: "AD" }
+sd10-05:
+  - { q: "选项", choice: "BD" }
+sd10-06:
+  - { q: "选项", choice: "ABD" }
+sd10-07:
+  - { q: "选项", choice: "BD" }

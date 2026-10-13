@@ -1,0 +1,31 @@
+# 2023 广东卷 答案键（机器导入草稿，计算题未核）。不发给模型。
+gd23-01:
+  - { q: "选项", choice: "D" }
+gd23-02:
+  - { q: "TODO", text: "C", manual: true }
+gd23-03:
+  - { q: "TODO", text: "D", manual: true }
+gd23-04:
+  - { q: "选项", choice: "B" }
+gd23-05:
+  - { q: "TODO", text: "C", manual: true }
+gd23-06:
+  - { q: "TODO", text: "A", manual: true }
+gd23-07:
+  - { q: "TODO", text: "B", manual: true }
+gd23-08:
+  - { q: "选项", choice: "BCD" }
+gd23-09:
+  - { q: "选项", choice: "AC" }
+gd23-10:
+  - { q: "选项", choice: "BD" }
+gd23-11:
+  - { q: "TODO", text: "①. 2.25 ②. ③. 1.51 ④. 稍小一些", manual: true }
+gd23-12:
+  - { q: "TODO", text: "①. 右 ②. 断开 ③. 40.0 ④. 闭合 ⑤. 60.0 ⑥. 100", manual: true }
+gd23-13:
+  - { q: "TODO", text: "（1） p0 ；（2） 1.9T0 ；（3） W", manual: true }
+gd23-14:
+  - { q: "TODO", text: "（1） F = ，方向水平向左；（2） f = ；（3） Q = 0", manual: true }
+gd23-15:
+  - { q: "TODO", text: "（1） t = （2） W = 6mgL - 3mv0 ；（3） s = 0", manual: true }

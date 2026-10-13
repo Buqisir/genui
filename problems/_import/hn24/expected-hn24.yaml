@@ -1,0 +1,31 @@
+# 2024 湖南卷 答案键（机器导入草稿，计算题未核）。不发给模型。
+hn24-01:
+  - { q: "选项", choice: "B" }
+hn24-02:
+  - { q: "选项", choice: "D" }
+hn24-03:
+  - { q: "选项", choice: "A" }
+hn24-04:
+  - { q: "选项", choice: "C" }
+hn24-05:
+  - { q: "选项", choice: "D" }
+hn24-06:
+  - { q: "选项", choice: "A" }
+hn24-07:
+  - { q: "选项", choice: "BD" }
+hn24-08:
+  - { q: "选项", choice: "CD" }
+hn24-09:
+  - { q: "选项", choice: "BC" }
+hn24-10:
+  - { q: "选项", choice: "AC" }
+hn24-11:
+  - { q: "TODO", text: "①. 1.23 ②. 12.3 ③. 右侧 ④. 小于", manual: true }
+hn24-12:
+  - { q: "TODO", text: "①. 【图】 ②. 线性的 ③. 0.120kg ④. 负方向", manual: true }
+hn24-13:
+  - { q: "TODO", text: "（1）；（2）", manual: true }
+hn24-14:
+  - { q: "TODO", text: "（1）；（2）；（3）", manual: true }
+hn24-15:
+  - { q: "TODO", text: "（1），；（2）或；", manual: true }

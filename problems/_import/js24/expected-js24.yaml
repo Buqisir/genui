@@ -1,0 +1,31 @@
+# 2024 江苏卷 答案键（机器导入草稿，计算题未核）。不发给模型。
+js24-01:
+  - { q: "TODO", text: "D", manual: true }
+js24-02:
+  - { q: "TODO", text: "D", manual: true }
+js24-03:
+  - { q: "TODO", text: "B", manual: true }
+js24-04:
+  - { q: "选项", choice: "A" }
+js24-05:
+  - { q: "TODO", text: "C", manual: true }
+js24-06:
+  - { q: "选项", choice: "A" }
+js24-07:
+  - { q: "TODO", text: "B", manual: true }
+js24-08:
+  - { q: "选项", choice: "D" }
+js24-09:
+  - { q: "选项", choice: "A" }
+js24-10:
+  - { q: "选项", choice: "A" }
+js24-11:
+  - { q: "TODO", text: "BC", manual: true }
+js24-12:
+  - { q: "TODO", text: "（1）300；（2）A；（3）B;（4）右端；（5）略", manual: true }
+js24-13:
+  - { q: "TODO", text: "（1）8 × 104Pa；（2）4.8 × 103N", manual: true }
+js24-14:
+  - { q: "TODO", text: "（1） ；（2）", manual: true }
+js24-15:
+  - { q: "TODO", text: "（1） ；（2） mgv  sin q + m cos q  ；（3）", manual: true }

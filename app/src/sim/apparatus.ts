@@ -302,6 +302,103 @@ export function platePair(x1: number, x2: number, yTop: number, yBot: number, an
   return { top: pair.bot, bot: pair.top, angle: pair.angle }
 }
 
+// ---------- gears and parachute, pixel coordinates, y down ----------
+
+/**
+ * Spur-gear outline around (X, Y) in pixels. R is the pitch radius; teeth follow the
+ * usual proportions (addendum one module, dedendum 1.25 modules, module = 2R / n).
+ * `angle` turns the gear counter-clockwise in degrees; tooth 0 points along +x at angle 0.
+ */
+export function gearProfile(X: number, Y: number, R: number, teeth: number, angle = 0): { pts: [number, number][]; outer: number; root: number } {
+  const n = Math.max(8, Math.round(teeth))
+  const mod = (2 * R) / n
+  // Few teeth: stub teeth, else the straight flanks interfere while turning (and look star-like).
+  const outer = R + mod * (n < 14 ? 0.8 : 1)
+  const root = Math.max(R * 0.3, R - 1.25 * mod)
+  const P = (2 * Math.PI) / n
+  const a0 = (angle * Math.PI) / 180
+  const pts: [number, number][] = []
+  const at = (rho: number, th: number) => pts.push([X + rho * Math.cos(th), Y - rho * Math.sin(th)])
+  // Tooth half-widths as fractions of the angular pitch at root, pitch and tip. The tooth is a
+  // little thinner than the gap at the pitch circle (backlash), so a meshing tooth never overlaps
+  // the flanks of the other gear even though the flanks are straight rather than involute.
+  const halfRoot = 0.28
+  const halfPitch = 0.23
+  const halfTip = 0.15
+  for (let i = 0; i < n; i++) {
+    const c = a0 + i * P
+    at(root, c - 0.5 * P)
+    at(root, c - halfRoot * P)
+    at(R, c - halfPitch * P)
+    at(outer, c - halfTip * P)
+    at(outer, c)
+    at(outer, c + halfTip * P)
+    at(R, c + halfPitch * P)
+    at(root, c + halfRoot * P)
+  }
+  return { pts, outer, root }
+}
+
+/**
+ * Rotation (degrees) for a gear of `teeth2` meshing with gear 1 (rotation `angle1`, `teeth1`)
+ * whose centre lies in direction `dir` (degrees) from gear 1. A tooth of one gear sits in a
+ * gap of the other at the contact point, and turning gear 1 by Δ turns gear 2 by −Δ·n1/n2.
+ */
+export function gearMeshAngle(angle1: number, teeth1: number, teeth2: number, dir = 0): number {
+  return dir + 180 - (180 - (dir - angle1) * teeth1) / teeth2
+}
+
+export interface ParachuteFrame {
+  /** Canopy outline: dome from the left rim over the apex to the right rim, then the scalloped hem back. */
+  canopy: [number, number][]
+  /** Seam from the apex region down to each rim point (gores + 1 rim points). */
+  rim: [number, number][]
+  /** Near hem, right to left, bowing up between rim points (the tail of `canopy`). */
+  hem: [number, number][]
+  apex: [number, number]
+  /** Where the lines gather (the attach point), at the origin. */
+  attach: [number, number]
+}
+
+/**
+ * Parachute in pixels relative to the attach point (0, 0), canopy above it (y down).
+ * W is the canopy width, H the dome height, drop the vertical distance from the attach
+ * point up to the rim. `gores` panels; the hem bows up between rim points.
+ */
+export function parachuteFrame(W: number, H: number, drop: number, gores = 6): ParachuteFrame {
+  const n = Math.max(3, Math.round(gores))
+  const a = W / 2
+  const yRim = -drop
+  const rim: [number, number][] = []
+  for (let i = 0; i <= n; i++) {
+    // Rim points spaced evenly in angle around the dome seen side-on, so outer gores look foreshortened.
+    const t = Math.PI - (Math.PI * i) / n
+    rim.push([a * Math.cos(t), yRim])
+  }
+  const canopy: [number, number][] = []
+  const N = 40
+  for (let i = 0; i <= N; i++) {
+    const t = Math.PI - (Math.PI * i) / N
+    // Slightly flattened dome: a superellipse reads as inflated fabric rather than a half-circle.
+    const c = Math.cos(t)
+    const s = Math.sin(t)
+    canopy.push([a * Math.sign(c) * Math.abs(c) ** 0.85, yRim - H * s ** 0.8])
+  }
+  const bow = Math.min(H * 0.16, (W / n) * 0.35)
+  const hem: [number, number][] = []
+  for (let i = n; i > 0; i--) {
+    const [x1] = rim[i]
+    const [x0] = rim[i - 1]
+    const steps = 6
+    for (let k = 1; k <= steps; k++) {
+      const u = k / steps
+      hem.push([x1 + (x0 - x1) * u, yRim - bow * Math.sin(Math.PI * u)])
+    }
+  }
+  canopy.push(...hem)
+  return { canopy, rim, hem, apex: [0, yRim - H], attach: [0, 0] }
+}
+
 // ---------- lab demountable transformer, pixel offsets, y down ----------
 
 export interface LabPost {
@@ -430,4 +527,251 @@ export function sampleWireFrame(x1: number, x2: number, y: number): { ends: [Pt,
       [x2, y],
     ],
   }
+}
+
+// ---------- wedge: a solid polygon with an edge a block can sit on ----------
+
+export interface WedgeEdge {
+  /** Index into `pts` of the edge's start vertex. */
+  i: number
+  a: Pt
+  b: Pt
+  length: number
+  /** Unit vector from a toward b. */
+  dir: Pt
+  /** Unit normal pointing out of the polygon. */
+  normal: Pt
+  /** Point at fraction u along the edge (0 at a, 1 at b). */
+  at: (u: number) => Pt
+}
+
+export interface WedgeFrame {
+  pts: Pt[]
+  edges: WedgeEdge[]
+  /** Index of the highest edge (the lit one). */
+  topEdge: number
+}
+
+/**
+ * Solid polygon from world vertices. Each edge carries a point-at-fraction and the
+ * outward unit normal, so a block or a force can sit on any face. y grows upward.
+ */
+export function wedgeFrame(pts: Pt[]): WedgeFrame {
+  if (!Array.isArray(pts) || pts.length < 3) throw new Error('v.wedge 的顶点至少要三个')
+  const clean: Pt[] = pts.map((p, i) => {
+    if (!p || p.length < 2 || !Number.isFinite(+p[0]) || !Number.isFinite(+p[1])) throw new Error('v.wedge 的第 ' + (i + 1) + ' 个顶点不是有限数字')
+    return [+p[0], +p[1]]
+  })
+  for (let i = 0; i < clean.length; i++) {
+    const a = clean[i]
+    const b = clean[(i + 1) % clean.length]
+    if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 1e-9) throw new Error('v.wedge 的相邻顶点不能重合')
+  }
+  const area2 = clean.reduce((s, p, i) => {
+    const q = clean[(i + 1) % clean.length]
+    return s + p[0] * q[1] - q[0] * p[1]
+  }, 0)
+  if (Math.abs(area2) < 1e-9) throw new Error('v.wedge 的顶点共线，构不成一个面')
+  const edges: WedgeEdge[] = clean.map((a, i) => {
+    const b = clean[(i + 1) % clean.length]
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1])
+    const dir: Pt = [(b[0] - a[0]) / len, (b[1] - a[1]) / len]
+    // Positive area is counter-clockwise, whose right-hand normal points inward.
+    const sign = area2 > 0 ? -1 : 1
+    const normal: Pt = [sign * -dir[1], sign * dir[0]]
+    return {
+      i,
+      a,
+      b,
+      length: len,
+      dir,
+      normal,
+      at: (u: number) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u],
+    }
+  })
+  // The lit band belongs on the uppermost edge that actually slopes or caps the shape,
+  // so a vertical riser that merely reaches the apex does not steal it from the slope.
+  let topEdge = 0
+  let best = -Infinity
+  edges.forEach((e, i) => {
+    const reach = Math.max(e.a[1], e.b[1])
+    const span = Math.abs(e.b[0] - e.a[0])
+    const score = span > 1e-9 ? reach : -Infinity
+    if (score > best + 1e-9 || (Math.abs(score - best) <= 1e-9 && e.length > edges[topEdge].length)) {
+      best = score
+      topEdge = i
+    }
+  })
+  return { pts: clean, edges, topEdge }
+}
+
+// ---------- slab: cabinet (oblique) projection of a cuboid ----------
+
+export interface SlabCorner {
+  x: number
+  y: number
+  z: number
+  px: number
+  py: number
+}
+
+export interface SlabFrame {
+  /** Depth recession: screen x grows by cos45·d, screen y shrinks by sin45·d. */
+  recede: Pt
+  /** Eight corners, x fastest then y then z, each with its projected pixel offset from the anchor. */
+  corners: SlabCorner[]
+  /** front z=0, side x=w, top y=h. Each face lists its four corners in outline order. */
+  faces: { front: number[]; side: number[]; top: number[] }
+  /** Section plane through the edges x=0,y=h and x=w,y=0 (the MNPQ cut). */
+  cut: number[]
+  /** Project a point of the cuboid to a pixel offset from the anchor. z points up the page. */
+  project: (x: number, y: number, z: number) => Pt
+}
+
+/**
+ * Cabinet projection of a w × h × d cuboid, in pixels, y up, origin at the front-bottom-left
+ * corner. Receding edges run at 45° and are drawn at half their true length.
+ */
+export function slabFrame(w: number, h: number, d: number): SlabFrame {
+  if (!(w > 0 && h > 0 && d > 0)) throw new Error('v.slab 的宽、高、厚都要是正数')
+  const k = 0.5
+  const recede: Pt = [k * Math.SQRT1_2, k * Math.SQRT1_2]
+  const project = (x: number, y: number, z: number): Pt => [x + z * recede[0], y + z * recede[1]]
+  const xyz: [number, number, number][] = [
+    [0, 0, 0],
+    [w, 0, 0],
+    [0, h, 0],
+    [w, h, 0],
+    [0, 0, d],
+    [w, 0, d],
+    [0, h, d],
+    [w, h, d],
+  ]
+  const corners = xyz.map(([x, y, z]) => {
+    const [px, py] = project(x, y, z)
+    return { x, y, z, px, py }
+  })
+  return {
+    recede,
+    corners,
+    faces: { front: [0, 1, 3, 2], side: [1, 5, 7, 3], top: [2, 3, 7, 6] },
+    cut: [2, 3, 5, 4],
+    project,
+  }
+}
+
+/**
+ * A flat loop lying on the top face of a slab, as an ellipse in the same projection.
+ * `u` runs along the width, `v` along the depth. Returns the centre and the two radii.
+ */
+export function slabLoop(frame: SlabFrame, w: number, h: number, d: number, o: { u?: number; v?: number; ru?: number; rv?: number } = {}) {
+  const u = o.u ?? 0.5
+  const v = o.v ?? 0.5
+  const ru = o.ru ?? Math.min(w, d) * 0.32
+  const rv = o.rv ?? ru * (d > 0 ? Math.min(1, d / Math.max(w, 1e-9)) : 1)
+  if (!(ru > 0 && rv > 0)) throw new Error('v.slab 的线圈半径要是正数')
+  const center = frame.project(u * w, h, v * d)
+  const right = frame.project(u * w + ru, h, v * d)
+  const back = frame.project(u * w, h, v * d + rv)
+  return {
+    center,
+    rx: [right[0] - center[0], right[1] - center[1]] as Pt,
+    rz: [back[0] - center[0], back[1] - center[1]] as Pt,
+  }
+}
+
+// ---------- hand: a fist closed around a grip ----------
+
+export interface HandFrame {
+  /** Direction the wrist runs, away from the grip, as a unit vector (screen y grows downward). */
+  wrist: Pt
+  /** Back of the hand, a rounded block between the fingers and the cuff. */
+  palm: Pt[]
+  /** Four curled fingers seen side on, stacked across the rope; each a rounded segment. */
+  fingers: Pt[][]
+  /** Thumb pressed over the first finger, on the upper side whenever the wrist allows. */
+  thumb: Pt[]
+  /** Cuff at the wrist. */
+  cuff: Pt[]
+  /** Rope axis through the grip. The rope is hidden between `front`, and shows on both sides. */
+  rope: { dir: Pt; from: number; to: number; front: [number, number] }
+}
+
+/**
+ * Fist gripping at the origin, in pixels, screen y downward. `dir` is degrees from +x
+ * (counter-clockwise in world axes) pointing from the grip toward the wrist.
+ */
+export function handFrame(dir = 0, size = 34): HandFrame {
+  if (!(size > 0)) throw new Error('v.hand 的尺寸要是正数')
+  const a = (dir * Math.PI) / 180
+  const ux = Math.cos(a)
+  const uy = -Math.sin(a)
+  // Mirror a leftward wrist so the thumb (the -side) stays on top, as in textbook drawings.
+  const flip = ux < -1e-9 ? -1 : 1
+  const nx = -uy * flip
+  const ny = ux * flip
+  const P = (along: number, side: number): Pt => [along * ux + side * nx, along * uy + side * ny]
+  const s = size
+  // Separate simple parts rather than one outline, so no edge ever crosses another.
+  const rounded = (a0: number, a1: number, s0: number, s1: number, r: number): Pt[] => {
+    const rr = Math.min(r, (a1 - a0) / 2, (s1 - s0) / 2)
+    const corners: [number, number, number][] = [
+      [a1 - rr, s0 + rr, -Math.PI / 2],
+      [a1 - rr, s1 - rr, 0],
+      [a0 + rr, s1 - rr, Math.PI / 2],
+      [a0 + rr, s0 + rr, Math.PI],
+    ]
+    const pts: Pt[] = []
+    for (const [ca, cs, t0] of corners) {
+      for (let i = 0; i <= 4; i++) {
+        const t = t0 + (i / 4) * (Math.PI / 2)
+        pts.push(P((ca + Math.cos(t) * rr) * s, (cs + Math.sin(t) * rr) * s))
+      }
+    }
+    return pts
+  }
+  const palm = rounded(0.02, 0.66, -0.4, 0.42, 0.16)
+  // Index to little finger across the rope; the middle finger reaches furthest.
+  const tips = [-0.27, -0.31, -0.29, -0.24]
+  const fingers = tips.map((tip, k) => rounded(tip, 0.2, -0.4 + k * 0.2 + 0.006, -0.2 + k * 0.2 - 0.006, 0.1))
+  const thumb = rounded(-0.04, 0.44, -0.52, -0.3, 0.11)
+  const cuff = rounded(0.6, 0.94, -0.37, 0.39, 0.03)
+  return { wrist: [ux, uy], palm, fingers, thumb, cuff, rope: { dir: [nx, ny], from: -s * 0.8, to: s * 0.8, front: [-s * 0.52, s * 0.42] } }
+}
+
+// ---------- laser pointer, side on ----------
+
+export interface LaserFrame {
+  /** Unit direction the beam leaves in, screen y downward. */
+  dir: Pt
+  /** Body outline from aperture back to the tail cap, closed. */
+  body: Pt[]
+  /** Knurled grip band. */
+  grip: Pt[]
+  /** Tail cap. */
+  cap: Pt[]
+  /** Push button on the upper side. */
+  button: Pt[]
+  /** Aperture centre, at the origin. */
+  aperture: Pt
+}
+
+/**
+ * Laser pointer seen from the side, aperture at the origin, in pixels. `angle` is degrees
+ * from +x, counter-clockwise in world axes. The body extends backward from the aperture.
+ */
+export function laserFrame(angle = 0, length = 92): LaserFrame {
+  if (!(length > 0)) throw new Error('v.laser 的长度要是正数')
+  const a = (angle * Math.PI) / 180
+  const fx = Math.cos(a)
+  const fy = -Math.sin(a)
+  const nx = -fy
+  const ny = fx
+  const P = (along: number, side: number): Pt => [along * fx + side * nx, along * fy + side * ny]
+  const r = Math.max(4.5, Math.min(8, length * 0.085))
+  const body: Pt[] = [P(0, r * 0.62), P(-length * 0.9, r), P(-length, r * 0.86), P(-length, -r * 0.86), P(-length * 0.9, -r), P(0, -r * 0.62)]
+  const grip: Pt[] = [P(-length * 0.34, r * 1.06), P(-length * 0.62, r * 1.06), P(-length * 0.62, -r * 1.06), P(-length * 0.34, -r * 1.06)]
+  const cap: Pt[] = [P(-length * 0.9, r * 0.96), P(-length * 1.045, r * 0.96), P(-length * 1.045, -r * 0.96), P(-length * 0.9, -r * 0.96)]
+  const button: Pt[] = [P(-length * 0.7, -r * 0.7), P(-length * 0.84, -r * 0.7), P(-length * 0.84, -r * 1.34), P(-length * 0.7, -r * 1.34)]
+  return { dir: [fx, fy], body, grip, cap, button, aperture: [0, 0] }
 }

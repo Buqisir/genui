@@ -30,6 +30,13 @@ related:
    | 滑动变阻器、电表、开关、电池 | 实物图 `<Wiring>`，原理图 `<Circuit>`；不要在 `<Sim>` 里画 |
    | 弹簧测力计、验电器 | `v.springScale`、`v.electrometer` |
    | 传送带 | `v.conveyor` |
+   | 齿轮、啮合的一对齿轮（开瓶器、卷轴外齿轮、齿轮传动） | `v.gear`；与它啮合的用 `v.gearMesh`（自动对齿、反向转） |
+   | 降落伞（伞盖、伞绳汇于一点） | `v.parachute`（返回 `attach` 接绳到下面的物体） |
+   | 测试仪、控制单元、电源盒、仪器外壳 | `v.box`（接线从返回的 `terminals` 引出）；房间框、机箱剖面用 `style: 'frame'` |
+   | 非直角的斜面、三角形或梯形的实体、积木 | `v.wedge`（顶点列表；物块放在返回的某条边上） |
+   | 斜二测的长方体、平板、带剖面的块、平躺的线圈 | `v.slab`（`cut` 画剖面并在顶点外标 M、N、P、Q，`cutLabels: false` 不标；`loop` 画顶面线圈；箭头用返回的 `P` 定位） |
+   | 握着绳子或杆的手 | `v.hand`（绳子从返回的 `grip` 接出） |
+   | 激光笔 | `v.laser`（光线从返回的 `aperture` 出发） |
    | 平行板、电容器极板 | `v.plates` |
    | 绳、细线 | `v.rope` 或 `v.line` |
    | 物体走过的轨迹、频闪照片 | `<Sim>` 里 `v.trail`（写 `every` 带频闪点）、`v.strobe`；整条预定轨迹只画一条细虚线 |

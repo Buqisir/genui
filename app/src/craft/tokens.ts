@@ -4,7 +4,7 @@
 // a thin bounce rim sits on the bottom edge.
 
 export type CraftTheme = 'light' | 'night'
-export type MaterialName = 'steel' | 'steelHi' | 'alu' | 'rubber' | 'insul' | 'dark' | 'brass' | 'cap'
+export type MaterialName = 'steel' | 'steelHi' | 'alu' | 'rubber' | 'insul' | 'dark' | 'brass' | 'cap' | 'fabric'
 
 export interface MaterialTone {
   /** Visible top face / chamfer band. */
@@ -69,6 +69,8 @@ const light: CraftTokens = {
       horiz: true,
     },
     cap: { top: '#E3E6EA', stops: [[0, '#D3D7DC'], [1, '#B4BAC2']], horiz: true },
+    // Matte cloth (parachute canopy): no metallic band, a gentle fall-off only.
+    fabric: { top: '#FBFCFD', stops: [[0, '#F5F7F9'], [0.6, '#E7EBEF'], [1, '#D5DBE1']] },
   },
 }
 
@@ -107,6 +109,7 @@ const night: CraftTokens = {
       horiz: true,
     },
     cap: { top: '#50555D', stops: [[0, '#454A51'], [1, '#30343A']], horiz: true },
+    fabric: { top: '#5A5F67', stops: [[0, '#4A4F56'], [0.6, '#3D4148'], [1, '#30343A']] },
   },
 }
 

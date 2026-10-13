@@ -402,6 +402,210 @@ export function glassRect(ctx: Ctx, X: number, Y: number, W: number, H: number, 
 }
 
 /**
+ * Spur gear face-on. `pts` is the toothed outline (from gearProfile), R the pitch radius,
+ * `root` the root radius. A recessed web with lightening holes (cut through, so the
+ * background shows) sits between the rim and an aluminium hub with a keyed bore.
+ */
+export function gear(ctx: Ctx, X: number, Y: number, R: number, pts: Pt[], root: number, mat: MaterialName, theme: CraftTheme, o: { holes?: number; angle?: number } = {}) {
+  if (!(R > 0) || pts.length < 3) return
+  const k = craftTokens(theme)
+  const tone = k.materials[mat]
+  const night = theme === 'night'
+  const hub = Math.max(2.5, R * 0.24)
+  const webOut = root * 0.8
+  const webIn = hub * 1.35
+  const a0 = ((o.angle ?? 0) * Math.PI) / 180
+  const holes = R >= 34 && webOut - webIn > 8 ? Math.max(0, Math.round(o.holes ?? 5)) : 0
+  const holeR = (webOut - webIn) * 0.34
+  const holeC = (webOut + webIn) / 2
+  const holeAt = (i: number): Pt => {
+    const t = a0 + Math.PI / holes + (i * 2 * Math.PI) / holes
+    return [X + holeC * Math.cos(t), Y - holeC * Math.sin(t)]
+  }
+  const body = () => {
+    polyPath(ctx, pts)
+    for (let i = 0; i < holes; i++) {
+      const [hx, hy] = holeAt(i)
+      ctx.moveTo(hx + holeR, hy)
+      ctx.arc(hx, hy, holeR, 0, Math.PI * 2)
+    }
+  }
+  const g = ctx.createLinearGradient(0, Y - R, 0, Y + R)
+  for (const [off, c] of tone.stops) g.addColorStop(off, c)
+  ctx.save()
+  body()
+  ctx.fillStyle = g
+  ctx.fill('evenodd')
+  ctx.clip('evenodd')
+  // Machined face: faint concentric turning marks.
+  if (R > 14) {
+    ctx.save()
+    ctx.globalAlpha *= night ? 0.08 : 0.3
+    ctx.strokeStyle = '#FFFFFF'
+    ctx.lineWidth = 0.35
+    for (let rr = webOut + 1.5; rr < root; rr += 1.8) {
+      ctx.beginPath()
+      ctx.arc(X, Y, rr, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+  // Recessed web: a shade darker, shadowed along its upper inner wall and lit along the lower one.
+  if (webOut - webIn > 3) {
+    ctx.beginPath()
+    ctx.arc(X, Y, webOut, 0, Math.PI * 2)
+    ctx.arc(X, Y, webIn, 0, Math.PI * 2, true)
+    ctx.fillStyle = night ? 'rgba(0,0,0,0.2)' : 'rgba(30,40,52,0.07)'
+    ctx.fill('evenodd')
+    ctx.lineWidth = 0.8
+    ctx.strokeStyle = night ? 'rgba(0,0,0,0.45)' : 'rgba(30,40,52,0.22)'
+    ctx.beginPath()
+    ctx.arc(X, Y, webOut, Math.PI * 1.05, Math.PI * 1.95)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(X, Y, webIn, Math.PI * 0.05, Math.PI * 0.95)
+    ctx.stroke()
+    ctx.globalAlpha *= tone.dim ? 0.2 : k.glint
+    ctx.strokeStyle = k.bevel
+    ctx.beginPath()
+    ctx.arc(X, Y, webOut - 0.8, Math.PI * 0.1, Math.PI * 0.9)
+    ctx.stroke()
+  }
+  ctx.restore()
+  // Hole walls: dark on the upper edge (looking into the cut), a glint on the lower edge.
+  for (let i = 0; i < holes; i++) {
+    const [hx, hy] = holeAt(i)
+    ctx.beginPath()
+    ctx.arc(hx, hy, holeR, Math.PI * 1.05, Math.PI * 1.95)
+    ctx.strokeStyle = night ? 'rgba(0,0,0,0.55)' : 'rgba(30,40,52,0.35)'
+    ctx.lineWidth = 0.9
+    ctx.stroke()
+    seg(ctx, [hx - holeR * 0.5, hy + holeR * 0.86], [hx + holeR * 0.5, hy + holeR * 0.86], k.bevel, 0.6, tone.dim ? 0.15 : k.glint * 0.8)
+  }
+  // Top light on the upper tooth tips.
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(X - R * 2, Y - R * 2, R * 4, R * 1.55)
+  ctx.clip()
+  ctx.translate(0, 0.8)
+  polyPath(ctx, pts)
+  ctx.globalAlpha *= tone.dim ? 0.2 : k.glint
+  ctx.strokeStyle = k.bevel
+  ctx.lineWidth = 0.7
+  ctx.stroke()
+  ctx.restore()
+  const ln = pickLine(k, 'auto', Math.PI * R * R)
+  if (ln) {
+    body()
+    ctx.strokeStyle = ln.color
+    ctx.lineWidth = ln.width
+    ctx.lineJoin = 'round'
+    ctx.setLineDash([])
+    ctx.stroke()
+  }
+  disc(ctx, X, Y, hub, 'alu', theme)
+  if (hub >= 4) {
+    // Bore with a keyway, turned with the gear.
+    const bore = hub * 0.42
+    ctx.save()
+    ctx.translate(X, Y)
+    ctx.rotate(-a0)
+    ctx.beginPath()
+    ctx.arc(0, 0, bore, 0, Math.PI * 2)
+    ctx.rect(bore * 0.55, -bore * 0.3, bore * 0.75, bore * 0.6)
+    ctx.fillStyle = night ? '#15171A' : '#3A3F46'
+    ctx.fill('nonzero')
+    ctx.restore()
+  } else {
+    ctx.beginPath()
+    ctx.arc(X, Y, Math.max(1, hub * 0.4), 0, Math.PI * 2)
+    ctx.fillStyle = k.screwHead
+    ctx.fill()
+  }
+}
+
+/**
+ * Parachute canopy (matte fabric): panels alternate a shade, seams run to the rim,
+ * outer panels darken like a curved surface, and the scalloped hem shows the darker
+ * underside. `canopy` and `rim` come from parachuteFrame, already placed in pixels.
+ */
+export function canopy(ctx: Ctx, outline: Pt[], rim: Pt[], hem: Pt[], apex: Pt, theme: CraftTheme) {
+  if (outline.length < 3 || rim.length < 2) return
+  const k = craftTokens(theme)
+  const tone = k.materials.fabric
+  const night = theme === 'night'
+  const xs = outline.map((p) => p[0])
+  const ys = outline.map((p) => p[1])
+  const X = Math.min(...xs)
+  const Y = Math.min(...ys)
+  const W = Math.max(...xs) - X
+  const H = Math.max(...ys) - Y
+  ctx.save()
+  polyPath(ctx, outline)
+  ctx.fillStyle = gradient(ctx, tone, X, Y, W, H)
+  ctx.fill()
+  ctx.clip()
+  // Alternate panels a shade darker; each panel is a wedge from the apex to two rim points.
+  for (let i = 0; i + 1 < rim.length; i++) {
+    if (i % 2 === 0) continue
+    ctx.beginPath()
+    ctx.moveTo(apex[0], apex[1] - 2)
+    ctx.lineTo(rim[i][0], rim[i][1] + 2)
+    ctx.lineTo(rim[i + 1][0], rim[i + 1][1] + 2)
+    ctx.closePath()
+    ctx.fillStyle = night ? 'rgba(0,0,0,0.16)' : 'rgba(30,40,52,0.06)'
+    ctx.fill()
+  }
+  // Curvature: the sides of the dome turn away from the light.
+  const side = ctx.createLinearGradient(X, 0, X + W, 0)
+  const edge = night ? 'rgba(0,0,0,0.3)' : 'rgba(30,40,52,0.16)'
+  side.addColorStop(0, edge)
+  side.addColorStop(0.28, 'rgba(0,0,0,0)')
+  side.addColorStop(0.72, 'rgba(0,0,0,0)')
+  side.addColorStop(1, edge)
+  ctx.fillStyle = side
+  ctx.fillRect(X - 1, Y - 1, W + 2, H + 2)
+  // Seams follow the dome: curved lines from near the apex to each rim point.
+  ctx.strokeStyle = k.seam
+  ctx.lineWidth = 0.7
+  for (let i = 1; i + 1 < rim.length; i++) {
+    const [rx, ry] = rim[i]
+    ctx.beginPath()
+    ctx.moveTo(apex[0] + (rx - apex[0]) * 0.08, apex[1] + 1)
+    ctx.quadraticCurveTo(rx * 1.04 + apex[0] * -0.04, apex[1] + (ry - apex[1]) * 0.35, rx, ry)
+    ctx.stroke()
+  }
+  // Lit crown: a soft sheen high on the dome.
+  ctx.globalAlpha *= night ? 0.25 : 0.7
+  ctx.strokeStyle = k.bevel
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.ellipse(apex[0], apex[1] + H * 0.62, W * 0.42, H * 0.58, 0, Math.PI * 1.22, Math.PI * 1.78)
+  ctx.stroke()
+  ctx.restore()
+  // Underside visible through the hem scallops.
+  ctx.save()
+  // Straight chord through the rim points (the far hem), then back along the near scalloped hem.
+  ctx.beginPath()
+  ctx.moveTo(rim[0][0], rim[0][1])
+  for (const p of rim.slice(1)) ctx.lineTo(p[0], p[1])
+  for (const p of hem) ctx.lineTo(p[0], p[1])
+  ctx.closePath()
+  ctx.fillStyle = night ? 'rgba(0,0,0,0.35)' : 'rgba(30,40,52,0.16)'
+  ctx.fill()
+  ctx.restore()
+  const ln = pickLine(k, 'auto', W * H * 0.7)
+  if (ln) {
+    polyPath(ctx, outline)
+    ctx.strokeStyle = ln.color
+    ctx.lineWidth = ln.width
+    ctx.lineJoin = 'round'
+    ctx.setLineDash([])
+    ctx.stroke()
+  }
+}
+
+/**
  * A painted part in a fixed colour (magnet poles, coloured knobs): flat paint with the
  * same top light and floor darkening as the metals, outline by size.
  */
@@ -437,4 +641,85 @@ export function paintedPoly(ctx: Ctx, pts: Pt[], fill: string, theme: CraftTheme
     ctx.setLineDash([])
     ctx.stroke()
   }
+}
+
+/**
+ * A flat wire loop seen in oblique projection, as an ellipse spanned by `rx` and `rz`
+ * (pixel offsets of the two radii from `center`). Enamelled copper, the same charge tint
+ * the solenoid wire uses, with a sheen on the near half.
+ */
+export function loopEllipse(ctx: Ctx, center: Pt, rx: Pt, rz: Pt, theme: CraftTheme, color: string) {
+  const steps = 48
+  const ring: Pt[] = []
+  for (let i = 0; i < steps; i++) {
+    const t = (i / steps) * Math.PI * 2
+    ring.push([center[0] + Math.cos(t) * rx[0] + Math.sin(t) * rz[0], center[1] + Math.cos(t) * rx[1] + Math.sin(t) * rz[1]])
+  }
+  const k = craftTokens(theme)
+  ctx.save()
+  polyPath(ctx, ring)
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = 2.4
+  ctx.strokeStyle = color
+  ctx.setLineDash([])
+  ctx.stroke()
+  ctx.lineWidth = 0.7
+  ctx.strokeStyle = k.bevel
+  ctx.globalAlpha *= theme === 'night' ? 0.3 : 0.65
+  ctx.beginPath()
+  for (let i = 0; i < steps; i++) {
+    if (ring[i][1] > center[1]) continue
+    const prev = ring[(i + steps - 1) % steps]
+    if (prev[1] > center[1]) ctx.moveTo(ring[i][0], ring[i][1])
+    else ctx.lineTo(ring[i][0], ring[i][1])
+  }
+  ctx.stroke()
+  ctx.restore()
+}
+
+/**
+ * A closed fist in a matte glove (fabric tone). `palm`, `fingers`, `cuff` and `knuckles`
+ * come from handFrame, already placed in pixels. Lit from above: the knuckle ridge takes
+ * the highlight, the finger wrap reads a shade darker.
+ */
+/** One rounded part of the fist: matte fabric fill, a top-edge glint, a strong outline. */
+function glovePart(ctx: Ctx, pts: Pt[], theme: CraftTheme, shade = 0) {
+  if (pts.length < 3) return
+  const k = craftTokens(theme)
+  const tone = k.materials.fabric
+  const xs = pts.map((p) => p[0])
+  const ys = pts.map((p) => p[1])
+  const X = Math.min(...xs)
+  const Y = Math.min(...ys)
+  const W = Math.max(...xs) - X
+  const H = Math.max(...ys) - Y
+  ctx.save()
+  polyPath(ctx, pts)
+  ctx.fillStyle = gradient(ctx, tone, X, Y, W, Math.max(H, 1))
+  ctx.fill()
+  if (shade > 0) {
+    ctx.clip()
+    ctx.fillStyle = theme === 'night' ? 'rgba(0,0,0,' + shade + ')' : 'rgba(30,40,52,' + shade * 0.5 + ')'
+    ctx.fillRect(X - 1, Y - 1, W + 2, H + 2)
+  }
+  ctx.restore()
+  seg(ctx, [X + W * 0.15, Y + 1], [X + W * 0.85, Y + 1], k.bevel, 0.8, theme === 'night' ? 0.3 : k.glint)
+  polyPath(ctx, pts)
+  ctx.strokeStyle = k.strong.color
+  ctx.lineWidth = k.strong.width
+  ctx.lineJoin = 'round'
+  ctx.setLineDash([])
+  ctx.stroke()
+}
+
+/**
+ * Side view of a gloved fist: cuff, back of the hand, four curled fingers a shade darker, and
+ * the thumb pressed on top. Each part is a simple rounded shape with its own outline, so the
+ * finger divisions read even when the hand is drawn small.
+ */
+export function fist(ctx: Ctx, parts: { palm: Pt[]; fingers: Pt[][]; thumb: Pt[]; cuff: Pt[] }, theme: CraftTheme) {
+  if (parts.cuff.length > 2) solidPoly(ctx, parts.cuff, 'dark', theme, { line: 'strong' })
+  if (parts.palm.length > 2) glovePart(ctx, parts.palm, theme)
+  for (const f of parts.fingers) glovePart(ctx, f, theme, 0.12)
+  if (parts.thumb.length > 2) glovePart(ctx, parts.thumb, theme)
 }

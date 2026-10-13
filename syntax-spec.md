@@ -1023,6 +1023,13 @@ sim({
 - `v.cart(m, x, y, w, h, opts)`：小车/木板，左端在 x、站在 y 上，返回 `{top, left, right}`，物块可以放在 `top` 上。
 - `v.block(m, x, y, w, h, opts)`：物块，底边中点在 (x, y)。放在斜面上时写 `angle`（斜面方向，度，逆时针为正），(x, y) 取斜面上的接触点，物块绕它转过去贴在面上，返回 `{topCenter, center, corners}`，力的箭头从 `center` 画；不要用 `v.path` 自己转方框。绕转轴转的板（电池板、挡板、杠杆、门）写 `pivot: 'center'`：(x, y) 改为板的中心，绕中心转过 `angle`，默认不画接触影。`v.ball(m, x, y, r, {label, charge})`：小球，`charge: true` 画带电粒子；要标电性就写 `charge: '+'`、`'-'` 或带正负的电荷量（如 `charge: p.q`），球上画 ± 号。`v.com(m, x, y, {label, size})`：质心，小十字，默认标「质心」（`label: false` 不标）。坐标用算出来的质心，不要手点一个圆。
 - `v.spring(m, x1, y1, x2, y2, {coils})`、`v.rope(m, points)`、`v.pulley(m, x, y, r, {mount})`、`v.incline(m, x, y, w, h, {angleLabel, flip})`。
+- `v.gear(m, x, y, r, {teeth, angle, mat, holes, label})`：正面看的直齿轮，`r` 是节圆半径（两轮在节圆上相切，边缘线速度 ωr 指节圆上的点）。`teeth` 齿数（至少 8，默认按大小取）；`angle` 转角（度，逆时针），转动时写 `angle: ω·t·180/π`；`mat` 取 `'steelHi'`（默认）、`'steel'`、`'alu'`、`'dark'`；`holes: false` 不开减重孔（小齿轮自动不开）。返回 `{x, y, r, outer, teeth, angle, pt(deg)}`，`pt` 给节圆上某个方向的点，接力和速度箭头用。`v.gearMesh(m, g, r, {dir, mat, label})`：和齿轮 `g` 啮合的第二个齿轮，圆心在 `g` 的 `dir` 方向（度，默认 0 即右边）。齿数按半径比取整（半径随之微调到整齐数），转角自动设好，齿咬进齿槽、反向转、角速度按齿数比，不用自己算。返回值同 `v.gear`，可以再接第三个。不要用 `v.path` 拼齿形。
+- `v.parachute(m, x, y, w, {h, drop, gores, angle, label})`：降落伞，(x, y) 是伞绳汇合点，伞盖宽 `w` 在它上方。`h` 伞顶高（默认 0.42w），`drop` 汇合点到伞沿的高度（默认 0.75w），`gores` 伞面分片数（默认 7），`angle` 绕汇合点倾斜（度）。返回 `{attach, apex, left, right}`，从 `attach` 用 `v.rope` 接到下面的物体（探测器用 `v.block`）。
+- `v.box(m, x, y, w, h, {label, terminals, display, style, mat})`：仪器盒（测试仪、控制单元、电源盒），底边中点在 (x, y)，和 `v.block` 一样放。壳体是喷漆钢，正面一块凹进去的深色面板，两角有螺丝；`label` 印在面板上（夜光下用正文色，不发灰），`terminals` 是顶部黄铜接线柱的个数（最多 8 个），`display: true` 在面板右侧加一块小屏。面板在夜光下有一圈清楚的边和顶沿高光，和壳体分开。`style: 'frame'` 改成开口的壳体（房间框、机箱剖面）：只画边框的厚度和内侧阴影，中间透出背景，没有面板和螺丝。`mat` 取 `'steel'`（默认）、`'steelHi'`、`'alu'`、`'dark'`。返回 `{center, top, left, right, terminals}`，`terminals` 是每个接线柱的坐标，接线从那里引出。物块是质量，仪器盒是壳体，两者不要混用。
+- `v.wedge(m, pts, {mat, dash, angleLabel, at, label})`：任意三角形或梯形实体（非直角的斜面、三角积木、梯形底座），`pts` 是顶点列表，至少三个，按顺序连成一个面。最高的那条边受光，和斜面同一套明暗。`dash: true` 只画虚线轮廓，用于「原来的位置」。`angleLabel` 在一个角上标角度，`at` 指定第几条边的起点（不写就取贴地的那个角）。返回 `{pts, edges, top}`，`edges[i]` 有 `at(u)`（边上 u 处的点，0 到 1）和 `normal`（指向体外的单位法向），物块和力箭头就放在这条边上。不要用 `v.path` 拼三角形。
+- `v.slab(m, x, y, w, h, d, {mat, hidden, cut, cutLabels, loop, label})`：斜二测的长方体或平板，(x, y) 是前下左角，`w`、`h`、`d` 是宽、高、厚。正面按实长，向后的棱走 45°、长度取一半。三个面分得开：侧面暗一档，正面用 `mat`，顶面亮一档。`hidden: true` 把看不见的三条棱画成虚线，`cut: true` 画过左上棱和右下棱的斜剖面（半透明灰面），并在剖面四个顶点外侧标 M、N、P、Q（`v.label` 的常规字体，不写在面中间）。`cutLabels` 默认 `['M','N','P','Q']`，传 `false` 不标，也可以换成别的四个字母。`loop: true` 或 `loop: {u, v, r}` 在顶面上放一个平躺的线圈（漆包线，颜色和螺线管的导线一样）。返回 `{corners, front, side, top, P, loop}`，`corners` 是八个顶点，`P(x, y, z)` 把体内一点换成场景坐标，箭头和标注都用它定位，保证和棱的方向一致。
+- `v.hand(m, x, y, {dir, size, label})`：一只握着绳或杆端的手，(x, y) 是握点。`dir` 取 `'right'`（默认）、`'left'`、`'up'`、`'down'`，或一个角度（度，手腕朝向，从 +x 逆时针）。侧视握拳：掌背、并排四节弯曲的手指（比掌背暗一档）、压在上面的拇指、手腕处一条深色袖口，都用冷灰织物色；手腕朝左时自动镜像，拇指保持在上方。`size` 是像素尺寸（默认 36）。手自带一小段穿过拳心的绳（拳头两侧露出、中间被手指挡住），`rope: false` 不画；接出去的绳从 `grip` 画起，先画绳再画手，手会盖住接头。返回 `{grip, dir}`。
+- `v.laser(m, x, y, angle, {length, on, lambda, label})`：激光笔，侧面看，出光口在 (x, y)，沿 `angle`（度，从 +x 逆时针）射出。深色阳极壳，尾盖、滚花握把和按钮；`on: true` 只在出光口点一个光点（`lambda` 是波长，纳米，默认 650，决定光的颜色），笔身不再用别的强调色。返回 `{aperture, dir, angle}`，`<Optics>` 的光线从 `aperture` 出发、沿 `dir` 走。
 - `v.springScale(m, x, y, {angle, value, max, length, divisions, label})`：弹簧测力计，接在装置里。`(x, y)` 是圆环（固定端）。`angle` 是钩子方向（度，从 +x 轴逆时针，默认 −90）。`value` / `max` 单位 N，指针和挂钩伸出量都按这个比例算（满量程时挂钩比空载多伸出 0.22 倍壳长）。`length` 是空载壳长（默认 1.6）。刻度数字保持正立。返回 `{hook, fraction}`，绳子接到 `hook`，不要手写挂钩坐标。
 - `v.electrometer(m, x, y, {value, max, deflection, label, h})`：静电计。金属球在上，外壳接地。指针张角 = 60° × value/max（写了 `value` 就不用再写 `deflection`）。`(x, y)` 在外壳中部。不要手画张角。返回 `{angle, ball}`，`angle` 是相对直杆的度数，`ball` 是金属球的坐标。
 - `v.cylinder(m, x, y, w, h, pistonY, {molecules, temp, heat})`：汽缸 + 活塞，气体分子会自己动，`heat` 画加热波纹。
@@ -1084,6 +1091,13 @@ sim({
    | 滑动变阻器、电表、开关、电池 | 实物图 `<Wiring>`，原理图 `<Circuit>`；不要在 `<Sim>` 里画 |
    | 弹簧测力计、验电器 | `v.springScale`、`v.electrometer` |
    | 传送带 | `v.conveyor` |
+   | 齿轮、啮合的一对齿轮（开瓶器、卷轴外齿轮、齿轮传动） | `v.gear`；与它啮合的用 `v.gearMesh`（自动对齿、反向转） |
+   | 降落伞（伞盖、伞绳汇于一点） | `v.parachute`（返回 `attach` 接绳到下面的物体） |
+   | 测试仪、控制单元、电源盒、仪器外壳 | `v.box`（接线从返回的 `terminals` 引出）；房间框、机箱剖面用 `style: 'frame'` |
+   | 非直角的斜面、三角形或梯形的实体、积木 | `v.wedge`（顶点列表；物块放在返回的某条边上） |
+   | 斜二测的长方体、平板、带剖面的块、平躺的线圈 | `v.slab`（`cut` 画剖面并在顶点外标 M、N、P、Q，`cutLabels: false` 不标；`loop` 画顶面线圈；箭头用返回的 `P` 定位） |
+   | 握着绳子或杆的手 | `v.hand`（绳子从返回的 `grip` 接出） |
+   | 激光笔 | `v.laser`（光线从返回的 `aperture` 出发） |
    | 平行板、电容器极板 | `v.plates` |
    | 绳、细线 | `v.rope` 或 `v.line` |
    | 物体走过的轨迹、频闪照片 | `<Sim>` 里 `v.trail`（写 `every` 带频闪点）、`v.strobe`；整条预定轨迹只画一条细虚线 |

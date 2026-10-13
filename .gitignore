@@ -3,6 +3,7 @@ dist/
 *.tsbuildinfo
 .DS_Store
 *.log
+__pycache__/
 
 # Exam originals: large binaries kept locally, not versioned.
 2008-2025·*/

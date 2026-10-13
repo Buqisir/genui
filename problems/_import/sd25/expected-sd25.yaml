@@ -1,0 +1,50 @@
+# 2025 山东卷答案键。不发给模型。
+sd25-01:
+  - { q: "选项", choice: "B" }
+sd25-02:
+  - { q: "选项", choice: "C" }
+sd25-03:
+  - { q: "选项", choice: "A" }
+sd25-04:
+  - { q: "选项", choice: "C" }
+sd25-05:
+  - { q: "选项", choice: "A" }
+sd25-06:
+  - { q: "选项", choice: "C" }
+sd25-07:
+  - { q: "选项", choice: "D" }
+sd25-08:
+  - { q: "选项", choice: "B" }
+sd25-09:
+  - { q: "选项", choice: "BD" }
+sd25-10:
+  - { q: "选项", choice: "BC" }
+sd25-11:
+  - { q: "选项", choice: "BD" }
+sd25-12:
+  - { q: "选项", choice: "AD" }
+sd25-13:
+  - { q: "(1) 遮光片宽度", text: "1.00", manual: true }
+  - { q: "(2) 加速度", any: [0.41] }
+  - { q: "(3) 轨道倾角", text: "增大", manual: true }
+  - { q: "(4) 斜率单位", text: "kg^{-1}", manual: true }
+sd25-14:
+  - { q: "(1) 电流", any: [200] }
+  - { q: "(1) 输出功率", any: [2.4] }
+  - { q: "(2) 功率倍数", any: [100] }
+  - { q: "(3) 减少的功率", any: [0.9] }
+sd25-15:
+  - { q: "(1) 折射率", text: "\u221a3", manual: true }
+  - { q: "(2) 传播时间", text: "19\u221a3 R/(5c)", manual: true }
+sd25-16:
+  - { q: "(1) h_2", text: "(4/3)h_1", manual: true }
+  - { q: "(2) 净热量", text: "(8/63)p_0 h_1 S", manual: true }
+sd25-17:
+  - { q: "(1) v_1", text: "6 m/s，水平向左", manual: true }
+  - { q: "(1) v_2", text: "2/3 m/s，水平向右", manual: true }
+  - { q: "(2) v_b", text: "2/3 m/s，水平向左", manual: true }
+  - { q: "(2) E_pm", text: "5/2 J", manual: true }
+sd25-18:
+  - { q: "(1) v", text: "mgR tan\u03b1/(B^2 L^2 cos\u03b1)", manual: true }
+  - { q: "(1) s", text: "m^2 g R^2 sin\u03b1/(2 B^4 L^4 cos^4 \u03b1)", manual: true }
+  - { q: "(2) d", text: "m R v_0/(k_2^2 L^4)", manual: true }

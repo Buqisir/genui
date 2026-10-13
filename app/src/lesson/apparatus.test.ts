@@ -7,7 +7,15 @@ import {
   circleHalfCount,
   coverageCount,
   crtDeflection,
+  gearMeshAngle,
+  gearProfile,
   hallPolarity,
+  handFrame,
+  laserFrame,
+  parachuteFrame,
+  slabFrame,
+  slabLoop,
+  wedgeFrame,
   labTransformerLayout,
   oilFilmGeometry,
   platePair,
@@ -177,12 +185,52 @@ describe('tilted plates and the lab transformer', () => {
 })
 
 /** Text and line-segment calls from the latest draw(), in canvas pixels. */
-let drawn: { texts: [string, number, number][]; lines: number } = { texts: [], lines: 0 }
+let drawn: { texts: [string, number, number][]; lines: number; fills: { w: number; h: number }[] } = { texts: [], lines: 0, fills: [] }
+
+describe('gears and parachute geometry', () => {
+  it('meshes two gears: teeth sit in gaps without overlap, and the ratio is n1/n2', () => {
+    for (const [n1, n2] of [[24, 16], [12, 8], [8, 8], [8, 12], [10, 40], [18, 30]]) {
+      for (let dir = -180; dir < 180; dir += 23) {
+        for (let a1 = 0; a1 < 60; a1 += 1.7) {
+          const R1 = 60
+          const R2 = (R1 * n2) / n1
+          const d = (dir * Math.PI) / 180
+          const X2 = 100 + (R1 + R2) * Math.cos(d)
+          const Y2 = 100 - (R1 + R2) * Math.sin(d)
+          const g1 = gearProfile(100, 100, R1, n1, a1)
+          const g2 = gearProfile(X2, Y2, R2, n2, gearMeshAngle(a1, n1, n2, dir))
+          // Shrink by 2% so touching flanks do not count as overlap.
+          const shrink = (pts: [number, number][], X: number, Y: number) => pts.map(([x, y]): [number, number] => [X + (x - X) * 0.98, Y + (y - Y) * 0.98])
+          const in1 = shrink(g2.pts, X2, Y2).filter(([x, y]) => pointInPoly(x, y, g1.pts)).length
+          const in2 = shrink(g1.pts, 100, 100).filter(([x, y]) => pointInPoly(x, y, g2.pts)).length
+          expect(in1 + in2).toBe(0)
+          // Engaged: some tip of gear 2 reaches inside gear 1's outer circle.
+          const deepest = Math.min(...g2.pts.map(([x, y]) => Math.hypot(x - 100, y - 100)))
+          expect(deepest).toBeLessThan(R1)
+        }
+      }
+    }
+    // Turning gear 1 by Δ turns gear 2 by −Δ·n1/n2.
+    expect(gearMeshAngle(10, 24, 16, 0) - gearMeshAngle(0, 24, 16, 0)).toBeCloseTo(-15, 9)
+  })
+
+  it('builds a parachute above the attach point with gores + 1 rim points', () => {
+    const f = parachuteFrame(200, 80, 150, 7)
+    expect(f.rim).toHaveLength(8)
+    expect(f.rim[0][0]).toBeCloseTo(-100, 6)
+    expect(f.rim[7][0]).toBeCloseTo(100, 6)
+    for (const p of f.rim) expect(p[1]).toBeCloseTo(-150, 6)
+    expect(f.apex).toEqual([0, -230])
+    expect(Math.min(...f.canopy.map((p) => p[1]))).toBeCloseTo(-230, 6)
+    // The hem bows up between rim points, never below the rim.
+    for (const p of f.hem) expect(p[1]).toBeLessThanOrEqual(-150 + 1e-9)
+  })
+})
 
 function draw(body: string) {
   const posts: { type?: string; message?: string }[] = []
   const listeners: Record<string, ((e: unknown) => void)[]> = {}
-  drawn = { texts: [], lines: 0 }
+  drawn = { texts: [], lines: 0, fills: [] }
   const ctx2d = new Proxy(
     {},
     {
@@ -190,6 +238,7 @@ function draw(body: string) {
         if (prop === 'measureText') return (s: unknown) => ({ width: String(s).length * 7 })
         if (prop === 'fillText') return (s: unknown, x: number, y: number) => drawn.texts.push([String(s), x, y])
         if (prop === 'lineTo') return () => drawn.lines++
+        if (prop === 'fillRect') return (x: number, y: number, w: number, h: number) => drawn.fills.push({ w, h })
         if (typeof prop === 'string' && /^create/.test(prop)) return () => ({ addColorStop() {}, setTransform() {} })
         return () => undefined
       },
@@ -328,6 +377,7 @@ describe('sandbox drawing agrees with the geometry', () => {
   it('flips plate signs and marks the sign on a charged ball', () => {
     const view = 'const m = v.view({ xmin: -2, xmax: 2, ymin: -2, ymax: 2, equal: true });'
     const signs = (o: string) => {
+      drawn.texts = []
       draw(`${view} v.plates(m, -1, 1, 1, -1, ${o})`)
       return drawn.texts.filter(([s]) => s === '+' || s === '−').sort((a, b) => a[2] - b[2]).map(([s]) => s)
     }
@@ -400,6 +450,103 @@ describe('demo lesson', () => {
   })
 })
 
+describe('new apparatus return values', () => {
+  const view = 'const m = v.view({ xmin: -4, xmax: 6, ymin: -3, ymax: 4, equal: true });'
+  it('returns the box anchors, the wedge face a block sits on, and the slab projector', () => {
+    const out = draw(`
+      ${view}
+      const box = v.box(m, 0, 0, 1.6, 0.9, { label: '测试仪', terminals: 2, display: true })
+      const frame = v.box(m, 3, 0, 1.2, 0.8, { style: 'frame' })
+      const w = v.wedge(m, [[0, 0], [3, 0], [3, 1.5]], { angleLabel: 'θ' })
+      const ghost = v.wedge(m, [[0, 2], [2, 2], [1, 3]], { dash: true })
+      const s = v.slab(m, -3, -2, 2, 1, 1.2, { hidden: true, cut: true, loop: { r: 0.3 } })
+      const hand = v.hand(m, 4, 2, { dir: 'left' })
+      const beam = v.laser(m, -2, 2, 20, { on: true, length: 1.4 })
+      globalThis.__out = { box, frame, w, ghost, s, hand, beam }
+    `) as {
+      box: { center: number[]; top: number[]; terminals: number[][]; left: number[] }
+      frame: { terminals: number[][] }
+      w: { edges: { normal: number[]; at: (u: number) => number[] }[]; top: number; pts: number[][] }
+      ghost: { pts: number[][] }
+      s: { corners: number[][]; P: (x: number, y: number, z: number) => number[]; top: number[]; loop: { center: number[] } }
+      hand: { grip: number[]; dir: number }
+      beam: { aperture: number[]; dir: number[] }
+    }
+    expect(out.box.center).toEqual([0, 0.45])
+    expect(out.box.top).toEqual([0, 0.9])
+    expect(out.box.terminals).toHaveLength(2)
+    expect(out.box.terminals[0][0]).toBeLessThan(0)
+    expect(out.box.terminals[0][1]).toBeGreaterThan(0.9)
+    expect(out.box.left).toEqual([-0.8, 0.45])
+    expect(out.frame.terminals).toEqual([])
+    expect(out.w.pts).toHaveLength(3)
+    expect(out.w.edges[0].normal[1]).toBeCloseTo(-1, 6)
+    expect(out.w.edges[0].at(0.5)[0]).toBeCloseTo(1.5, 6)
+    expect(out.w.top).toBe(2)
+    expect(out.ghost.pts[2]).toEqual([1, 3])
+    expect(out.s.corners).toHaveLength(8)
+    expect(out.s.corners[0]).toEqual([-3, -2])
+    expect(out.s.corners[1][0]).toBeCloseTo(-1, 6)
+    const far = out.s.P(2, 1, 1.2)
+    expect(far[0]).toBeCloseTo(out.s.corners[7][0], 6)
+    expect(far[1]).toBeCloseTo(out.s.corners[7][1], 6)
+    expect(out.s.corners[4][0]).toBeGreaterThan(-3)
+    expect(out.s.corners[4][1]).toBeGreaterThan(-2)
+    expect(out.s.loop.center[1]).toBeGreaterThan(out.s.top[1] - 0.01)
+    expect(out.hand).toEqual({ grip: [4, 2], dir: 180 })
+    expect(out.beam.aperture).toEqual([-2, 2])
+    expect(out.beam.dir[0]).toBeCloseTo(Math.cos((20 * Math.PI) / 180), 6)
+    expect(out.beam.dir[1]).toBeCloseTo(Math.sin((20 * Math.PI) / 180), 6)
+  })
+
+  it('marks the four corners of a cut and stays quiet when cutLabels is false', () => {
+    const view = 'const m = v.view({ xmin: -4, xmax: 4, ymin: -1, ymax: 3, equal: true });'
+    const letters = (body: string) => {
+      drawn.texts = []
+      draw(body)
+      return drawn.texts.map(([s]) => s).filter((s) => /^[A-Z]$/.test(s))
+    }
+    const marked = letters(`${view} v.slab(m, -1, 0, 2, 1.2, 1.2, { cut: true })`)
+    expect(marked).toEqual(['M', 'N', 'P', 'Q'])
+    const renamed = letters(`${view} v.slab(m, -1, 0, 2, 1.2, 1.2, { cut: true, cutLabels: ['A', 'B', 'C', 'D'] })`)
+    expect(renamed).toEqual(['A', 'B', 'C', 'D'])
+    const quiet = letters(`${view} v.slab(m, -1, 0, 2, 1.2, 1.2, { cut: true, cutLabels: false })`)
+    expect(quiet).toEqual([])
+    // The four letters sit apart, one toward each corner, not stacked in the middle.
+    drawn.texts = []
+    draw(`${view} v.slab(m, -1, 0, 2, 1.2, 1.2, { cut: true })`)
+    const spots = drawn.texts.filter(([s]) => 'MNPQ'.includes(s))
+    const xs = spots.map(([, x]) => x)
+    const ys = spots.map(([, , y]) => y)
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(40)
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(40)
+  })
+
+  it('draws an open frame instead of a filled housing', () => {
+    const view = 'const m = v.view({ xmin: -3, xmax: 3, ymin: -1, ymax: 2, equal: true });'
+    const fills = (body: string) => {
+      drawn.fills = []
+      draw(body)
+      return drawn.fills.filter((f) => f.w > 20 || f.h > 20)
+    }
+    const solid = fills(`${view} v.box(m, 0, 0, 1.6, 0.9, { label: '\u6d4b\u8bd5\u4eea' })`)
+    expect(solid.some((f) => f.w > 80 && f.h > 40)).toBe(true)
+    const frame = fills(`${view} v.box(m, 0, 0, 1.6, 0.9, { style: 'frame' })`)
+    // Walls are long thin strips; none of them spans the opening in both directions.
+    expect(frame.every((f) => f.w < 30 || f.h < 30)).toBe(true)
+    expect(frame.length).toBeGreaterThan(0)
+  })
+
+  it('throws the Chinese messages for a bad box, wedge, hand and laser', () => {
+    expect(() => draw(`${view} v.box(m, 0, 0, 0, 1)`)).toThrow(/宽和高/)
+    expect(() => draw(`${view} v.box(m, 0, 0, 1, 1, { terminals: 12 })`)).toThrow(/最多 8 个/)
+    expect(() => draw(`${view} v.wedge(m, [[0, 0], [1, 1]])`)).toThrow(/至少要三个/)
+    expect(() => draw(`${view} v.slab(m, 0, 0, 1, -1, 1)`)).toThrow(/正数/)
+    expect(() => draw(`${view} v.hand(m, 0, 0, { dir: 'sideways' })`)).toThrow(/方向/)
+    expect(() => draw(`${view} v.laser(m, 0, 0, 0, { length: 0 })`)).toThrow(/长度/)
+  })
+})
+
 describe('v.block pivot', () => {
   it('turns a panel about its centre when pivot is centre', () => {
     const out = draw(`
@@ -416,6 +563,91 @@ describe('v.block pivot', () => {
     expect(out.flat.top).toBeCloseTo(0.6, 9)
     // Without pivot the bottom-edge midpoint stays on (x, y), so the centre sits off it.
     expect(out.onSlope.center[1]).toBeGreaterThan(0.5)
+  })
+})
+
+describe('wedge, slab, hand and laser geometry', () => {
+  it('gives every edge an outward normal and a point at fraction u', () => {
+    const tri = wedgeFrame([
+      [0, 0],
+      [4, 0],
+      [4, 3],
+    ])
+    expect(tri.edges).toHaveLength(3)
+    expect(tri.topEdge).toBe(2)
+    const base = tri.edges[0]
+    expect(base.normal[1]).toBeCloseTo(-1, 9)
+    expect(base.at(0.25)).toEqual([1, 0])
+    const slope = tri.edges[2]
+    expect(slope.length).toBeCloseTo(5, 9)
+    const mid = slope.at(0.5)
+    expect(mid[0]).toBeCloseTo(2, 9)
+    expect(mid[1]).toBeCloseTo(1.5, 9)
+    // The normal steps off the edge and lands outside the triangle.
+    const out = [mid[0] + slope.normal[0], mid[1] + slope.normal[1]]
+    expect(pointInPoly(out[0], out[1], tri.pts)).toBe(false)
+    expect(pointInPoly(mid[0] - slope.normal[0] * 0.2, mid[1] - slope.normal[1] * 0.2, tri.pts)).toBe(true)
+    const trap = wedgeFrame([
+      [0, 0],
+      [6, 0],
+      [5, 2],
+      [1, 2],
+    ])
+    expect(trap.edges[2].normal[1]).toBeCloseTo(1, 9)
+    expect(trap.topEdge).toBe(2)
+  })
+
+  it('rejects a wedge that is not a face', () => {
+    expect(() => wedgeFrame([[0, 0], [1, 0]])).toThrow(/至少要三个/)
+    expect(() => wedgeFrame([[0, 0], [1, 0], [1, 0]])).toThrow(/不能重合/)
+    expect(() => wedgeFrame([[0, 0], [2, 0], [1, 0]])).toThrow(/共线/)
+    expect(() => wedgeFrame([[0, 0], [1, NaN], [0, 1]])).toThrow(/不是有限数字/)
+  })
+
+  it('projects a cuboid in cabinet projection with receding edges at half length', () => {
+    const f = slabFrame(80, 40, 60)
+    const p = (i: number) => [f.corners[i].px, f.corners[i].py]
+    expect(p(0)).toEqual([0, 0])
+    expect(p(1)).toEqual([80, 0])
+    expect(p(2)).toEqual([0, 40])
+    // 45 degrees, foreshortened to half: depth 60 contributes 30/√2 on each axis.
+    expect(p(4)[0]).toBeCloseTo(30 / Math.SQRT2, 8)
+    expect(p(4)[1]).toBeCloseTo(30 / Math.SQRT2, 8)
+    expect(p(7)[0]).toBeCloseTo(80 + 30 / Math.SQRT2, 8)
+    expect(p(7)[1]).toBeCloseTo(40 + 30 / Math.SQRT2, 8)
+    const c = f.project(40, 20, 30)
+    expect(c[0]).toBeCloseTo(40 + 15 / Math.SQRT2, 8)
+    expect(f.faces.top).toEqual([2, 3, 7, 6])
+    expect(f.cut).toEqual([2, 3, 5, 4])
+    const loop = slabLoop(f, 80, 40, 60, { ru: 12, rv: 12 })
+    // Centred on the top face: half the width across, half the depth back.
+    const centre = f.project(40, 40, 30)
+    expect(loop.center[0]).toBeCloseTo(centre[0], 8)
+    expect(loop.center[1]).toBeCloseTo(centre[1], 8)
+    expect(Math.hypot(...loop.rx)).toBeCloseTo(12, 8)
+    expect(() => slabFrame(1, 0, 1)).toThrow(/正数/)
+    expect(() => slabLoop(f, 80, 40, 60, { ru: 0, rv: 0 })).toThrow(/半径/)
+  })
+
+  it('points the wrist away from the grip and the beam out of the aperture', () => {
+    const right = handFrame(0, 40)
+    expect(right.wrist[0]).toBeCloseTo(1, 9)
+    expect(right.palm.length).toBeGreaterThan(8)
+    // The rope is hidden only where the fingers cross it, and shows on both sides.
+    expect(right.rope.front[0]).toBeGreaterThan(right.rope.from)
+    expect(right.rope.front[1]).toBeLessThan(right.rope.to)
+    const up = handFrame(90, 40)
+    expect(up.wrist[1]).toBeCloseTo(-1, 9)
+    expect(up.palm).toHaveLength(right.palm.length)
+    expect(() => handFrame(0, 0)).toThrow(/尺寸/)
+    const beam = laserFrame(30, 100)
+    expect(beam.dir[0]).toBeCloseTo(Math.cos(Math.PI / 6), 9)
+    expect(beam.dir[1]).toBeCloseTo(-0.5, 9)
+    expect(beam.aperture).toEqual([0, 0])
+    // The whole body sits behind the aperture.
+    for (const p of beam.body) expect(p[0] * beam.dir[0] + p[1] * beam.dir[1]).toBeLessThanOrEqual(1e-9)
+    expect(beam.grip).toHaveLength(4)
+    expect(() => laserFrame(0, -5)).toThrow(/长度/)
   })
 })
 
