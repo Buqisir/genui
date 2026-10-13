@@ -7,6 +7,7 @@ npm install
 npm run dev        # http://localhost:5173（或 npx vite --port 5317），顶部下拉框切换课件
 npm test           # 解析器、表达式、注册表单元测试；并检查每份课件能解析、answers 和派生量一致
 npm run build      # 类型检查 + 打包
+npm run verify     # 提交前全量检查：打包、测试、docs check、课件 validate（CI 同款）
 ```
 
 目录：
@@ -22,7 +23,7 @@ python3 ../tools/extract_problems.py                      # capture-plan.md → 
 npx tsx scripts/generate.ts r5-01-belt-loop r6-04-generator-heaters --jobs 3 --rounds 3 --effort high
 npx tsx scripts/validate.ts ../generated/*.md            # 结构 + 表达式 + answers + Sim/Figure 试跑
 npx tsx scripts/compare.ts                               # 和 ../problems/expected.yaml 的标准答案核对
-node scripts/shoot.mjs gen-r6-04-generator-heaters --marks --out shots/gen   # 需要 dev server 在 5317 端口
+node scripts/shoot.mjs gen-r6-04-generator-heaters --marks --out shots/gen   # 用 GENUI_URL 或 5317 上的 dev server，都没有就自己起一个
 ```
 
 生成结果在 `../generated/`（每次尝试另存在 `.attempts/`，日志在 `generate.log`），页面里以 `gen-` 前缀出现。

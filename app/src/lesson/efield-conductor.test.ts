@@ -249,7 +249,7 @@ describe('efield conductors', () => {
     expect(out.hasSurface).toBe(false)
   })
 
-  it('solves 400 panels in under 150 ms', () => {
+  it('solves 400 panels in under 400 ms', () => {
     const out = run(`
       const m = v.view({ xmin: -0.2, xmax: 0.2, ymin: -0.08, ymax: 0.08, equal: true })
       let best = Infinity
@@ -264,7 +264,8 @@ describe('efield conductors', () => {
     `) as { dt: number; n: number }
     expect(out.n).toBeGreaterThanOrEqual(360)
     expect(out.n).toBeLessThanOrEqual(420)
-    expect(out.dt).toBeLessThan(150)
+    // ~100 ms on a quiet machine, ~180 ms under a parallel test run; the bound leaves room for CI runners.
+    expect(out.dt).toBeLessThan(400)
   })
 
   // A finger above two thin grounded plates (2026 Zhejiang): before the far-field
@@ -314,6 +315,8 @@ describe('efield conductors', () => {
       globalThis.__out = { dt: Date.now() - t0, n: f.surface.length }
     `) as { dt: number; n: number }
     expect(out.n).toBeGreaterThan(100)
-    expect(out.dt).toBeLessThan(400)
+    // Wall-clock, so bound at half the 2 s sandbox budget: still catches the old ~6 s path, but not a busy test runner.
+    // (Only the first call is timed; repeats with the same conductors hit the cache.)
+    expect(out.dt).toBeLessThan(1000)
   })
 })

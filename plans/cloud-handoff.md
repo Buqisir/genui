@@ -8,9 +8,8 @@
 cd app && npm ci && npx playwright install chromium
 ```
 
-- 有两处写死了本机路径 `/Users/huangxuewei/Projects/genui/bin/genui`：`skills/genui/SKILL.md` 第 8 行和 `app/scripts/generate.ts`（生成的 prompt 里也会带上）。最省事的做法是建同名软链接，不改代码：
-  `sudo mkdir -p /Users/huangxuewei/Projects && sudo ln -s "$PWD" /Users/huangxuewei/Projects/genui`（在仓库根目录执行）。
-- 开发服务器固定端口 5317（截图脚本写死了这个端口）：先 `curl -s -o /dev/null -w '%{http_code}' http://localhost:5317/`，不是 200 再后台启动 `cd app && npx vite --port 5317 --strictPort`。
+- `generate.ts`、`regen-prompt.ts` 按仓库位置算出 `bin/genui` 的绝对路径写进 prompt，不需要建软链接。`plans/regen*/` 里旧的 prompt.md 还带着原来的本机路径，重新生成即可。
+- 截图和 QA 脚本（`qa-all`、`moments`、`shoot` 等）先看 `GENUI_URL`，再看 5317 端口有没有服务，都没有就自己在空闲端口起一个，跑完关掉。不用先手动启动 dev server。
 - 真题原卷（`2008-2025·（*）物理高考真题/`）和题图（`problems/**/*.png`）都在 `.gitignore` 里，仓库没有。题目文字和答案键已经在 `problems/` 里，生成课件不需要原卷；需要看原图时找用户要。
 
 ## 常用命令（仓库根目录）
@@ -25,6 +24,7 @@ cd app && npm ci && npx playwright install chromium
 | 答案核对 | stdin 传 `[{"id":"sd25-01","file":"../generated-grok/sd25/sd25-01.md"}, ...]` 给 `cd app && npx tsx scripts/keycheck.ts`；答案键自动读 `problems/expected*.yaml` |
 | 类型检查 | `cd app && ./node_modules/.bin/tsc -b` |
 | 单元测试 | `cd app && npx vitest run --maxWorkers=1`（当前 369 个全过） |
+| 一键检查 | `cd app && npm run verify`（tsc + 打包、vitest、docs check、lessons 和 bank2 全部 validate；CI 跑的就是它） |
 | 文档 | `cd app && npx tsx scripts/docs.ts build`，然后 `... docs.ts check` |
 | 演示课件回归 | `node app/scripts/qa-all.mjs _demo-apparatus _demo-atom _demo-axis _demo-circuit-b _demo-conductor _demo-e _demo-fringes _demo-gaokao _demo-instruments-2 _demo-magnetics _demo-optics _demo-prefabs _demo-radial _demo-track _demo-vessel-wave`（15/15） |
 | 打包 | `cd app && npx vite build` |
@@ -75,6 +75,6 @@ cd app && npm ci && npx playwright install chromium
 
 ## 全部做完后的验证
 
-tsc、vitest、docs check、bank2 75 课 + sd25 18 课 validate、keycheck、qa-all 15/15、`vite build`，都过了再提交。
+`npm run verify`（覆盖 tsc、vitest、docs check、lessons + bank2 validate、`vite build`），再加 sd25 18 课 validate、keycheck、qa-all 15/15，都过了再提交。sd25 课件进库后把它加进 `package.json` 的 `validate:lessons`。
 
 —— Droid 整理（2026-10-13）

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import * as gastube from './gastube'
 import { runGasTube } from './gastube'
 import { validateLesson } from './validate'
 
@@ -56,18 +57,17 @@ describe('GasTube', () => {
       ],
       drive: { name: 'Tg', from: 300, to: 600 },
     }
-    const cpuMs = (fn: () => void) => {
-      const start = process.cpuUsage()
+    const work = (fn: () => void) => {
+      const start = gastube.gasTubeAssemblies
       fn()
-      const used = process.cpuUsage(start)
-      return (used.user + used.system) / 1000
+      return gastube.gasTubeAssemblies - start
     }
-    tube(props)
-    const built = Math.min(cpuMs(() => tube(props)), cpuMs(() => tube(props)))
+    const built = work(() => tube(props))
     const { obj, values, warnings, errors } = tube(props)
     expect(errors).toEqual([])
     expect(warnings).toEqual([])
-    expect(built).toBeLessThan(30)
+    // Counts equilibrium assemblies, not milliseconds, so the bound holds on any machine. Today: ~2200 (200 sweep steps).
+    expect(built).toBeLessThan(4000)
     rel(values.Tleave as number, 330)
     rel(values.Thit as number, 495)
     expect(Math.abs((values.Tleave as number) - 330) / 330).toBeLessThan(1e-9)
@@ -89,10 +89,11 @@ describe('GasTube', () => {
     rel(call(obj, 'UA', 600), 500)
     rel(call(obj, 'QA', 600), 610)
     rel(call(obj, 'WA', 450), 1.1e5 * 0.01 * (450 / 1650 - 0.2))
-    const perCall = cpuMs(() => {
+    const perCall = work(() => {
       for (let i = 0; i < 20; i++) call(obj, 'pA', 300 + i * 13)
     }) / 20
-    expect(perCall).toBeLessThan(0.2)
+    // A lookup is a cache hit or one short Newton solve (~1.5 today), never a re-sweep.
+    expect(perCall).toBeLessThan(10)
   })
 
   it('splits a closed horizontal cylinder into two columns', () => {

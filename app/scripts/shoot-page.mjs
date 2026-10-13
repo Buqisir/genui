@@ -3,6 +3,7 @@
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
+import { devServer } from './devserver.mjs'
 
 const args = process.argv.slice(2)
 const opt = (name, fallback) => {
@@ -14,7 +15,7 @@ if (!id || id.startsWith('--')) {
   console.error('usage: node scripts/shoot-page.mjs <lessonId> [--width 1440] [--night] [--mark N] [--open-answer]')
   process.exit(2)
 }
-const base = opt('--base', 'http://localhost:5317')
+const { base, close } = await devServer(opt('--base', undefined))
 const width = Number(opt('--width', 1440))
 const out = resolve(opt('--out', 'shots'))
 const mark = opt('--mark', null)
@@ -53,4 +54,5 @@ if (clip) {
 } else await page.screenshot({ path: file, fullPage: !args.includes('--viewport') })
 const blockErrors = await page.$$eval('.block-error, .sim-error', (els) => els.map((e) => e.textContent.trim()))
 await browser.close()
+await close()
 console.log(JSON.stringify({ file, errors, blockErrors }, null, 2))

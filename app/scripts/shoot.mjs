@@ -1,8 +1,9 @@
 // Headless render check: opens a lesson, screenshots every figure, reports render errors.
-// Usage: node scripts/shoot.mjs <lessonId> [--base http://localhost:5317] [--out shots] [--marks]
+// Usage: node scripts/shoot.mjs <lessonId> [--base URL] [--out shots] [--marks]
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
+import { devServer } from './devserver.mjs'
 
 const args = process.argv.slice(2)
 const opt = (name, fallback) => {
@@ -14,7 +15,7 @@ if (!id) {
   console.error('usage: node scripts/shoot.mjs <lessonId> [--base URL] [--out DIR] [--marks]')
   process.exit(2)
 }
-const base = opt('--base', 'http://localhost:5317')
+const { base, close } = await devServer(opt('--base', undefined))
 const out = resolve(opt('--out', 'shots'))
 const withMarks = args.includes('--marks')
 mkdirSync(out, { recursive: true })
@@ -65,5 +66,6 @@ for (let i = 0; i < figures.length; i++) {
 }
 
 await browser.close()
+await close()
 console.log(JSON.stringify(report, null, 2))
 process.exit(report.blockErrors.length || report.simErrors.length || consoleErrors.length ? 1 : 0)
