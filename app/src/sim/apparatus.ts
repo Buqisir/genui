@@ -1,7 +1,7 @@
 // Pure geometry for the lab-apparatus helpers:
 // v.transformer({style:'lab'}), v.sampleWire, v.oilFilm, v.centripetalDemo,
 // v.crt, v.hall, and v.plates({angle, tilt}) / v.platesAt.
-// Bundled into the sandbox runtime. runtime.js calls these functions; it does not keep a copy.
+// Bundled into the sandbox runtime. The runtime (runtime/*.js) calls these functions; it does not keep a copy.
 
 export type Pt = [number, number]
 
@@ -774,4 +774,287 @@ export function laserFrame(angle = 0, length = 92): LaserFrame {
   const cap: Pt[] = [P(-length * 0.9, r * 0.96), P(-length * 1.045, r * 0.96), P(-length * 1.045, -r * 0.96), P(-length * 0.9, -r * 0.96)]
   const button: Pt[] = [P(-length * 0.7, -r * 0.7), P(-length * 0.84, -r * 0.7), P(-length * 0.84, -r * 1.34), P(-length * 0.7, -r * 1.34)]
   return { dir: [fx, fy], body, grip, cap, button, aperture: [0, 0] }
+}
+
+// ---------- household apparatus (batch 3), pixels, y down ----------
+
+/** Outline of a thick polyline: left side out, right side back. Width in px. */
+export function ribbon(pts: Pt[], width: number): Pt[] {
+  if (pts.length < 2) return []
+  const h = width / 2
+  const left: Pt[] = []
+  const right: Pt[] = []
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)]
+    const b = pts[Math.min(pts.length - 1, i + 1)]
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
+    const nx = -(b[1] - a[1]) / len
+    const ny = (b[0] - a[0]) / len
+    left.push([pts[i][0] + nx * h, pts[i][1] + ny * h])
+    right.push([pts[i][0] - nx * h, pts[i][1] - ny * h])
+  }
+  return [...left, ...right.reverse()]
+}
+
+export interface PlowFrame {
+  /** Iron share at the front of the sole, its tip at the origin on the ground. */
+  share: Pt[]
+  /** Curved plate above the share that turns the soil over (犁壁). */
+  moldboard: Pt[]
+  sole: Pt[]
+  /** Upright post from the sole to the beam. */
+  standard: Pt[]
+  /** Handle rising backward from the rear of the sole, and its grip bar. */
+  stilt: Pt[]
+  grip: Pt[]
+  beam: Pt[]
+  /** Where the traces (耕索) tie on, at the front of the beam. */
+  hitch: Pt
+  /** Top of the handle, where the ploughman holds it. */
+  handle: Pt
+}
+
+/**
+ * Side view of a plough pulled toward +x (−x when `flip`), share tip on the ground at the
+ * origin. `H` is the height of the handle in px. A straight-beam plough (直辕) has a long
+ * horizontal beam ending at `length` px ahead of the share; a curved-beam plough (曲辕) has
+ * a short beam arching over and down, so its hitch is low and close.
+ */
+export function plowFrame(kind: 'curved' | 'straight' = 'curved', H = 64, length?: number, flip = false): PlowFrame {
+  if (kind !== 'curved' && kind !== 'straight') throw new Error("v.plow 的 kind 取 'curved'（曲辕犁）或 'straight'（直辕犁）")
+  if (!(H > 0)) throw new Error('v.plow 的尺寸要是正数')
+  const s = flip ? -1 : 1
+  const P = (x: number, y: number): Pt => [s * x * H, y * H]
+  const share = [P(0, 0), P(-0.44, 0), P(-0.44, -0.12), P(-0.3, -0.19)]
+  // Sits on the share's upper edge and curls up and back.
+  const moldboard = [P(-0.1, -0.06), P(-0.3, -0.18), P(-0.44, -0.12), P(-0.6, -0.4), P(-0.48, -0.48), P(-0.32, -0.36)]
+  const sole = [P(-0.4, 0), P(-1.0, 0), P(-1.0, -0.11), P(-0.4, -0.11)]
+  const stiltLine = [P(-0.93, -0.06), P(-1.05, -0.5), P(-1.17, -0.98)]
+  const stilt = ribbon(stiltLine, 0.11 * H)
+  const handle = P(-1.17, -0.98)
+  const grip = ribbon([P(-1.34, -0.94), P(-1.0, -1.02)], 0.085 * H)
+  let beamLine: Pt[]
+  let hitch: Pt
+  if (kind === 'straight') {
+    const L = length != null && length > 0 ? length / H : 2.6
+    beamLine = [P(-1.07, -0.62), P(L, -0.62)]
+    hitch = P(L, -0.62)
+  } else {
+    // Quadratic arch from the handle, over the share, down to a low hitch just ahead of it.
+    const a: Pt = [-1.06, -0.72]
+    const c: Pt = [-0.2, -1.12]
+    const b: Pt = [0.55, -0.3]
+    beamLine = []
+    for (let i = 0; i <= 16; i++) {
+      const t = i / 16
+      const x = (1 - t) ** 2 * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0]
+      const y = (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1]
+      beamLine.push(P(x, y))
+    }
+    hitch = P(b[0], b[1])
+  }
+  const beam = ribbon(beamLine, 0.11 * H)
+  // The post runs from the sole up to wherever the beam passes above it.
+  const postX = -0.72
+  let topY = -0.62
+  if (kind === 'curved') {
+    let best = Infinity
+    for (const [x, y] of beamLine) {
+      const d = Math.abs(x / (s * H) - postX)
+      if (d < best) {
+        best = d
+        topY = y / H
+      }
+    }
+  }
+  const standard = ribbon([P(postX, -0.08), P(postX, topY)], 0.085 * H)
+  return { share, moldboard, sole, standard, stilt, grip, beam, hitch, handle }
+}
+
+export interface EmitterFrame {
+  /** Unit direction the spray leaves in, screen y downward. */
+  dir: Pt
+  /** Capillary needle ending at the tip (origin). */
+  needle: Pt[]
+  /** Conical nozzle head behind the needle. */
+  cone: Pt[]
+  barrel: Pt[]
+  /** Insulating rear cap; the lead leaves from `back`. */
+  cap: Pt[]
+  tip: Pt
+  back: Pt
+}
+
+/**
+ * Electrospray emitter (静电推进的发射极) side on: needle tip at the origin, aimed along
+ * `angle` degrees (counter-clockwise from +x in world axes), body extending `length` px back.
+ */
+export function emitterFrame(angle = 0, length = 72): EmitterFrame {
+  if (!(length > 0)) throw new Error('v.emitter 的长度要是正数')
+  const a = (angle * Math.PI) / 180
+  const fx = Math.cos(a)
+  const fy = -Math.sin(a)
+  const P = (along: number, side: number): Pt => [along * fx - side * fy, along * fy + side * fx]
+  const L = length
+  const r = Math.max(5, Math.min(14, L * 0.16))
+  const needle = [P(0, 0.8), P(-L * 0.24, Math.max(1.2, r * 0.18)), P(-L * 0.24, -Math.max(1.2, r * 0.18)), P(0, -0.8)]
+  const cone = [P(-L * 0.22, r * 0.3), P(-L * 0.42, r), P(-L * 0.42, -r), P(-L * 0.22, -r * 0.3)]
+  const barrel = [P(-L * 0.42, r), P(-L * 0.9, r), P(-L * 0.9, -r), P(-L * 0.42, -r)]
+  const cap = [P(-L * 0.88, r * 0.86), P(-L, r * 0.86), P(-L, -r * 0.86), P(-L * 0.88, -r * 0.86)]
+  return { dir: [fx, fy], needle, cone, barrel, cap, tip: [0, 0], back: P(-L, 0) }
+}
+
+export interface BackshellFrame {
+  /** Silhouette: outer surface from the left rim over the crown to the right rim, closed by the rim. */
+  outline: Pt[]
+  /** Rim band along the opening, and the flat crown plate on top. */
+  lip: Pt[]
+  crown: Pt[]
+  /** Circumferential seams across the shell, as polylines. */
+  seams: Pt[][]
+  /** Eye on the crown where the parachute line ties on. */
+  apex: Pt
+  left: Pt
+  right: Pt
+}
+
+/**
+ * Back cover (背罩) of an entry capsule seen side on: a truncated cone whose walls bow outward
+ * a little, a flat crown and a rim band, rim centre at the origin. W rim width, H crown height (px).
+ */
+export function backshellFrame(W: number, H: number): BackshellFrame {
+  if (!(W > 0 && H > 0)) throw new Error('v.backshell 的宽和高要是正数')
+  const a = W / 2
+  const c = a * 0.34
+  const lipH = Math.max(2.5, H * 0.1)
+  // Side wall: from the rim (u = 0) to the crown edge (u = 1), bowing outward a little.
+  const wall = (u: number): Pt => {
+    const x = a + (c - a) * u
+    const y = -lipH - (H - lipH) * u
+    const bow = Math.sin(Math.PI * u) * W * 0.035
+    return [x + bow, y]
+  }
+  const N = 18
+  const right: Pt[] = []
+  for (let i = 0; i <= N; i++) right.push(wall(i / N))
+  // Up the left wall from the rim to the crown, across, and down the right wall.
+  const outer: Pt[] = [[-a, 0], ...right.map(([x, y]) => [-x, y] as Pt), ...right.slice().reverse(), [a, 0]]
+  const lip: Pt[] = [[-a, 0], [a, 0], [a, -lipH], [-a, -lipH]]
+  const crown: Pt[] = [[-c * 0.92, -H], [c * 0.92, -H], [c * 0.8, -H - Math.max(2, H * 0.06)], [-c * 0.8, -H - Math.max(2, H * 0.06)]]
+  const seams: Pt[][] = [0.38, 0.7].map((u) => {
+    const [x, y] = wall(u)
+    const line: Pt[] = []
+    for (let i = 0; i <= 16; i++) {
+      const t = -1 + (2 * i) / 16
+      // A ring seen nearly edge-on sags slightly in the middle.
+      line.push([t * x, y + (1 - t * t) * H * 0.045])
+    }
+    return line
+  })
+  return { outline: outer, lip, crown, seams, apex: [0, -H - Math.max(2, H * 0.06)], left: [-a, 0], right: [a, 0] }
+}
+
+export interface AirbagFrame {
+  outline: Pt[]
+  /** Mounting plate under the bag. */
+  base: Pt[]
+  /** Fold lines across the fabric. */
+  seams: Pt[][]
+  /** Top of the bag above the press point, after the dent. */
+  top: Pt
+  left: Pt
+  right: Pt
+}
+
+/**
+ * Inflated airbag on a test bench, side on, bottom centre at the origin. W width, H height,
+ * `press` the depth (px) of the dent a falling head makes at `at` px from the centre; the
+ * sides bulge a little as it is pressed.
+ */
+export function airbagFrame(W: number, H: number, press = 0, at = 0): AirbagFrame {
+  if (!(W > 0 && H > 0)) throw new Error('v.airbag 的宽和高要是正数')
+  const d = Math.max(0, Math.min(press, H * 0.6))
+  const a = W / 2
+  const plate = Math.max(3, H * 0.08)
+  const bulge = 1 + (0.18 * d) / H
+  const spread = W * 0.24
+  const dent = (x: number) => d * Math.exp(-(((x - at) / spread) ** 2))
+  const outline: Pt[] = []
+  const N = 48
+  // Rounded pillow: x = a cos θ, with flattened top and a bottom that tucks into the plate.
+  for (let i = 0; i <= N; i++) {
+    const th = Math.PI - (Math.PI * i) / N
+    const c = Math.cos(th)
+    const sn = Math.sin(th)
+    const x = a * bulge * Math.sign(c) * Math.pow(Math.abs(c), 0.7)
+    const y = -plate - (H - plate) * Math.pow(sn, 0.45) + dent(x) * Math.pow(sn, 2)
+    outline.push([x, Math.min(-plate, y)])
+  }
+  outline.push([a * 0.86, -plate], [-a * 0.86, -plate])
+  const base: Pt[] = [[-a * 0.94, 0], [a * 0.94, 0], [a * 0.94, -plate], [-a * 0.94, -plate]]
+  const seams: Pt[][] = []
+  for (const f of [0.38, 0.66]) {
+    const line: Pt[] = []
+    for (let i = 0; i <= 20; i++) {
+      const u = -0.78 + (1.56 * i) / 20
+      const x = u * a * bulge
+      const yTop = -plate - (H - plate) * Math.pow(Math.max(0, 1 - Math.abs(u) ** 1.4), 0.45) + dent(x)
+      line.push([x, -plate + (yTop + plate) * f])
+    }
+    seams.push(line)
+  }
+  const topAt = outline.reduce((best, p) => (Math.abs(p[0] - at) < Math.abs(best[0] - at) && p[1] < -plate ? p : best), outline[N / 2])
+  return { outline, base, seams, top: [at, topAt[1]], left: [-a * bulge, -H * 0.5], right: [a * bulge, -H * 0.5] }
+}
+
+export interface AirconFrame {
+  kind: 'indoor' | 'outdoor'
+  /** Housing box in px relative to the anchor: x, y (top-left), w, h. */
+  body: { x: number; y: number; w: number; h: number }
+  /** Indoor: air outlet slot and the louver below it. */
+  outlet?: { x: number; y: number; w: number; h: number }
+  louver?: Pt[]
+  /** Outdoor: fan grille. */
+  grille?: { c: Pt; r: number }
+  /** Outdoor: side vent panel; feet under the box. */
+  vents?: { x: number; y: number; w: number; h: number }
+  feet?: { x: number; y: number; w: number; h: number }[]
+  /** Refrigerant pipe ports (brass service valves outdoors, the pipe stub indoors). */
+  ports: Pt[]
+  /** Point the air leaves from, and its direction. */
+  air: Pt
+  airDir: Pt
+}
+
+/**
+ * Split air conditioner. Indoor unit: wall-mounted, anchored at its centre, outlet on the
+ * underside with a louver. Outdoor unit: anchored at the middle of its bottom on the
+ * ground, fan grille on the front, vents on the right, pipe valves on the right side.
+ */
+export function airconFrame(kind: 'indoor' | 'outdoor' = 'indoor', W = 160): AirconFrame {
+  if (kind !== 'indoor' && kind !== 'outdoor') throw new Error("v.aircon 的 kind 取 'indoor'（室内机）或 'outdoor'（室外机）")
+  if (!(W > 0)) throw new Error('v.aircon 的宽要是正数')
+  if (kind === 'indoor') {
+    const h = W * 0.3
+    const body = { x: -W / 2, y: -h / 2, w: W, h }
+    const outlet = { x: -W * 0.4, y: h * 0.22, w: W * 0.8, h: h * 0.16 }
+    const ly = h / 2 + h * 0.02
+    const louver: Pt[] = [[-W * 0.4, ly], [W * 0.4, ly], [W * 0.38, ly + h * 0.12], [-W * 0.38, ly + h * 0.12]]
+    return { kind, body, outlet, louver, ports: [[-W / 2 + W * 0.04, h / 2]], air: [0, ly + h * 0.12], airDir: [0, 1] }
+  }
+  const h = W * 0.72
+  const footH = Math.max(3, h * 0.06)
+  const body = { x: -W / 2, y: -h, w: W, h: h - footH }
+  const r = (h - footH) * 0.38
+  const grille = { c: [-W * 0.1, -footH - (h - footH) / 2] as Pt, r }
+  const vents = { x: W * 0.26, y: -h + (h - footH) * 0.14, w: W * 0.17, h: (h - footH) * 0.72 }
+  const feet = [
+    { x: -W * 0.42, y: -footH, w: W * 0.16, h: footH },
+    { x: W * 0.26, y: -footH, w: W * 0.16, h: footH },
+  ]
+  const ports: Pt[] = [
+    [W / 2, -footH - (h - footH) * 0.22],
+    [W / 2, -footH - (h - footH) * 0.36],
+  ]
+  return { kind, body, grille, vents, feet, ports, air: grille.c, airDir: [0, 0] }
 }

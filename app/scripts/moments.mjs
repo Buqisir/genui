@@ -4,6 +4,7 @@
 import { mkdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
+import { devServer } from './devserver.mjs'
 
 const args = process.argv.slice(2)
 const opt = (name, fallback) => {
@@ -20,11 +21,12 @@ const preset = opt('--preset', '')
 const [id] = args
 mkdirSync('shots/moments', { recursive: true })
 
+const { base, close } = await devServer()
 const b = await chromium.launch()
 const files = []
 async function shoot(fracs, night) {
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' })
-  await p.goto(`http://localhost:5317/#${id}`)
+  await p.goto(`${base}/#${id}`)
   await p.waitForTimeout(1500)
   if (preset) {
     await p.locator('button', { hasText: preset }).first().click()
@@ -55,5 +57,6 @@ async function shoot(fracs, night) {
 await shoot(at, false)
 if (nightAt !== 'none') await shoot([Number(nightAt)], true)
 await b.close()
+await close()
 const out = `shots/moments/${id}-s${scene}${preset ? '-p' : ''}.png`
 execFileSync('node', ['scripts/montage.mjs', out, ...files, '--cols', '2'], { stdio: 'inherit' })

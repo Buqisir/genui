@@ -1,7 +1,8 @@
 // Screenshots every scene block (sim, figure, force diagram, circuit) of every lesson.
 // Usage: node scripts/audit-scenes.mjs [id ...]   → shots/audit/<id>-<n>.png
 import { chromium } from 'playwright'
-const base = 'http://localhost:5317'
+import { devServer } from './devserver.mjs'
+const { base, close } = await devServer()
 const b = await chromium.launch()
 const probe = await b.newPage()
 await probe.goto(base); await probe.waitForTimeout(1000)
@@ -32,3 +33,4 @@ for (const id of ids) {
   await p.close()
 }
 await b.close()
+await close()

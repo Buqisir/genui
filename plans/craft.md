@@ -225,7 +225,7 @@
 
 ### 真题课件整体验收（2026-10-12）
 
-- 94 课（`lessons/` + `generated-grok/bank/`）、262 个场景，脚本筛查 + 逐页看总览。详细结论和内容问题清单在 `plans/audit/README.md`，排序表 `plans/audit/summary.md`。
+- 94 课（`lessons/` + `archive/generated-grok/bank/`）、262 个场景，脚本筛查 + 逐页看总览。详细结论和内容问题清单在 `plans/audit/README.md`，排序表 `plans/audit/summary.md`。
 - B+ 材质已在所有组件里统一，没发现旧样式组件；控制台报错 0。
 - 修了 4 处组件 / 检查问题：自带标签画在自己实体上不再误报（`layout.ts`）；`v.dim` 文字没登记名字导致后续标签名字错位（`runtime.js`）；矩形 `v.vessel` 只登记四面壁，空腔里可以放标签；空标签不占位。`layout.test.ts` 加 3 条测试。排版问题 58 条 / 27 课 → 55 条 / 23 课。
 - 剩下的都是课件内容问题（用通用图元画实物、标签拥挤、出界、1 处参数没声明），按约定只记录不改。
@@ -235,7 +235,7 @@
 
 - 收尾：3 个演示课出界已修（见 `plans/audit/README.md` C 类）；`_demo-gaokao` 板块题的「f」压住木板是接触面摩擦力，标签放哪边都会碰到物块或木板，保留。「风险和待定」已更新。`app/dist` 重新打包。
 - 生成规则：`docs/ref/sim-craft.md` 第 1 条加「有现成器材必须用」和器材对照表（刻度尺、气缸、容器、玻璃砖、板、杆、电磁铁、变阻器、测力计、传送带、极板……）；`docs/index.md` 硬规则第 7 条指向这张表。`syntax-spec.md` 已重建。
-- 重新生成：Worker（Grok 4.7）按和 `generate.ts` 相同的输入（SKILL.md + 输出要求 + 题目原文，blind）重做 5 道清单里的题，提示由 `app/scripts/regen-prompt.ts` 生成。结果在 `plans/regen/<id>/`（`lesson.md`、`old/`、`new/`、`compare.png`）。5 道都是校验 0 错误、排版无问题：
+- 重新生成：Worker（Grok 4.7）按和 `generate.ts` 相同的输入（SKILL.md + 输出要求 + 题目原文，blind）重做 5 道清单里的题，提示由 `app/scripts/regen-prompt.ts` 生成。结果在 `archive/plans/regen/<id>/`（`lesson.md`、`old/`、`new/`、`compare.png`）。5 道都是校验 0 错误、排版无问题：
   - gd24-13：气缸从 `v.path` 拼壁 + `v.block` 当气体，改为 `v.vessel` 带气体分子；没有 `v.rect`/`v.path`。旧版多一个活塞受力场景，新版没做。
   - gd24-06：介质从白框改为 `<Optics>` + `v.optics`；没有 `v.rect`/`v.path`。
   - gd23-11：手画断口毫米尺改为 `v.ruler`，玻璃砖改为 `v.optics`；只剩激光笔笔身用 `v.path`（表里没有）。
@@ -251,14 +251,14 @@
 
 ### 整库重新生成、器材补齐、按需加载（2026-10-13）
 
-- 换入新版：5 道试做题（gd23-11、gd24-13、gd24-06、gd24-12、gd21-12）的新版放进 `generated-grok/bank/`，旧版备份在 `plans/regen/<id>/old/lesson.md`。
+- 换入新版：5 道试做题（gd23-11、gd24-13、gd24-06、gd24-12、gd21-12）的新版放进 `archive/generated-grok/bank/`，旧版备份在 `archive/plans/regen/<id>/old/lesson.md`。
 - 器材：`v.block` 加 `pivot:'center'`（x、y 是中心，配合 `angle` 绕中心转，默认不画阴影），gd24-12 的斜电池板改用它；`v.ruler` 加 `angle`（绕起点转，包围盒按旋转后登记）。测试在 `app/src/lesson/apparatus.test.ts`。`docs/ref/sim-craft.md` 对照表补了：旋转板、斜尺、轨迹（`v.trail`/`v.strobe`）、弧形导轨和管道（`v.track` 圆弧）。
 - 按需加载：`App.tsx` 的课件改为按需导入，只加载选中的那一课。主包 5.85 MB → 2.1 MB（gzip 626 KB）。
-- 整库重新生成：剩下 70 道用 Worker（Grok 4.7）按 `app/scripts/regen-prompt.ts` 的提示重做（盲做：只给 SKILL.md、输出要求、题目原文，不给参考答案），结果在 `plans/regen2/<id>/`，进度和每道的说明在 `plans/regen2-status.md`。75 道新版合在 `generated-grok/bank2/`（旧的 `bank/` 保留，两套都能在应用里打开）。
+- 整库重新生成：剩下 70 道用 Worker（Grok 4.7）按 `app/scripts/regen-prompt.ts` 的提示重做（盲做：只给 SKILL.md、输出要求、题目原文，不给参考答案），结果在 `archive/plans/regen2/<id>/`，进度和每道的说明在 `archive/plans/regen2-status.md`。75 道新版合在 `generated-grok/bank2/`（旧的 `bank/` 保留，两套都能在应用里打开）。
   - 并发：10、8、5 个同时跑都出现过模型拒绝请求，最后定在 5 个。被拒但文件已写完的，核对后直接采用；没文件的重跑。gd25-09 被拒两次，第三次空转 23 分钟读源码，第四次（明确只读文档、先写一版）完成。
-  - 盲做结果（`plans/regen2-stats-blind.md`）：8 道答案与标准答案不符（旧版 1 道）。6 道选错（gd22-10、gd23-07、gd23-09、gd23-10、gd24-05、gd24-08），2 道各错一问（gd22-13、gd24-14）。错法：符号算反、题图位置放错、漏算一个力或冲量、代值算错、把不该算的位移算进去。旧版生成时可能看过参考答案，两边条件不一样。
+  - 盲做结果（`archive/plans/regen2-stats-blind.md`）：8 道答案与标准答案不符（旧版 1 道）。6 道选错（gd22-10、gd23-07、gd23-09、gd23-10、gd24-05、gd24-08），2 道各错一问（gd22-13、gd24-14）。错法：符号算反、题图位置放错、漏算一个力或冲量、代值算错、把不该算的位移算进去。旧版生成时可能看过参考答案，两边条件不一样。
   - 修正：每道派 Worker 读 `problems/<id>.md` 的参考解析，推导、Define、模拟和答案一起改，不只改字母。8 道都已通过 validate、layout、答案核对。
-  - 最终对比（`plans/regen2-stats.md`，75 道）：
+  - 最终对比（`archive/plans/regen2-stats.md`，75 道）：
 
     | 指标 | 旧版 | 新版 |
     |---|---|---|

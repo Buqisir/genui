@@ -632,7 +632,11 @@ function unknownsOf(spec: Spec, env: Env, mode: Mode): Block[] {
   })
 }
 
+/** Count of equilibrium assemblies since load. Tests diff it to bound solver work without timing the machine. */
+export let gasTubeAssemblies = 0
+
 function assemble(spec: Spec, scope: Scope, drive: number, env: Env, mode: Mode, values: Map<Block, number>, info: Map<GasC, GasInfo>): Solved {
+  gasTubeAssemblies++
   const blockPos = spec.blocks.map((b) => blockStart(spec, env, b, mode, values))
   const sc = withPositions(spec, scope, drive, env, blockPos)
   // Force depends on the piston position, so masses and forces are read from sc inside the residual.

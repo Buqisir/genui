@@ -723,3 +723,113 @@ export function fist(ctx: Ctx, parts: { palm: Pt[]; fingers: Pt[][]; thumb: Pt[]
   for (const f of parts.fingers) glovePart(ctx, f, theme, 0.12)
   if (parts.thumb.length > 2) glovePart(ctx, parts.thumb, theme)
 }
+
+/**
+ * Inflated fabric bag (airbag): matte fabric fill, sides turning away from the light,
+ * fold lines across it, a soft sheen on the crown. `outline` and `seams` from airbagFrame,
+ * already placed in pixels.
+ */
+export function pillow(ctx: Ctx, outline: Pt[], seams: Pt[][], theme: CraftTheme) {
+  if (outline.length < 3) return
+  const k = craftTokens(theme)
+  const tone = k.materials.fabric
+  const night = theme === 'night'
+  const xs = outline.map((p) => p[0])
+  const ys = outline.map((p) => p[1])
+  const X = Math.min(...xs)
+  const Y = Math.min(...ys)
+  const W = Math.max(...xs) - X
+  const H = Math.max(...ys) - Y
+  ctx.save()
+  polyPath(ctx, outline)
+  ctx.fillStyle = gradient(ctx, tone, X, Y, W, H)
+  ctx.fill()
+  ctx.clip()
+  const side = ctx.createLinearGradient(X, 0, X + W, 0)
+  const edge = night ? 'rgba(0,0,0,0.32)' : 'rgba(30,40,52,0.17)'
+  side.addColorStop(0, edge)
+  side.addColorStop(0.3, 'rgba(0,0,0,0)')
+  side.addColorStop(0.7, 'rgba(0,0,0,0)')
+  side.addColorStop(1, edge)
+  ctx.fillStyle = side
+  ctx.fillRect(X - 1, Y - 1, W + 2, H + 2)
+  ctx.strokeStyle = k.seam
+  ctx.lineWidth = 0.8
+  ctx.setLineDash([])
+  for (const line of seams) {
+    if (line.length < 2) continue
+    ctx.beginPath()
+    line.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
+    ctx.stroke()
+  }
+  ctx.globalAlpha *= night ? 0.25 : 0.75
+  ctx.strokeStyle = k.bevel
+  ctx.lineWidth = 1.1
+  ctx.beginPath()
+  ctx.ellipse(X + W / 2, Y + H * 0.55, W * 0.36, H * 0.42, 0, Math.PI * 1.2, Math.PI * 1.8)
+  ctx.stroke()
+  ctx.restore()
+  const ln = pickLine(k, 'auto', W * H * 0.8)
+  if (ln) {
+    polyPath(ctx, outline)
+    ctx.strokeStyle = ln.color
+    ctx.lineWidth = ln.width
+    ctx.lineJoin = 'round'
+    ctx.setLineDash([])
+    ctx.stroke()
+  }
+}
+
+/**
+ * Round fan grille (outdoor unit): dark recess, blades turned by `angle` degrees, then
+ * concentric guard rings and four spokes over them, and a hub.
+ */
+export function fanGrille(ctx: Ctx, X: number, Y: number, R: number, theme: CraftTheme, angle = 0) {
+  if (!(R > 0)) return
+  const k = craftTokens(theme)
+  const night = theme === 'night'
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(X, Y, R, 0, Math.PI * 2)
+  const well = ctx.createRadialGradient(X, Y - R * 0.3, R * 0.1, X, Y, R)
+  well.addColorStop(0, night ? '#1C1F23' : '#4A5059')
+  well.addColorStop(1, night ? '#101215' : '#2B2F35')
+  ctx.fillStyle = well
+  ctx.fill()
+  ctx.clip()
+  const blades = 3
+  const a0 = (-angle * Math.PI) / 180
+  for (let i = 0; i < blades; i++) {
+    const a = a0 + (i * 2 * Math.PI) / blades
+    ctx.beginPath()
+    ctx.moveTo(X, Y)
+    ctx.quadraticCurveTo(X + Math.cos(a - 0.5) * R * 0.95, Y + Math.sin(a - 0.5) * R * 0.95, X + Math.cos(a + 0.28) * R * 0.86, Y + Math.sin(a + 0.28) * R * 0.86)
+    ctx.quadraticCurveTo(X + Math.cos(a + 0.5) * R * 0.45, Y + Math.sin(a + 0.5) * R * 0.45, X, Y)
+    ctx.fillStyle = night ? '#3A3F46' : '#7A828C'
+    ctx.fill()
+  }
+  ctx.restore()
+  ctx.save()
+  ctx.strokeStyle = night ? 'rgba(226,231,238,0.42)' : 'rgba(238,241,244,0.85)'
+  ctx.lineWidth = 0.8
+  ctx.setLineDash([])
+  for (let f = 0.28; f < 1; f += 0.18) {
+    ctx.beginPath()
+    ctx.arc(X, Y, R * f, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+  ctx.beginPath()
+  for (let i = 0; i < 4; i++) {
+    const a = (i * Math.PI) / 2 + Math.PI / 4
+    ctx.moveTo(X + Math.cos(a) * R * 0.12, Y + Math.sin(a) * R * 0.12)
+    ctx.lineTo(X + Math.cos(a) * R, Y + Math.sin(a) * R)
+  }
+  ctx.stroke()
+  ctx.restore()
+  sphere(ctx, X, Y, Math.max(2.5, R * 0.12), 'steel', theme, { line: 'strong' })
+  ctx.beginPath()
+  ctx.arc(X, Y, R, 0, Math.PI * 2)
+  ctx.strokeStyle = k.strong.color
+  ctx.lineWidth = k.strong.width
+  ctx.stroke()
+}

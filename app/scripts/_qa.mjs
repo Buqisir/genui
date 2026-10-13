@@ -1,4 +1,6 @@
 import { chromium } from 'playwright'
+import { devServer } from './devserver.mjs'
+const { base, close } = await devServer()
 const id = process.argv[2]
 const b = await chromium.launch()
 const p = await b.newPage({ viewport: { width: 1440, height: 1000 } })
@@ -8,7 +10,7 @@ const grab = async (tag) => {
   const t = await p.$$eval('.sim-error, .block-error', (els) => els.map((e) => e.textContent.trim()))
   if (t.length) errs.push(tag + ': ' + t.join(' | '))
 }
-await p.goto('http://localhost:5317/#' + id); await p.waitForTimeout(1500); await grab('load')
+await p.goto(`${base}/#${id}`); await p.waitForTimeout(1500); await grab('load')
 const sends = await p.evaluate(() => {
   const out = []
   document.querySelectorAll('iframe').forEach((f, i) => {
@@ -20,3 +22,4 @@ const sends = await p.evaluate(() => {
 await grab('after')
 console.log(JSON.stringify({ id, frames: sends, errs }, null, 1))
 await b.close()
+await close()

@@ -12,6 +12,12 @@ import {
   hallPolarity,
   handFrame,
   laserFrame,
+  plowFrame,
+  emitterFrame,
+  backshellFrame,
+  airbagFrame,
+  airconFrame,
+  ribbon,
   parachuteFrame,
   slabFrame,
   slabLoop,
@@ -227,7 +233,7 @@ describe('gears and parachute geometry', () => {
   })
 })
 
-function draw(body: string) {
+function draw(body: string, theme: 'light' | 'night' = 'light') {
   const posts: { type?: string; message?: string }[] = []
   const listeners: Record<string, ((e: unknown) => void)[]> = {}
   drawn = { texts: [], lines: 0, fills: [] }
@@ -277,7 +283,7 @@ function draw(body: string) {
   vm.runInContext(`figure({ draw(ctx, p, v) { ${body} } })`, context, { timeout: 20000 })
   vm.runInContext('__simReady()', context)
   for (const fn of listeners.message || []) {
-    fn({ source: parent, data: { source: 'genui-host', params: {}, t: 0, colors: sandbox.__colors, theme: 'light' } })
+    fn({ source: parent, data: { source: 'genui-host', params: {}, t: 0, colors: sandbox.__colors, theme } })
   }
   const err = posts.filter((p) => p.type === 'error').map((p) => p.message).join('\n')
   if (err) throw new Error(err)
@@ -662,5 +668,150 @@ describe('v.ruler angle', () => {
         globalThis.__out = {}
       `),
     ).not.toThrow()
+  })
+})
+
+describe('household apparatus (batch 3) geometry', () => {
+  it('puts the curved-beam hitch low and close, and the straight-beam hitch far ahead', () => {
+    const curved = plowFrame('curved', 60)
+    const straight = plowFrame('straight', 60, 200)
+    expect(curved.hitch[0]).toBeGreaterThan(0)
+    expect(curved.hitch[0]).toBeLessThan(60)
+    expect(straight.hitch).toEqual([200, -0.62 * 60])
+    // The curved hitch sits lower (nearer the ground) than the straight one.
+    expect(curved.hitch[1]).toBeGreaterThan(straight.hitch[1])
+    // Share tip on the ground at the origin, every part on or above the ground.
+    expect(curved.share[0]).toEqual([0, 0])
+    for (const part of [curved.share, curved.moldboard, curved.sole, curved.beam, curved.stilt]) {
+      for (const p of part) expect(p[1]).toBeLessThanOrEqual(1e-9)
+    }
+    // The handle trails behind the share, and flip mirrors the whole plough.
+    expect(curved.handle[0]).toBeLessThan(0)
+    const flipped = plowFrame('curved', 60, undefined, true)
+    expect(flipped.hitch[0]).toBeCloseTo(-curved.hitch[0], 9)
+    expect(flipped.hitch[1]).toBeCloseTo(curved.hitch[1], 9)
+    expect(() => plowFrame('bent' as 'curved')).toThrow(/kind/)
+    expect(() => plowFrame('curved', 0)).toThrow(/尺寸/)
+  })
+
+  it('builds a ribbon twice as long as its centreline, offset by half the width', () => {
+    const r = ribbon([[0, 0], [10, 0]], 4)
+    expect(r).toEqual([[0, 2], [10, 2], [10, -2], [0, -2]])
+    expect(ribbon([[0, 0]], 4)).toEqual([])
+  })
+
+  it('aims the emitter along its angle with the whole body behind the tip', () => {
+    const e = emitterFrame(90, 80)
+    expect(e.dir[0]).toBeCloseTo(0, 9)
+    expect(e.dir[1]).toBeCloseTo(-1, 9)
+    expect(e.back[1]).toBeCloseTo(80, 9)
+    for (const part of [e.needle, e.cone, e.barrel, e.cap]) {
+      for (const p of part) expect(p[0] * e.dir[0] + p[1] * e.dir[1]).toBeLessThanOrEqual(1e-9)
+    }
+    expect(() => emitterFrame(0, 0)).toThrow(/长度/)
+  })
+
+  it('closes the back shell on its rim and puts the eye on the crown', () => {
+    const f = backshellFrame(120, 50)
+    expect(f.outline[0]).toEqual([-60, 0])
+    expect(f.outline[f.outline.length - 1]).toEqual([60, 0])
+    const top = Math.min(...f.outline.map((p) => p[1]))
+    expect(top).toBeCloseTo(-50, 9)
+    expect(f.apex[1]).toBeLessThan(top)
+    expect(f.apex[0]).toBe(0)
+    // Symmetric about the axis.
+    const n = f.outline.length
+    for (let i = 0; i < n; i++) expect(f.outline[i][0]).toBeCloseTo(-f.outline[n - 1 - i][0], 9)
+    expect(f.seams).toHaveLength(2)
+    expect(() => backshellFrame(0, 10)).toThrow(/正数/)
+  })
+
+  it('dents the airbag top where it is pressed and bulges the sides', () => {
+    const rest = airbagFrame(200, 120)
+    const hit = airbagFrame(200, 120, 30)
+    expect(rest.top[1]).toBeCloseTo(-120, 6)
+    expect(hit.top[1]).toBeGreaterThan(rest.top[1] + 20)
+    expect(hit.right[0]).toBeGreaterThan(rest.right[0])
+    // Everything stays above the bench; the plate sits on it.
+    for (const p of hit.outline) expect(p[1]).toBeLessThan(0)
+    expect(Math.max(...hit.base.map((p) => p[1]))).toBe(0)
+    // Off-centre press.
+    const side = airbagFrame(200, 120, 30, 40)
+    expect(side.top[0]).toBe(40)
+    expect(() => airbagFrame(10, 0)).toThrow(/正数/)
+  })
+
+  it('lays out both air conditioner units with pipe ports on the housing', () => {
+    const indoor = airconFrame('indoor', 200)
+    expect(indoor.body.w).toBe(200)
+    expect(indoor.body.y + indoor.body.h / 2).toBeCloseTo(0, 9)
+    expect(indoor.louver).toHaveLength(4)
+    expect(indoor.airDir).toEqual([0, 1])
+    const outdoor = airconFrame('outdoor', 200)
+    // Stands on the anchor: feet reach y = 0, body above them.
+    expect(Math.max(...outdoor.feet!.map((f) => f.y + f.h))).toBeCloseTo(0, 9)
+    expect(outdoor.body.y + outdoor.body.h).toBeLessThanOrEqual(0)
+    for (const p of outdoor.ports) expect(p[0]).toBe(100)
+    const g = outdoor.grille!
+    expect(g.c[0] - g.r).toBeGreaterThan(outdoor.body.x)
+    expect(g.c[0] + g.r).toBeLessThan(outdoor.vents!.x)
+    expect(() => airconFrame('window' as 'indoor')).toThrow(/kind/)
+  })
+})
+
+describe('household apparatus (batch 3) in the sandbox', () => {
+  const scene = `
+    const m = v.view({ xmin: -5, xmax: 7, ymin: -2, ymax: 4, equal: true })
+    v.ground(m, -5, 7, 0)
+    const plow = v.plow(m, -3, 0, { label: '曲辕犁' })
+    const plow2 = v.plow(m, 1, 0, { kind: 'straight', length: 2, flip: true })
+    const em = v.emitter(m, -2, 2.5, { angle: 0, length: 1.5, label: '发射极' })
+    const shell = v.backshell(m, 4, 2, 1.6, { label: '背罩' })
+    const bag = v.airbag(m, 4, 0, 2, { press: 0.3, at: 0.2, label: '安全气囊' })
+    const ac = v.aircon(m, 0, 3, { w: 2 })
+    const out = v.aircon(m, -1, 0, { kind: 'outdoor', w: 1.8, fan: 30 })
+    globalThis.__out = { plow, plow2, em, shell, bag, ac, out }
+  `
+  type Out = Record<string, Record<string, unknown>>
+
+  it('returns world anchors that line up with the arguments', () => {
+    const o = draw(scene) as Out
+    expect(o.plow.tip).toEqual([-3, 0])
+    const hitch = o.plow.hitch as number[]
+    expect(hitch[0]).toBeGreaterThan(-3)
+    expect(hitch[1]).toBeGreaterThan(0)
+    // A flipped straight plough reaches the length to the left of its tip.
+    expect((o.plow2.hitch as number[])[0]).toBeLessThan(1 - 1.9)
+    expect(o.em.tip).toEqual([-2, 2.5])
+    expect((o.em.back as number[])[0]).toBeCloseTo(-3.5, 6)
+    expect(o.shell.rim).toEqual([4, 2])
+    expect((o.shell.apex as number[])[1]).toBeGreaterThan(2 + 0.42 * 1.6)
+    const top = o.bag.top as number[]
+    expect(top[0]).toBeCloseTo(4.2, 6)
+    expect(top[1]).toBeLessThan(0.6 * 2)
+    expect(top[1]).toBeGreaterThan(0.6 * 2 - 0.35)
+    expect((o.ac.center as number[])[1]).toBeCloseTo(3, 6)
+    expect((o.out.ports as number[][]).every((p) => p[0] > -1 + 0.9)).toBe(true)
+  })
+
+  it('draws the same scene in night mode', () => {
+    expect(() => draw(scene, 'night')).not.toThrow()
+    expect(drawn.texts.map((t) => t[0])).toEqual(expect.arrayContaining(['曲辕犁', '发射极', '背罩', '安全气囊']))
+  })
+
+  it('throws the Chinese messages for bad arguments', () => {
+    const view = 'const m = v.view({ xmin: -4, xmax: 4, ymin: -2, ymax: 2, equal: true });'
+    expect(() => draw(`${view} v.plow(m, 0, 0, { kind: 'bent' })`)).toThrow(/曲辕犁/)
+    expect(() => draw(`${view} v.plow(m, 0, 0, { size: -1 })`)).toThrow(/尺寸/)
+    expect(() => draw(`${view} v.emitter(m, 0, 0, { length: 0 })`)).toThrow(/长度/)
+    expect(() => draw(`${view} v.backshell(m, 0, 0, 0)`)).toThrow(/宽/)
+    expect(() => draw(`${view} v.airbag(m, 0, 0, 1, { press: -1 })`)).toThrow(/press/)
+    expect(() => draw(`${view} v.aircon(m, 0, 0, { kind: 'window' })`)).toThrow(/室内机/)
+  })
+
+  it('validates the household demo lesson', () => {
+    const result = validateFile(join(__dirname, '../../../lessons/_demo-household.md'))
+    expect(result.errors).toEqual([])
+    expect(result.warnings).toEqual([])
   })
 })

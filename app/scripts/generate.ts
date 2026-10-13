@@ -20,6 +20,7 @@ import { validateFile } from './validate'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, '../..')
+const genui = join(root, 'bin/genui')
 
 const args = process.argv.slice(2)
 const opt = (name: string, fallback: string) => {
@@ -339,11 +340,11 @@ ${outputRequirements(p, true)}
 
 把课件写到当前目录的 lesson.md（第一行就是 \`---\`，不要用代码围栏包住整个文件）。写完运行：
 
-/Users/huangxuewei/Projects/genui/bin/genui validate lesson.md
+${genui} validate lesson.md
 
-每条错误末尾写着该读的文档。用 \`/Users/huangxuewei/Projects/genui/bin/genui docs <id>\` 读完再改，直到校验没有错误。然后运行：
+每条错误末尾写着该读的文档。用 \`${genui} docs <id>\` 读完再改，直到校验没有错误。然后运行：
 
-/Users/huangxuewei/Projects/genui/bin/genui layout lesson.md
+${genui} layout lesson.md
 
 按报告改掉压线和出界。不要联网，不要启动子代理。
 
@@ -360,7 +361,7 @@ function agentRetry(report: string): string {
 
 ${report}
 
-请把修正后的完整课件重新写入当前目录的 lesson.md，再运行 /Users/huangxuewei/Projects/genui/bin/genui validate lesson.md，直到没有错误。可以读文档。不要联网。`
+请把修正后的完整课件重新写入当前目录的 lesson.md，再运行 ${genui} validate lesson.md，直到没有错误。可以读文档。不要联网。`
 }
 
 async function generate(id: string): Promise<Outcome> {

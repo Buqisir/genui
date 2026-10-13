@@ -1,18 +1,20 @@
 // Drives the gaokao demo lesson with real mouse/keyboard input (slider drags, arrow
 // keys, radio clicks, scrubbing, show/hide buttons) and checks the readouts.
-// Needs the dev server on :5317. Figures are found by their titles in lessons/_demo-gaokao.md.
+// Uses GENUI_URL, a dev server on :5317, or starts one (scripts/devserver.mjs). Figures are found by their titles in lessons/_demo-gaokao.md.
 // Usage: node scripts/interact-gaokao.mjs [night] → shots/interact/*.png + printed checks
 import { mkdirSync } from 'node:fs'
 import { chromium } from 'playwright'
+import { devServer } from './devserver.mjs'
 
 const night = process.argv[2] === 'night'
 const out = 'shots/interact'
 mkdirSync(out, { recursive: true })
+const { base, close } = await devServer()
 const b = await chromium.launch()
 const p = await b.newPage({ viewport: { width: 1440, height: 1000 } })
 const errors = []
 p.on('pageerror', (e) => errors.push('pageerror: ' + e.message))
-await p.goto('http://localhost:5317/#_demo-gaokao')
+await p.goto(`${base}/#_demo-gaokao`)
 await p.waitForTimeout(1800)
 if (night) {
   await p.getByRole('button', { name: /夜光/ }).first().click()
@@ -788,4 +790,5 @@ console.log(checks.join('\n'))
 const allErrors = [...errors, ...blockErrors]
 console.log('errors:', allErrors.join(' | ') || 'none')
 await b.close()
+await close()
 if (allErrors.length || checks.some((c) => c.startsWith('✗'))) process.exitCode = 1

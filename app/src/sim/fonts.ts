@@ -27,13 +27,23 @@ const SOURCES: (Omit<FontPayload, 'data'> & { url: string })[] = [
 
 let pending: Promise<FontPayload[]> | null = null
 
+/** A single-file build inlines the faces as data: URLs, which some page CSPs refuse to fetch. */
+async function fontBytes(url: string): Promise<ArrayBuffer> {
+  const inline = /^data:[^,]*;base64,/.exec(url)
+  if (inline) {
+    const bin = atob(url.slice(inline[0].length))
+    const out = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+    return out.buffer
+  }
+  const res = await fetch(url)
+  return res.arrayBuffer()
+}
+
 export function loadSandboxFonts(): Promise<FontPayload[]> {
   if (!pending) {
     pending = Promise.all(
-      SOURCES.map(async ({ url, ...rest }) => {
-        const res = await fetch(url)
-        return { ...rest, data: await res.arrayBuffer() }
-      }),
+      SOURCES.map(async ({ url, ...rest }) => ({ ...rest, data: await fontBytes(url) })),
     ).catch(() => [])
   }
   return pending

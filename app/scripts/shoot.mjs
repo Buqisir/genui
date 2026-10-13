@@ -1,20 +1,21 @@
 // Headless render check: opens a lesson, screenshots every figure, reports render errors.
-// Usage: node scripts/shoot.mjs <lessonId> [--base http://localhost:5317] [--out shots] [--marks]
+// Usage: node scripts/shoot.mjs <lessonId> [--base URL] [--out shots] [--marks] [--night]
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
+import { devServer } from './devserver.mjs'
 
 const args = process.argv.slice(2)
 const opt = (name, fallback) => {
   const i = args.indexOf(name)
   return i >= 0 ? args[i + 1] : fallback
 }
-const id = args.find((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--') && args[i - 1] !== '--marks'))
+const id = args.find((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--') && !['--marks', '--night'].includes(args[i - 1])))
 if (!id) {
-  console.error('usage: node scripts/shoot.mjs <lessonId> [--base URL] [--out DIR] [--marks]')
+  console.error('usage: node scripts/shoot.mjs <lessonId> [--base URL] [--out DIR] [--marks] [--night]')
   process.exit(2)
 }
-const base = opt('--base', 'http://localhost:5317')
+const { base, close } = await devServer(opt('--base', undefined))
 const out = resolve(opt('--out', 'shots'))
 const withMarks = args.includes('--marks')
 mkdirSync(out, { recursive: true })
@@ -33,6 +34,11 @@ if (selected !== id) {
   await browser.close()
   process.exit(2)
 }
+const night = args.includes('--night')
+if (night) {
+  const toggle = page.locator('button', { hasText: '夜光' })
+  if (await toggle.count()) await toggle.first().click()
+}
 // Sims post 'ready' after their first frame; give them a moment.
 await page.waitForTimeout(800)
 
@@ -44,7 +50,7 @@ for (let i = 0; i < figures.length; i++) {
   const f = figures[i]
   const cls = (await f.getAttribute('class')) ?? ''
   const kind = cls.split(' ').filter((c) => c !== 'plot')[0] ?? 'plot'
-  const file = join(out, `${id}-${i + 1}-${kind}.png`)
+  const file = join(out, `${id}-${i + 1}-${kind}${night ? '-night' : ''}.png`)
   await f.scrollIntoViewIfNeeded()
   await f.screenshot({ path: file })
   report.shots.push(file)
@@ -65,5 +71,6 @@ for (let i = 0; i < figures.length; i++) {
 }
 
 await browser.close()
+await close()
 console.log(JSON.stringify(report, null, 2))
 process.exit(report.blockErrors.length || report.simErrors.length || consoleErrors.length ? 1 : 0)

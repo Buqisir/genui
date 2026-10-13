@@ -1,5 +1,5 @@
 // Side-by-side: answers in each generated lesson vs the reference answer kept in problems/.
-// Usage: npx tsx scripts/compare.ts
+// Usage: npx tsx scripts/compare.ts [dir]   (dir relative to the repo root, default generated; the r5/r6 run is in archive/generated)
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,6 +7,7 @@ import YAML from 'yaml'
 import { checkAnswerKey } from './answerkey'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
+const genDir = join(root, process.argv[2] ?? 'generated')
 const front = (file: string) => {
   const m = readFileSync(file, 'utf8').match(/^---\n([\s\S]*?)\n---/)
   return m ? (YAML.parse(m[1]) as Record<string, unknown>) : {}
@@ -15,7 +16,7 @@ const front = (file: string) => {
 for (const f of readdirSync(join(root, 'problems')).filter((f) => f.endsWith('.md')).sort()) {
   const id = f.replace(/\.md$/, '')
   const ref = String(front(join(root, 'problems', f)).reference ?? '').trim()
-  const gen = join(root, 'generated', f)
+  const gen = join(genDir, f)
   console.log(`\n## ${id}\n参考：${ref}`)
   if (!existsSync(gen)) {
     console.log('生成：（无）')

@@ -1,5 +1,5 @@
 // Side-effect entry for the sandbox prelude. esbuild bundles this into an IIFE
-// that runs before runtime.js. Lessons keep the same global names as before.
+// that runs before the runtime parts (runtime/*.js). Lessons keep the same global names as before.
 import * as apparatus from './apparatus'
 import * as craft from '../craft/canvas'
 import * as magnetics from './magnetics'

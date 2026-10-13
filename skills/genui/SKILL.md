@@ -5,7 +5,7 @@ description: 编写或修改高中物理交互课件（genui 的 lesson .md）�
 
 # genui 课件
 
-命令（任意工作目录都能跑）：`/Users/huangxuewei/Projects/genui/bin/genui`
+命令：仓库根目录下的 `bin/genui`（本文件所在目录往上两级），任意工作目录都能跑。下文简写为 `genui`。
 
 先跑 `genui docs`（无参数）读 L0 入口。组件怎么写以文档为准，不要猜属性或 `v` 工具。
 
