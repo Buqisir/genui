@@ -1,7 +1,7 @@
 // Pure geometry for the lab-apparatus helpers:
 // v.transformer({style:'lab'}), v.sampleWire, v.oilFilm, v.centripetalDemo,
 // v.crt, v.hall, and v.plates({angle, tilt}) / v.platesAt.
-// Bundled into the sandbox runtime. runtime.js calls these functions; it does not keep a copy.
+// Bundled into the sandbox runtime. The runtime (runtime/*.js) calls these functions; it does not keep a copy.
 
 export type Pt = [number, number]
 

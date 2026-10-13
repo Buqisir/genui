@@ -32,7 +32,7 @@ cd app && npm ci && npx playwright install chromium
 ## 规矩
 
 - **并行 Worker 最多 4 个。** 8–10 个并发时出现过一批 `model_request_rejected`，上一轮后段 6 个 Worker 连续失败也是这个原因。
-- 一个文件同一时间只能有一个 Worker 改。`app/src/sim/runtime.js` 有 7300 多行，分段读，按函数名搜。
+- 一个文件同一时间只能有一个 Worker 改。画布运行时已拆成 `app/src/sim/runtime/` 下 15 个分段（对照表见 `app/README.md`），不同分段可以由不同 Worker 同时改；`render.js` 里的 `v` 工具表是共用的，加工具时改它要错开。
 - 每个器材、每节课件都要截亮色和夜光两张图，人看过才算完成。只看校验结果不算数（校验通过但画面错的情况见 `plans/craft.md`「审图返工」各条）。
 - 画面规矩见 `plans/craft.md`「画面规矩」：只用 `tokens.ts` 里的材质，不手配颜色；标签不能压在线上或物体上；有现成器材必须用，不要拿 `v.rect` / `v.path` 拼。
 - 生成课件时答案只能来自题目推导，答案键 `expected-*.yaml` **不能**放进给模型的 prompt。
@@ -65,7 +65,7 @@ cd app && npm ci && npx playwright install chromium
 
 照前两批的做法（参考 `v.gear` / `v.parachute` / `v.box` / `v.hand` 的代码和测试）：
 
-1. 器材写在 `app/src/sim/runtime.js` 的 `v.*`，需要的话在 `app/src/craft/canvas.ts` 加画法，材质在 `app/src/craft/tokens.ts`（亮色、夜光两套都要）。返回挂点（绳端、接线点、受力点）给课件连线用。
+1. 器材写在 `app/src/sim/runtime/bodies.js`（生活器具、实物，`v.gear` / `v.parachute` / `v.hand` 都在这里），再在 `runtime/render.js` 的 `v` 工具表里登记，需要的话在 `app/src/craft/canvas.ts` 加画法，材质在 `app/src/craft/tokens.ts`（亮色、夜光两套都要）。返回挂点（绳端、接线点、受力点）给课件连线用。
 2. 测试写进 `app/src/lesson/apparatus.test.ts`（至少：能画出来、挂点位置、夜光不报错）。
 3. 文档：`docs/ref/sim-bodies.md` 加用法，`docs/ref/sim-craft.md` 的对照表加一行，然后 `docs.ts build` + `check`。
 4. 样张：在 `lessons/_demo-gears.md` 加场景（或新建 `_demo-household.md`），截亮色/夜光到 `plans/craft/batch3-sample/`，**先给用户看，认可后**再改课件。

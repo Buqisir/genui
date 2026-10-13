@@ -1,5 +1,5 @@
 // Pure geometry for v.solenoid / v.toroid / v.magnet / v.radialField.
-// Bundled into the sandbox runtime. runtime.js calls these functions; it does not keep a copy.
+// Bundled into the sandbox runtime. The runtime (runtime/*.js) calls these functions; it does not keep a copy.
 
 export type Pt = [number, number]
 export type End = 1 | 2 | null
