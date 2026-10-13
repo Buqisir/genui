@@ -45,3 +45,11 @@ node scripts/shoot.mjs gen-r6-04-generator-heaters --marks --out shots/gen   # �
 ```
 
 生成结果在 `../generated/`（每次尝试另存在 `.attempts/`，日志在 `generate.log`），页面里以 `gen-` 前缀出现。`.attempts/` 不提交。广东 75 题的现行版在 `../generated-grok/bank2/`；以前的实验结果移到了 `../archive/`（说明见 `../archive/README.md`），启动时加 `VITE_GENUI_ARCHIVE=1` 才会出现在下拉框里。
+
+## 发布成网页
+
+```bash
+node scripts/build-artifact.mjs ../generated-grok/bank2/gd24-14.md --out gd24-14.html
+```
+
+把一节课件打成单个 HTML（脚本、样式、KaTeX、沙箱字体都内嵌，页面字体走 Google Fonts），可以直接发布成 claude.ai 的 Artifact，在手机和浏览器上操作。
