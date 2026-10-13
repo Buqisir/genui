@@ -1,5 +1,5 @@
 // Old bank vs regenerated lessons: validate errors, layout issues, hand-drawn v.rect / v.path calls.
-// usage: node plans/regen2-stats.mjs > plans/regen2-stats.md
+// usage: node archive/plans/regen2-stats.mjs > archive/plans/regen2-stats.md
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -9,11 +9,11 @@ const genui = join(root, 'bin/genui')
 const ids = readdirSync(join(root, 'archive/generated-grok/bank')).filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, '')).sort()
 
 function oldFile(id) {
-  const backup = join(root, 'plans/regen', id, 'old/lesson.md')
+  const backup = join(root, 'archive/plans/regen', id, 'old/lesson.md')
   return existsSync(backup) ? backup : join(root, 'archive/generated-grok/bank', `${id}.md`)
 }
 function newFile(id) {
-  for (const dir of ['plans/regen2', 'plans/regen']) {
+  for (const dir of ['archive/plans/regen2', 'archive/plans/regen']) {
     const f = join(root, dir, id, 'lesson.md')
     if (existsSync(f)) return f
   }

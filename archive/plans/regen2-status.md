@@ -1,6 +1,6 @@
-# 整库重新生成进度（plans/regen2）
+# 整库重新生成进度（archive/plans/regen2）
 
-队列：`plans/regen2-queue.txt`（还没启动的题，从上往下取）。并行上限 5 个：同时 10 个、8 个时各有 4 个被拒（model_request_rejected）。
+队列：`archive/plans/regen2-queue.txt`（还没启动的题，从上往下取）。并行上限 5 个：同时 10 个、8 个时各有 4 个被拒（model_request_rejected）。
 
 ## 完成
 - gd21-11：0 错误，排版无问题。斜管刻度用 v.line（当时 v.ruler 不能斜放，之后已补 `angle`）。
@@ -96,7 +96,7 @@
 - 
 
 ## 盲做答案错误（统计发现，2026-10-13）
-盲做（提示词不含参考答案）后 8 道与标准答案不符，旧版只有 1 项。盲做结果存 plans/regen2-stats-blind.md。
+盲做（提示词不含参考答案）后 8 道与标准答案不符，旧版只有 1 项。盲做结果存 archive/plans/regen2-stats-blind.md。
 - 选错：gd22-10（BD→应 AC）、gd23-07（C→B）、gd23-09（BC→AC）、gd23-10（CD→BD）、gd24-05（B→A）、gd24-08（A→AC）
 - 数值不符：gd22-13「(1) 上滑时支持力 N_2」、gd24-14「(2)② 上升最大高度」
 - 修正：Worker 读 problems/<id>.md 参考解析后改推导、模拟和答案。进行中：gd22-10、gd23-07、gd23-09、gd23-10

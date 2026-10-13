@@ -1,6 +1,6 @@
 # 云端接手说明（2026-10-13）
 
-本地做到提交 `3898078` 之后，剩两项待办交给云端继续：**A. 山东 2025 生成课件**、**B. 第三批生活器具**。先读完「环境」「规矩」两节再动手。背景和历史记录在 `plans/craft.md`（器材与画面规矩）、`plans/regen2-status.md`（整库重新生成的流程）。
+本地做到提交 `3898078` 之后，剩两项待办交给云端继续：**A. 山东 2025 生成课件**、**B. 第三批生活器具**。先读完「环境」「规矩」两节再动手。背景和历史记录在 `plans/craft.md`（器材与画面规矩）、`archive/plans/regen2-status.md`（整库重新生成的流程）。
 
 ## 环境
 
@@ -8,7 +8,7 @@
 cd app && npm ci && npx playwright install chromium
 ```
 
-- `generate.ts`、`regen-prompt.ts` 按仓库位置算出 `bin/genui` 的绝对路径写进 prompt，不需要建软链接。`plans/regen*/` 里旧的 prompt.md 还带着原来的本机路径，重新生成即可。
+- `generate.ts`、`regen-prompt.ts` 按仓库位置算出 `bin/genui` 的绝对路径写进 prompt，不需要建软链接。以前几轮的 prompt 和草稿在 `archive/plans/regen*/`，里面还是原来的本机路径，只作记录。
 - 截图和 QA 脚本（`qa-all`、`moments`、`shoot` 等）先看 `GENUI_URL`，再看 5317 端口有没有服务，都没有就自己在空闲端口起一个，跑完关掉。不用先手动启动 dev server。
 - 真题原卷（`2008-2025·（*）物理高考真题/`）和题图（`problems/**/*.png`）都在 `.gitignore` 里，仓库没有。题目文字和答案键已经在 `problems/` 里，生成课件不需要原卷；需要看原图时找用户要。
 

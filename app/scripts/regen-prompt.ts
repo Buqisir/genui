@@ -1,4 +1,4 @@
-// Writes the same first prompt generate.ts gives a grok agent, for a subagent to run in plans/regen/<id>/.
+// Writes the same first prompt generate.ts gives a grok agent, for a subagent to run in <outRoot>/<id>/ (e.g. plans/regen-sd25).
 // usage: npx tsx scripts/regen-prompt.ts <outRoot> <id>...
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
