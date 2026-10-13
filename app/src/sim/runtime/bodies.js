@@ -1,4 +1,4 @@
-// Sandbox runtime, part: objects in enamel material: ground, wall, carts, blocks, ball, spring, pulley, gear, parachute, box, hand, laser, incline, cylinder.
+// Sandbox runtime, part: objects in enamel material: ground, wall, carts, blocks, ball, spring, pulley, gear, parachute, box, hand, laser, plow, emitter, backshell, airbag, aircon, incline, cylinder.
   // ---------- objects (格致 material: enamel body, ink outline, steel parts) ----------
 
   function hatch(X1, X2, Y, o = {}) {
@@ -983,6 +983,219 @@
     if (o.label) label(m, m.ix(X - f.dir[0] * len * 0.5), m.iy(Y - f.dir[1] * len * 0.5), String(o.label), { offset: 12, background: false })
     const rad = (a * Math.PI) / 180
     return { aperture: [x, y], dir: [Math.cos(rad), Math.sin(rad)], angle: a }
+  }
+
+  /** Pixel polygon bounds, registered as one body for the layout check. */
+  function noteBody(pts) {
+    const xs = pts.map((p) => p[0])
+    const ys = pts.map((p) => p[1])
+    addShape(Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), BODY)
+  }
+
+  /**
+   * Plough side on, pulled toward +x (`flip: true` for −x), share tip on the ground at (x, y).
+   * `kind: 'curved'` (曲辕犁, default) arches a short beam down to a low hitch just ahead of the
+   * share; `'straight'` (直辕犁) runs a long horizontal beam forward, `length` (world) past the tip.
+   * `size` is the handle height in px (default 72). Returns {tip, hitch, handle}; the traces start at `hitch`.
+   */
+  function plow(m, x, y, o = {}) {
+    const kind = o.kind == null ? 'curved' : o.kind
+    if ('size' in o && !(o.size > 0)) throw new Error('v.plow 的尺寸要是正数')
+    const H = o.size > 0 ? +o.size : 72
+    const L = o.length > 0 ? Math.abs(m.s(o.length)) : undefined
+    const f = plowFrame(kind, H, L, !!o.flip)
+    const X = m.x(x)
+    const Y = m.y(y)
+    const S = (p) => [X + p[0], Y + p[1]]
+    const parts = [f.beam, f.standard, f.stilt, f.grip, f.sole, f.share, f.moldboard].map((part) => part.map(S))
+    noteBody(parts.flat())
+    const sole = parts[4].map((p) => p[0])
+    if (o.shadow !== false && restsOn(Math.min(...sole), Math.max(...sole), Y)) craft.contactShadow(ctx, Math.min(...sole) + 1, Math.max(...sole) - 1, Y, theme)
+    craft.solidPoly(ctx, parts[2], 'steel', theme, { line: 'strong' })
+    craft.solidPoly(ctx, parts[1], 'steel', theme, { line: 'strong' })
+    craft.solidPoly(ctx, parts[4], 'steel', theme, { line: 'strong' })
+    craft.solidPoly(ctx, parts[0], 'steelHi', theme, { line: 'strong' })
+    craft.solidPoly(ctx, parts[3], 'rubber', theme, { line: 'strong' })
+    craft.solidPoly(ctx, parts[6], 'steelHi', theme, { line: 'strong' })
+    craft.solidPoly(ctx, parts[5], 'dark', theme, { line: 'strong' })
+    const hitch = S(f.hitch)
+    metalRing(hitch[0], hitch[1], 2.8, 1.3)
+    const world = (p) => [m.ix(p[0]), m.iy(p[1])]
+    if (o.label) label(m, ...world(S([(f.handle[0] + f.hitch[0]) / 2, -H * 1.05])), String(o.label), { place: 'above', offset: 6, background: false })
+    return { tip: [x, y], hitch: world(hitch), handle: world(S(f.handle)) }
+  }
+
+  /**
+   * Electrospray emitter (发射极) side on: needle tip at (x, y), aimed along `angle` degrees
+   * (default 0, to the right). Metal barrel, conical head, capillary needle, dark insulating
+   * cap at the back where the lead attaches. `length` is the body length (world; default 72 px).
+   * Returns {tip, back, dir}: the droplet path starts at `tip`, the supply lead at `back`.
+   */
+  function emitter(m, x, y, o = {}) {
+    const a = +o.angle || 0
+    if ('length' in o && !(o.length > 0)) throw new Error('v.emitter 的长度要是正数')
+    const len = o.length > 0 ? Math.abs(m.s(o.length)) : 72
+    const f = emitterFrame(a, len)
+    const X = m.x(x)
+    const Y = m.y(y)
+    const S = (p) => [X + p[0], Y + p[1]]
+    const barrel = f.barrel.map(S)
+    noteBody([...barrel, ...f.cap.map(S), ...f.needle.map(S)])
+    craft.solidPoly(ctx, barrel, 'alu', theme, { line: 'strong' })
+    craft.solidPoly(ctx, f.cap.map(S), 'insul', theme, { line: 'strong' })
+    craft.solidPoly(ctx, f.cone.map(S), 'steelHi', theme, { line: 'strong' })
+    craft.solidPoly(ctx, f.needle.map(S), 'steel', theme, { line: 'strong' })
+    const world = (p) => [m.ix(p[0]), m.iy(p[1])]
+    const back = world(S(f.back))
+    if (o.label) label(m, ...world(S([(f.back[0] + f.tip[0]) / 2, (f.back[1] + f.tip[1]) / 2])), String(o.label), { offset: Math.max(10, len * 0.18), background: false })
+    const rad = (a * Math.PI) / 180
+    return { tip: [x, y], back, dir: [Math.cos(rad), Math.sin(rad)], angle: a }
+  }
+
+  /**
+   * Back cover (背罩) of an entry capsule: a convex shell, rim centre at (x, y), rim width `w`
+   * (world). `h` crown height (default 0.42 w). An eye on the crown takes the
+   * parachute line. Returns {apex, left, right, rim}; hang the probe (`v.box` or `v.block`) under `rim`.
+   */
+  function backshell(m, x, y, w, o = {}) {
+    if (!(w > 0)) throw new Error('v.backshell 的宽要是正数')
+    const W = m.s(w)
+    const H = m.s(o.h > 0 ? +o.h : 0.42 * w)
+    const f = backshellFrame(W, H)
+    const X = m.x(x)
+    const Y = m.y(y)
+    const S = (p) => [X + p[0], Y + p[1]]
+    const outline = f.outline.map(S)
+    noteBody(outline)
+    craft.solidPoly(ctx, outline, 'steelHi', theme, { line: 'auto' })
+    const k = craft.craftTokens(theme)
+    ctx.save()
+    ctx.beginPath()
+    outline.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])))
+    ctx.closePath()
+    ctx.clip()
+    // The cone turns away from the light toward both sides.
+    const xs = outline.map((p) => p[0])
+    const x0 = Math.min(...xs)
+    const x1 = Math.max(...xs)
+    const side = ctx.createLinearGradient(x0, 0, x1, 0)
+    const edge = night() ? 'rgba(0,0,0,0.34)' : 'rgba(30,40,52,0.18)'
+    side.addColorStop(0, edge)
+    side.addColorStop(0.3, 'rgba(0,0,0,0)')
+    side.addColorStop(0.7, 'rgba(0,0,0,0)')
+    side.addColorStop(1, edge)
+    ctx.fillStyle = side
+    ctx.fillRect(x0, Y - H - 4, x1 - x0, H + 4)
+    ctx.strokeStyle = k.seam
+    ctx.lineWidth = 0.8
+    ctx.setLineDash([])
+    for (const seam of f.seams) {
+      ctx.beginPath()
+      seam.map(S).forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])))
+      ctx.stroke()
+    }
+    ctx.restore()
+    craft.solidPoly(ctx, f.lip.map(S), 'dark', theme, { line: 'strong' })
+    craft.solidPoly(ctx, f.crown.map(S), 'steel', theme, { line: 'strong' })
+    const apex = S(f.apex)
+    metalRing(apex[0], apex[1] - 2.6, 2.8, 1.3)
+    const world = (p) => [m.ix(p[0]), m.iy(p[1])]
+    if (o.label) label(m, ...world(S([f.right[0], -H * 0.5])), String(o.label), { place: 'right', offset: 6, background: false })
+    return { apex: world([apex[0], apex[1] - 5.4]), left: world(S(f.left)), right: world(S(f.right)), rim: [x, y] }
+  }
+
+  /**
+   * Inflated airbag on a bench, bottom centre at (x, y), width `w` (world). `h` height
+   * (default 0.6 w). `press` (world) dents the top by that much at `at` (world, from the
+   * centre), for the moment a head hits it. Returns {top, left, right}: `top` is the surface
+   * point above `at`, where a falling object meets the bag.
+   */
+  function airbag(m, x, y, w, o = {}) {
+    if (!(w > 0)) throw new Error('v.airbag 的宽要是正数')
+    if ('press' in o && !(+o.press >= 0)) throw new Error('v.airbag 的 press 要是不小于 0 的数')
+    const W = m.s(w)
+    const H = m.s(o.h > 0 ? +o.h : 0.6 * w)
+    const f = airbagFrame(W, H, m.s(+o.press || 0), m.s(+o.at || 0))
+    const X = m.x(x)
+    const Y = m.y(y)
+    const S = (p) => [X + p[0], Y + p[1]]
+    const outline = f.outline.map(S)
+    const base = f.base.map(S)
+    noteBody([...outline, ...base])
+    if (o.shadow !== false && restsOn(base[0][0], base[1][0], Y)) craft.contactShadow(ctx, base[0][0] + 1, base[1][0] - 1, Y, theme)
+    craft.pillow(ctx, outline, f.seams.map((s) => s.map(S)), theme)
+    craft.solidPoly(ctx, base, 'dark', theme, { line: 'strong' })
+    const world = (p) => [m.ix(p[0]), m.iy(p[1])]
+    if (o.label) label(m, ...world(S(f.right)), String(o.label), { place: 'right', offset: 6, background: false })
+    return { top: world(S(f.top)), left: world(S(f.left)), right: world(S(f.right)) }
+  }
+
+  /**
+   * Split air conditioner. `kind: 'indoor'` (default): wall unit centred on (x, y), outlet and
+   * louver underneath. `'outdoor'`: unit standing on the ground at (x, y), fan grille, side
+   * vents, rubber feet and two brass pipe valves on the right. `w` width (world; default 160 px),
+   * `fan` turns the blades (degrees). Returns {center, top, left, right, ports, air, airDir}.
+   */
+  function aircon(m, x, y, o = {}) {
+    if ('w' in o && !(o.w > 0)) throw new Error('v.aircon 的宽要是正数')
+    const W = o.w > 0 ? Math.abs(m.s(o.w)) : 160
+    const f = airconFrame(o.kind == null ? 'indoor' : o.kind, W)
+    const X = m.x(x)
+    const Y = m.y(y)
+    const b = f.body
+    noteBody([[X + b.x, Y + b.y], [X + b.x + b.w, Y + b.y + b.h + (f.feet ? f.feet[0].h : 0)]])
+    const world = (p) => [m.ix(X + p[0]), m.iy(Y + p[1])]
+    if (f.kind === 'indoor') {
+      craft.solidRect(ctx, X + b.x, Y + b.y, b.w, b.h, 'steelHi', theme, { r: Math.min(8, b.h * 0.22), band: Math.min(5, b.h * 0.12) })
+      const ol = f.outlet
+      craft.solidRect(ctx, X + ol.x, Y + ol.y, ol.w, ol.h, 'dark', theme, { r: 1.5, band: 0, line: 'strong' })
+      craft.solidPoly(ctx, f.louver.map((p) => [X + p[0], Y + p[1]]), 'steel', theme, { line: 'strong' })
+      ctx.beginPath()
+      ctx.arc(X + b.x + b.w * 0.88, Y + b.y + b.h * 0.42, Math.max(1.4, b.h * 0.045), 0, Math.PI * 2)
+      ctx.fillStyle = night() ? '#7FA8B4' : '#5E7480'
+      ctx.fill()
+      const port = f.ports[0]
+      craft.solidRect(ctx, X + port[0] - 3, Y + port[1] - 1, 6, Math.max(6, b.h * 0.18), 'brass', theme, { r: 1, band: 0, line: 'strong' })
+    } else {
+      if (o.shadow !== false && restsOn(X + b.x, X + b.x + b.w, Y)) craft.contactShadow(ctx, X + b.x + 2, X + b.x + b.w - 2, Y, theme)
+      for (const ft of f.feet) craft.solidRect(ctx, X + ft.x, Y + ft.y, ft.w, ft.h, 'rubber', theme, { r: 1, band: 0, line: 'strong' })
+      craft.solidRect(ctx, X + b.x, Y + b.y, b.w, b.h, 'steel', theme, { r: 3, band: Math.min(5, b.h * 0.06) })
+      const vt = f.vents
+      const k = craft.craftTokens(theme)
+      ctx.save()
+      ctx.strokeStyle = night() ? 'rgba(0,0,0,0.55)' : 'rgba(38,43,50,0.32)'
+      ctx.lineWidth = 1.2
+      ctx.setLineDash([])
+      ctx.beginPath()
+      for (let yy = Y + vt.y + 2; yy < Y + vt.y + vt.h; yy += 4.2) {
+        ctx.moveTo(X + vt.x, yy)
+        ctx.lineTo(X + vt.x + vt.w, yy)
+      }
+      ctx.stroke()
+      ctx.strokeStyle = k.bevel
+      ctx.globalAlpha *= night() ? 0.2 : 0.7
+      ctx.lineWidth = 0.6
+      ctx.beginPath()
+      for (let yy = Y + vt.y + 3.2; yy < Y + vt.y + vt.h; yy += 4.2) {
+        ctx.moveTo(X + vt.x, yy)
+        ctx.lineTo(X + vt.x + vt.w, yy)
+      }
+      ctx.stroke()
+      ctx.restore()
+      craft.fanGrille(ctx, X + f.grille.c[0], Y + f.grille.c[1], f.grille.r, theme, +o.fan || 0)
+      for (const p of f.ports) craft.solidRect(ctx, X + p[0], Y + p[1] - 3, 7, 6, 'brass', theme, { r: 1, band: 0, line: 'strong' })
+    }
+    if (o.label) label(m, ...world([0, b.y]), String(o.label), { place: 'above', offset: 6, background: false })
+    const ports = f.ports.map((p) => world(f.kind === 'indoor' ? [p[0], p[1] + Math.max(6, b.h * 0.18)] : [p[0] + 7, p[1]]))
+    return {
+      center: world([0, b.y + b.h / 2]),
+      top: world([0, b.y]),
+      left: world([b.x, b.y + b.h / 2]),
+      right: world([b.x + b.w, b.y + b.h / 2]),
+      ports,
+      air: world(f.air),
+      airDir: [f.airDir[0], -f.airDir[1]],
+    }
   }
 
   /** Right-angle incline from (x, y) rising to the right over w × h (physical). */

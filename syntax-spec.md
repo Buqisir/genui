@@ -1030,6 +1030,11 @@ sim({
 - `v.slab(m, x, y, w, h, d, {mat, hidden, cut, cutLabels, loop, label})`：斜二测的长方体或平板，(x, y) 是前下左角，`w`、`h`、`d` 是宽、高、厚。正面按实长，向后的棱走 45°、长度取一半。三个面分得开：侧面暗一档，正面用 `mat`，顶面亮一档。`hidden: true` 把看不见的三条棱画成虚线，`cut: true` 画过左上棱和右下棱的斜剖面（半透明灰面），并在剖面四个顶点外侧标 M、N、P、Q（`v.label` 的常规字体，不写在面中间）。`cutLabels` 默认 `['M','N','P','Q']`，传 `false` 不标，也可以换成别的四个字母。`loop: true` 或 `loop: {u, v, r}` 在顶面上放一个平躺的线圈（漆包线，颜色和螺线管的导线一样）。返回 `{corners, front, side, top, P, loop}`，`corners` 是八个顶点，`P(x, y, z)` 把体内一点换成场景坐标，箭头和标注都用它定位，保证和棱的方向一致。
 - `v.hand(m, x, y, {dir, size, label})`：一只握着绳或杆端的手，(x, y) 是握点。`dir` 取 `'right'`（默认）、`'left'`、`'up'`、`'down'`，或一个角度（度，手腕朝向，从 +x 逆时针）。侧视握拳：掌背、并排四节弯曲的手指（比掌背暗一档）、压在上面的拇指、手腕处一条深色袖口，都用冷灰织物色；手腕朝左时自动镜像，拇指保持在上方。`size` 是像素尺寸（默认 36）。手自带一小段穿过拳心的绳（拳头两侧露出、中间被手指挡住），`rope: false` 不画；接出去的绳从 `grip` 画起，先画绳再画手，手会盖住接头。返回 `{grip, dir}`。
 - `v.laser(m, x, y, angle, {length, on, lambda, label})`：激光笔，侧面看，出光口在 (x, y)，沿 `angle`（度，从 +x 逆时针）射出。深色阳极壳，尾盖、滚花握把和按钮；`on: true` 只在出光口点一个光点（`lambda` 是波长，纳米，默认 650，决定光的颜色），笔身不再用别的强调色。返回 `{aperture, dir, angle}`，`<Optics>` 的光线从 `aperture` 出发、沿 `dir` 走。
+- `v.plow(m, x, y, {kind, length, size, flip, label})`：犁，侧面看，犁铧尖落在地面 (x, y)，默认向 +x 拉（`flip: true` 向 −x）。`kind: 'curved'`（默认）是曲辕犁：短辕从把手拱过犁身、向前下弯，系索点低而近；`kind: 'straight'` 是直辕犁：长辕水平伸向前方，`length` 是辕端到犁铧尖的距离（场景单位）。犁身、犁箭、把手是喷漆钢，犁铧是深色铁件，犁壁贴在犁铧上，把手套橡胶。`size` 是把手高度（像素，默认 72）。返回 `{tip, hitch, handle}`，耕索用 `v.rope` 从 `hitch` 画出，力的箭头也从 `hitch` 起。
+- `v.emitter(m, x, y, {angle, length, label})`：静电喷管（发射极），喷针尖在 (x, y)，沿 `angle`（度，从 +x 逆时针，默认 0）喷出。铝管身、锥形喷头、细针，尾部深色绝缘盖接引线。`length` 是管长（场景单位，默认 72 像素）。返回 `{tip, back, dir, angle}`：液滴从 `tip` 出发，电源引线接到 `back`。吸极是两块竖着的极板，用 `v.block` 或 `v.plates` 画。
+- `v.backshell(m, x, y, w, {h, label})`：背罩（返回舱的后盖），罩口中心在 (x, y)，罩口宽 `w`，向上凸。侧壁略鼓的截锥、平顶、罩口一圈深色边，两道环向接缝；顶上有吊环。`h` 罩高（默认 0.42w）。返回 `{apex, left, right, rim}`：伞绳从 `apex` 接到 `v.parachute` 的 `attach`，探测器（`v.box` 或 `v.block`）挂在 `rim` 下面。
+- `v.airbag(m, x, y, w, {h, press, at, label})`：安全气囊，装在深色底板上，底边中点在 (x, y)，放在 `v.ground` 或台面上。冷灰织物，两侧暗、顶上一道反光、两道褶线。`h` 高度（默认 0.6w）。`press` 是顶面被压下去的深度（场景单位），`at` 是压点离中心的水平距离；压下去时两侧略鼓。碰撞动画里写 `press: 压入深度`，头锤（`v.ball`）放在返回的 `top` 上。返回 `{top, left, right}`。
+- `v.aircon(m, x, y, {kind, w, fan, label})`：分体空调。`kind: 'indoor'`（默认）是挂墙的室内机，(x, y) 是机身中心，下面是出风口和导风板；`kind: 'outdoor'` 是室外机，站在地面 (x, y) 上，正面风扇格栅、右侧百叶、两个黄铜阀门、橡胶脚。`w` 机身宽（场景单位，默认 160 像素），`fan` 是扇叶转角（度，动画时写 `fan: ω·t·180/π`）。返回 `{center, top, left, right, ports, air, airDir}`：冷媒管从 `ports` 接出，热量、气流的箭头从 `air` 画起（室内机 `airDir` 朝下）。
 - `v.springScale(m, x, y, {angle, value, max, length, divisions, label})`：弹簧测力计，接在装置里。`(x, y)` 是圆环（固定端）。`angle` 是钩子方向（度，从 +x 轴逆时针，默认 −90）。`value` / `max` 单位 N，指针和挂钩伸出量都按这个比例算（满量程时挂钩比空载多伸出 0.22 倍壳长）。`length` 是空载壳长（默认 1.6）。刻度数字保持正立。返回 `{hook, fraction}`，绳子接到 `hook`，不要手写挂钩坐标。
 - `v.electrometer(m, x, y, {value, max, deflection, label, h})`：静电计。金属球在上，外壳接地。指针张角 = 60° × value/max（写了 `value` 就不用再写 `deflection`）。`(x, y)` 在外壳中部。不要手画张角。返回 `{angle, ball}`，`angle` 是相对直杆的度数，`ball` 是金属球的坐标。
 - `v.cylinder(m, x, y, w, h, pistonY, {molecules, temp, heat})`：汽缸 + 活塞，气体分子会自己动，`heat` 画加热波纹。
@@ -1098,13 +1103,18 @@ sim({
    | 斜二测的长方体、平板、带剖面的块、平躺的线圈 | `v.slab`（`cut` 画剖面并在顶点外标 M、N、P、Q，`cutLabels: false` 不标；`loop` 画顶面线圈；箭头用返回的 `P` 定位） |
    | 握着绳子或杆的手 | `v.hand`（绳子从返回的 `grip` 接出） |
    | 激光笔 | `v.laser`（光线从返回的 `aperture` 出发） |
+   | 犁（曲辕犁、直辕犁） | `v.plow`（`kind` 选曲辕或直辕；耕索从返回的 `hitch` 接出） |
+   | 静电喷管、发射极、电喷针 | `v.emitter`（液滴从返回的 `tip` 出发，引线接 `back`） |
+   | 返回舱背罩、着陆器的后盖 | `v.backshell`（伞绳从 `apex` 接到 `v.parachute`，探测器挂在 `rim` 下） |
+   | 安全气囊 | `v.airbag`（`press` 画被压下去的样子，头锤放在返回的 `top`） |
+   | 空调室内机、室外机 | `v.aircon`（`kind: 'indoor'` / `'outdoor'`，冷媒管从 `ports` 接出） |
    | 平行板、电容器极板 | `v.plates` |
    | 绳、细线 | `v.rope` 或 `v.line` |
    | 物体走过的轨迹、频闪照片 | `<Sim>` 里 `v.trail`（写 `every` 带频闪点）、`v.strobe`；整条预定轨迹只画一条细虚线 |
    | 弯曲或圆弧的轨道、导轨、管道 | `v.track`（`{arc: […]}` 段画圆弧，`pipe: true` 画成管） |
    | 导轨、光电门、变压器、示波管、霍尔片 | 见 `sim-apparatus` |
 
-   表里没有、也没有相近器材的（安全气囊、空调、锁止机构这类生活装置），才用 `v.rect`、`v.path` 画示意简图，线条保持细、少、平面。动笔前把 `draw` 里每个 `v.rect` / `v.path` 对照这张表过一遍。
+   表里没有、也没有相近器材的（安全带锁止机构这类装置），才用 `v.rect`、`v.path` 画示意简图，线条保持细、少、平面。动笔前把 `draw` 里每个 `v.rect` / `v.path` 对照这张表过一遍。
 2. **放稳**：放在台面、斜面、小车上的物体，底边就写在那个面的高度上，接触影和受力作用点才对得上。悬空的物体不画影子。
 3. **图里只留符号**：图上写 θ、v、F、A、B 这类符号，数值放进 `hud`、`<Readout>` 或 `note`。「N = 8.7 N」「T = 300 K」这样的写法会出现在作图建议里。题目给定的角度（30°）、尺寸线上的长度（`v.dim`）、坐标轴刻度、表示状态的「v = 0」不算。
 4. **文字不压线**：名称用 `v.label`（自动避开物体和箭头）；手放的 `v.text` 要离开线条，不要压在导轨、器壁、场线上。
