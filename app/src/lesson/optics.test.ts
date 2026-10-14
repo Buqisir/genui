@@ -261,6 +261,25 @@ describe('Optics ray tracing', () => {
     expect(corner.ray.hits as number).toBeLessThan(15)
     expect(corner.run.warnings.join(' ')).not.toContain('maxHits')
   })
+  it('hidden media bend light but are left out of the drawing', () => {
+    const props = (hidden: boolean) => ({
+      name: 'lt',
+      media: [
+        { name: 'glass', n: 1.5, shape: { xmin: -2, xmax: 2, ymin: -1, ymax: 1 } },
+        { name: 'hole', n: 1, hidden, shape: { cx: 0, cy: 0, r: 0.5 } },
+      ],
+      rays: [{ name: 'a', from: [-3, 0.2], angle: 0 }],
+      length: 8,
+    })
+    const shown = rayOf(props(false))
+    const hid = rayOf(props(true))
+    expect(hid.draw.media.map((m) => m.name)).toEqual(['glass'])
+    expect(shown.draw.media.map((m) => m.name)).toEqual(['glass', 'hole'])
+    // The cut-out still refracts: same hits as when it is drawn, and more than the bare slab's two faces.
+    expect(hid.ray.kind).toEqual(shown.ray.kind)
+    expect((hid.ray.kind as number[]).length).toBeGreaterThan(2)
+    expect(hid.ray.exitY).toBeCloseTo(shown.ray.exitY as number, 9)
+  })
 })
 
 describe('Optics validator and payload', () => {
