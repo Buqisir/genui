@@ -633,8 +633,8 @@ function drawTransformer(node: TransformerNode, x: number, y: number, w: number,
   caption(c, x0 + coilW / 2, y - 14, turnsText(node.n1, 'n_1'), 'circuit-label')
   fixText(c, x0 + coilW / 2, y - 14, turnsText(node.n1, 'n_1'), 'circuit-label')
   if (node.label) {
-    caption(c, x0 + coilW / 2, y - 30, node.label, 'circuit-label')
-    fixText(c, x0 + coilW / 2, y - 30, node.label, 'circuit-label')
+    caption(c, x0 + coilW / 2, y - 34, node.label, 'circuit-label')
+    fixText(c, x0 + coilW / 2, y - 34, node.label, 'circuit-label')
   }
   let prevCoil = y
   let cursor = y + dir * 58

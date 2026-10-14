@@ -355,9 +355,12 @@ export function Plot({ props }: { props: Props }) {
         {risers.map((r, i) => (
           <line key={`r${i}`} x1={sx(r.x)} x2={sx(r.x)} y1={sy(r.ya)} y2={sy(r.yb)} stroke={colorAt(r.si)} strokeDasharray="3 3" strokeWidth={1.4} opacity={0.8} />
         ))}
-        {paths.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke={colorAt(i)} strokeWidth={2} strokeDasharray={series[i].dash ? '5 4' : undefined} strokeLinejoin="round" strokeLinecap="round" />
-        ))}
+        {/* Curves that leave the y range are cut at the plot frame instead of spilling over the card. */}
+        <g clipPath={`url(#${clipId})`}>
+          {paths.map((d, i) => (
+            <path key={i} d={d} fill="none" stroke={colorAt(i)} strokeWidth={2} strokeDasharray={series[i].dash ? '5 4' : undefined} strokeLinejoin="round" strokeLinecap="round" />
+          ))}
+        </g>
         <defs>
           <clipPath id={clipId}>
             <rect x={M.left} y={M.top} width={pw} height={ph} />
