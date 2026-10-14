@@ -2446,11 +2446,6 @@ figure.card {
   min-width: 0;
 }
 
-.seg-visual .seg-quote {
-  margin: 0;
-  font-size: 15px;
-}
-
 .seg-quote {
   margin: 0 0 14px;
   padding: 12px 16px;

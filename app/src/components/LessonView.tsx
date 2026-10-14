@@ -186,7 +186,7 @@ function Quote({ text }: { text: string }) {
 
 const SEG_CONTROLS = ['Param', 'Preset', 'Status', 'Readout']
 
-function SegmentPage({ seg, quoteAtVisual }: { seg: { head: ComponentBlock; blocks: Block[] }; quoteAtVisual: boolean }) {
+function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }) {
   const comps = seg.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
   const visuals = comps.filter((b) => MAIN.has(b.name))
   const controls = comps.filter((b) => SEG_CONTROLS.includes(b.name) && !(b.name === 'Param' && b.props.hidden))
@@ -201,7 +201,6 @@ function SegmentPage({ seg, quoteAtVisual }: { seg: { head: ComponentBlock; bloc
     <div className={`seg-page ${hasVisual ? '' : 'seg-text-only'}`}>
       {hasVisual && (
         <div className="seg-visual">
-          {quote && quoteAtVisual && <Quote text={quote} />}
           {visuals.map((b, i) => boxed(b, `v${i}`))}
           {controls.length > 0 && <div className="seg-controls">{controls.map((b, i) => boxed(b, `c${i}`))}</div>}
           {questions.length > 0 && (
@@ -212,7 +211,7 @@ function SegmentPage({ seg, quoteAtVisual }: { seg: { head: ComponentBlock; bloc
         </div>
       )}
       <div className="seg-text">
-        {quote && !(quoteAtVisual && hasVisual) && <Quote text={quote} />}
+        {quote && <Quote text={quote} />}
         {(hint || watch) && (
           <div className="seg-hint">
             {hint && (
@@ -240,7 +239,7 @@ function SegmentPage({ seg, quoteAtVisual }: { seg: { head: ComponentBlock; bloc
   )
 }
 
-function SegmentedLesson({ blocks, quoteAtVisual }: { blocks: Block[]; quoteAtVisual: boolean }) {
+function SegmentedLesson({ blocks }: { blocks: Block[] }) {
   const { intro, segs } = useMemo(() => splitSegments(blocks), [blocks])
   const [at, setAt] = useState(0)
   const cur = Math.min(at, segs.length - 1)
@@ -272,7 +271,7 @@ function SegmentedLesson({ blocks, quoteAtVisual }: { blocks: Block[]; quoteAtVi
         ))}
       </ol>
       {/* key: a fresh page per segment, so its figures start from their own initial state */}
-      <SegmentPage key={cur} seg={segs[cur]} quoteAtVisual={quoteAtVisual} />
+      <SegmentPage key={cur} seg={segs[cur]} />
       <div className="seg-footer">
         <button className="pill" disabled={cur === 0} onClick={() => go(cur - 1)}>
           ← 上一段
@@ -373,7 +372,7 @@ export function LessonView({ source }: { source: string }) {
             </div>
           )}
 
-          {segmented && <SegmentedLesson blocks={lesson.blocks} quoteAtVisual={meta.quoteAt === 'visual'} />}
+          {segmented && <SegmentedLesson blocks={lesson.blocks} />}
 
           {!segmented && (main.length > 0 || side.length > 0) && (
             <div className="lab">
