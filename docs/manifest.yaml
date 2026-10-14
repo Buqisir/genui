@@ -38,6 +38,8 @@
   file: cards/ledger.md
 - region: dial
   file: cards/dial.md
+- region: segment
+  file: cards/segment.md
 - region: force-diagram
   file: cards/force-diagram.md
 - region: force-solve

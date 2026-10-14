@@ -2311,6 +2311,205 @@ figure.card {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
+/* ---------- segmented lesson: one difficulty per screen ---------- */
+
+.seg-intro {
+  margin: 0 0 24px;
+  padding: 0;
+  border-top: 0;
+  max-width: 920px;
+}
+
+.seg-intro > :first-child,
+.seg-solution > :first-child > :first-child {
+  margin-top: 0;
+}
+
+.seg-nav {
+  list-style: none;
+  display: flex;
+  gap: 8px;
+  margin: 0 0 24px;
+  padding: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-margin-top: 12px;
+}
+
+.seg-nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px 0 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--c-hairline);
+  background: var(--c-card);
+  color: var(--c-graphite);
+  font-size: var(--text-label);
+  white-space: nowrap;
+  transition: background-color 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.seg-num {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--c-raised);
+  font-family: var(--font-readout);
+  font-weight: 600;
+  color: var(--c-ink);
+}
+
+.seg-nav button.active {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+  color: var(--c-inverse);
+}
+
+.seg-nav button.active .seg-num {
+  background: var(--c-inverse);
+  color: var(--c-ink);
+}
+
+.seg-nav button.done {
+  color: var(--c-steel);
+}
+
+.seg-page {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.seg-page.seg-text-only {
+  grid-template-columns: minmax(0, 920px);
+}
+
+/* The figure and its own sliders stay in view while the explanation beside it is read. */
+.seg-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+}
+
+.seg-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  box-shadow: var(--card-shadow);
+}
+
+.seg-text {
+  min-width: 0;
+}
+
+.seg-hint {
+  margin: 0 0 20px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background: var(--c-raised);
+  border-left: 3px solid var(--c-charge);
+  font-size: var(--text-body);
+  line-height: 1.7;
+  color: var(--c-ink);
+}
+
+.seg-hint p {
+  margin: 0;
+}
+
+.seg-hint p + p {
+  margin-top: 6px;
+}
+
+.seg-hint b {
+  display: inline-block;
+  min-width: 4.2em;
+  margin-right: 8px;
+  font-size: var(--text-micro);
+  letter-spacing: 0.06em;
+  color: var(--c-charge);
+}
+
+.seg-solution {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+  max-width: none;
+}
+
+.seg-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--c-hairline);
+}
+
+.seg-footer .pill:disabled {
+  opacity: 0.4;
+}
+
+.seg-next:not(:disabled) {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+  color: var(--c-inverse);
+}
+
+.seg-count {
+  font-family: var(--font-readout);
+  font-size: var(--text-label);
+  color: var(--c-steel);
+}
+
+@media (max-width: 900px) {
+  /* One column: what to do first, then the figure with its sliders, then the explanation. */
+  .seg-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .seg-text {
+    display: contents;
+  }
+  .seg-hint {
+    order: -1;
+    margin: 0;
+  }
+  .seg-visual {
+    position: static;
+  }
+  .seg-footer .pill {
+    white-space: nowrap;
+  }
+  .seg-count {
+    display: none;
+  }
+  .seg-nav .seg-title {
+    max-width: 9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .seg-footer .seg-next {
+    max-width: 62%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 .katex-display {
   overflow-x: auto;
   overflow-y: hidden;

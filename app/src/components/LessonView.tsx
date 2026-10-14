@@ -152,6 +152,116 @@ const moonIcon = (
   </svg>
 )
 
+/** A lesson split by <Segment> markers: what comes before the first one is the opening, then one segment per screen. */
+function splitSegments(blocks: Block[]) {
+  const intro: Block[] = []
+  const segs: { head: ComponentBlock; blocks: Block[] }[] = []
+  for (const b of blocks) {
+    if (b.kind === 'component' && b.name === 'Segment') segs.push({ head: b, blocks: [] })
+    else if (segs.length) segs[segs.length - 1].blocks.push(b)
+    else intro.push(b)
+  }
+  return { intro, segs }
+}
+
+const SEG_CONTROLS = ['Param', 'Preset', 'Status', 'Readout']
+
+function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }) {
+  const comps = seg.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
+  const visuals = comps.filter((b) => MAIN.has(b.name))
+  const controls = comps.filter((b) => SEG_CONTROLS.includes(b.name) && !(b.name === 'Param' && b.props.hidden))
+  const questions = comps.filter((b) => b.name === 'Question')
+  const answers = comps.filter((b) => b.name === 'Answer')
+  const texts = seg.blocks.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
+  const hint = typeof seg.head.props.hint === 'string' ? seg.head.props.hint : ''
+  const watch = typeof seg.head.props.watch === 'string' ? seg.head.props.watch : ''
+  const hasVisual = visuals.length > 0
+  return (
+    <div className={`seg-page ${hasVisual ? '' : 'seg-text-only'}`}>
+      {hasVisual && (
+        <div className="seg-visual">
+          {visuals.map((b, i) => boxed(b, `v${i}`))}
+          {controls.length > 0 && <div className="seg-controls">{controls.map((b, i) => boxed(b, `c${i}`))}</div>}
+          {questions.length > 0 && (
+            <Boundary name="Question">
+              <QuestionList items={questions.map((q) => q.props as Props)} />
+            </Boundary>
+          )}
+        </div>
+      )}
+      <div className="seg-text">
+        {(hint || watch) && (
+          <div className="seg-hint">
+            {hint && (
+              <p>
+                <b>动手</b>
+                {hint}
+              </p>
+            )}
+            {watch && (
+              <p>
+                <b>注意看</b>
+                {watch}
+              </p>
+            )}
+          </div>
+        )}
+        <div className="solution seg-solution">
+          {texts.map((b, i) => (
+            <Markdown key={i} text={b.text} />
+          ))}
+        </div>
+        {answers.map((b, i) => boxed(b, `a${i}`))}
+      </div>
+    </div>
+  )
+}
+
+function SegmentedLesson({ blocks }: { blocks: Block[] }) {
+  const { intro, segs } = useMemo(() => splitSegments(blocks), [blocks])
+  const [at, setAt] = useState(0)
+  const cur = Math.min(at, segs.length - 1)
+  const introText = intro.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
+  const go = (i: number) => {
+    setAt(i)
+    document.querySelector('.seg-nav')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }
+  return (
+    <div className="seg-lesson">
+      {cur === 0 && introText.length > 0 && (
+        <div className="seg-intro solution">
+          {introText.map((b, i) => (
+            <Markdown key={i} text={b.text} />
+          ))}
+        </div>
+      )}
+      <ol className="seg-nav">
+        {segs.map((s, i) => (
+          <li key={i}>
+            <button className={i === cur ? 'active' : i < cur ? 'done' : ''} aria-current={i === cur ? 'step' : undefined} onClick={() => go(i)}>
+              <span className="seg-num">{i + 1}</span>
+              <span className="seg-title">{String(s.head.props.title ?? '')}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      {/* key: a fresh page per segment, so its figures start from their own initial state */}
+      <SegmentPage key={cur} seg={segs[cur]} />
+      <div className="seg-footer">
+        <button className="pill" disabled={cur === 0} onClick={() => go(cur - 1)}>
+          ← 上一段
+        </button>
+        <span className="seg-count">
+          {cur + 1} / {segs.length}
+        </span>
+        <button className="pill seg-next" disabled={cur === segs.length - 1} onClick={() => go(cur + 1)}>
+          {cur + 1 < segs.length ? `下一段：${String(segs[cur + 1].head.props.title ?? '')} →` : '已是最后一段'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function LessonView({ source }: { source: string }) {
   const lesson = useMemo(() => parseLesson(source), [source])
   const registry = useMemo(() => buildRegistry(lesson.blocks), [lesson])
@@ -165,6 +275,7 @@ export function LessonView({ source }: { source: string }) {
   }, [theme])
 
   const comps = lesson.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
+  const segmented = comps.some((b) => b.name === 'Segment')
   const main = comps.filter((b) => MAIN.has(b.name))
   const side = comps.filter((b) => SIDE.has(b.name) && !(b.name === 'Param' && b.props.hidden))
   const markdown = lesson.blocks.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
@@ -222,7 +333,9 @@ export function LessonView({ source }: { source: string }) {
             </div>
           )}
 
-          {(main.length > 0 || side.length > 0) && (
+          {segmented && <SegmentedLesson blocks={lesson.blocks} />}
+
+          {!segmented && (main.length > 0 || side.length > 0) && (
             <div className="lab">
               <div className="lab-main">
                 {main.map((b, i) => (
@@ -271,7 +384,7 @@ export function LessonView({ source }: { source: string }) {
             </div>
           )}
 
-          {markdown.length > 0 && (
+          {!segmented && markdown.length > 0 && (
             <section className="solution" id="solution">
               <h2 className="solution-title">分析与解答</h2>
               {markdown.map((b, i) => (

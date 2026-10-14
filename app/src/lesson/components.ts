@@ -59,6 +59,11 @@ export const COMPONENTS: Record<string, Record<string, PropSpec>> = {
     frame: { kind: 'string', doc: '参考系用的物体名' },
     tip: { kind: 'object', doc: '翻倒判断，见规范原文' },
   },
+  Segment: {
+    title: { kind: 'string', required: true, doc: '这一段讲什么（导航上显示）' },
+    hint: { kind: 'string', doc: '动手：拖哪个量、点哪个按钮' },
+    watch: { kind: 'string', doc: '注意看：拖动时该盯住什么' },
+  },
   Question: { text: { kind: 'string', required: true, doc: '题干' }, hint: { kind: 'string', doc: '选中时显示的提示' }, set: { kind: 'object', doc: '切到这一问时设置的参数' } },
   Preset: { label: { kind: 'string', required: true, doc: '按钮上的文字' }, set: { kind: 'object', required: true, doc: '要点进去的参数值' } },
   Readout: { items: { kind: 'array', required: true, doc: '读数条目 {label, expr, …}' } },
