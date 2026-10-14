@@ -201,8 +201,10 @@ function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }
     <div className={`seg-page ${hasVisual ? '' : 'seg-text-only'}`}>
       {hasVisual && (
         <div className="seg-visual">
-          {visuals.map((b, i) => boxed(b, `v${i}`))}
+          {/* Sliders sit right under the main figure; a second chart (a graph of the same quantity) follows them. */}
+          {boxed(visuals[0], 'v0')}
           {controls.length > 0 && <div className="seg-controls">{controls.map((b, i) => boxed(b, `c${i}`))}</div>}
+          {visuals.slice(1).map((b, i) => boxed(b, `v${i + 1}`))}
           {questions.length > 0 && (
             <Boundary name="Question">
               <QuestionList items={questions.map((q) => q.props as Props)} />
