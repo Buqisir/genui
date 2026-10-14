@@ -19,6 +19,7 @@ import { Plot } from './Plot'
 import { Sim } from './Sim'
 import { TickerTape } from './TickerTape'
 import { Wiring } from './Wiring'
+import { Rich } from './rich'
 
 type ComponentBlock = Extract<Block, { kind: 'component' }>
 
@@ -224,7 +225,10 @@ function SegmentedLesson({ blocks }: { blocks: Block[] }) {
   const introText = intro.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
   const go = (i: number) => {
     setAt(i)
-    document.querySelector('.seg-nav')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    // Coming from the footer the tabs are above the fold: go back to the top, where the problem
+    // text is. Clicking a tab that is already in view leaves the page where it is.
+    const nav = document.querySelector('.seg-nav')
+    if (nav && nav.getBoundingClientRect().top < 0) window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   return (
     <div className="seg-lesson">
@@ -267,7 +271,10 @@ export function LessonView({ source }: { source: string }) {
   const registry = useMemo(() => buildRegistry(lesson.blocks), [lesson])
   const meta = lesson.meta
   const [theme, setTheme] = useState<ThemeName>(meta.theme === 'night' ? 'night' : 'light')
-  const [showProblem, setShowProblem] = useState(false)
+  // A segmented lesson keeps the problem in view: students check the givens while they read each segment.
+  const segmented = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment'), [lesson])
+  // On a phone the full text would push the figure off the first screen; the givens line stands in for it.
+  const [showProblem, setShowProblem] = useState(() => segmented && (typeof window === 'undefined' || window.innerWidth > 900))
   const problems = [...lesson.errors.map((e) => `第 ${e.line} 行：${e.message}`), ...registry.errors]
 
   useEffect(() => {
@@ -275,7 +282,6 @@ export function LessonView({ source }: { source: string }) {
   }, [theme])
 
   const comps = lesson.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
-  const segmented = comps.some((b) => b.name === 'Segment')
   const main = comps.filter((b) => MAIN.has(b.name))
   const side = comps.filter((b) => SIDE.has(b.name) && !(b.name === 'Param' && b.props.hidden))
   const markdown = lesson.blocks.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
@@ -293,6 +299,7 @@ export function LessonView({ source }: { source: string }) {
     : ([meta.topic, meta.source].filter((x) => typeof x === 'string') as string[])
   if (questions.length) crumbs.push(`${questions.length} 问`)
   const problemText = typeof meta.question === 'string' ? meta.question : null
+  const givens = Array.isArray(meta.givens) ? (meta.givens as unknown[]).filter((g): g is string => typeof g === 'string') : []
 
   return (
     <ThemeContext.Provider value={theme}>
@@ -319,7 +326,16 @@ export function LessonView({ source }: { source: string }) {
                 </button>
               </div>
             </div>
-            {showProblem && problemText && <div className="problem-text">{problemText}</div>}
+            {showProblem && problemText && <div className={`problem-text ${segmented ? 'compact' : ''}`}><Rich html text={problemText} /></div>}
+            {!showProblem && givens.length > 0 && (
+              <button className="givens" onClick={() => setShowProblem(true)} title="展开题目原文">
+                {givens.map((g, i) => (
+                  <span key={i}>
+                    <Rich html text={g} />
+                  </span>
+                ))}
+              </button>
+            )}
           </header>
 
           {problems.length > 0 && (

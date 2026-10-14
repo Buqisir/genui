@@ -4,6 +4,7 @@ title: 活塞封闭气体的升温与降温（分段样板）
 source: 2025 山东卷 第 16 题（计算）
 topic: 理想气体与热力学第一定律
 demo: true
+givens: ["轻质活塞", "f₀ = p₀S/21（等于最大静摩擦）", "T₁ = 330 K，开始上升", "T₂ = 440 K，停止加热", "T₃ = 400 K，开始下降", "T₄ = 330 K，停止"]
 question: "如图所示，上端开口、下端封闭的足够长玻璃管竖直固定于调温装置内。玻璃管导热性能良好，管内横截面积为 S，用轻质活塞封闭一定质量的理想气体。大气压强为 p_0，活塞与玻璃管之间的滑动摩擦力大小恒为 f_0 = (1/21)p_0 S，等于最大静摩擦力。用调温装置对封闭气体缓慢加热，T_1 = 330 K 时，气柱高度为 h_1，活塞开始缓慢上升；继续缓慢加热至 T_2 = 440 K 时停止加热，活塞不再上升；再缓慢降低气体温度，活塞位置保持不变，直到降温至 T_3 = 400 K 时，活塞才开始缓慢下降；温度缓慢降至 T_4 = 330 K 时，保持温度不变，活塞不再下降。求：\n（1）T_2 = 440 K 时，气柱高度 h_2；\n（2）从 T_1 状态到 T_4 状态的过程中，封闭气体吸收的净热量 Q（扣除放热后净吸收的热量）。"
 answers:
   - { name: h2ratio, value: 1.3333 }
@@ -45,7 +46,7 @@ $$
   {label: "摩擦力（向下）", symbol: "f/f₀", expr: "1", digits: 0, color: "force"}
 ]} />
 
-<Figure title="加热时活塞的受力" height={400} params={["ha"]} note="压力箭头不按比例；摩擦力箭头按 f₀ 的倍数画">
+<Figure title="加热时活塞的受力" height={340} params={["ha"]} note="压力箭头不按比例；摩擦力箭头按 f₀ 的倍数画">
 figure({
   draw(ctx, p, v) {
     const m = v.view({ xmin: -0.8, xmax: 1.0, ymin: -0.15, ymax: 2.35, equal: true })
@@ -109,7 +110,7 @@ $$
   {label: "摩擦力（向下为正）", symbol: "f/f₀", expr: "fb", digits: 2, color: "force"}
 ]} />
 
-<Figure title="降温时活塞的受力与「卡住区间」" height={420} params={["pb", "hb", "fb"]} note="压力箭头不按比例；摩擦力箭头按 f₀ 的倍数画">
+<Figure title="降温时活塞的受力与「卡住区间」" height={360} params={["pb", "hb", "fb"]} note="压力箭头不按比例；摩擦力箭头按 f₀ 的倍数画">
 figure({
   draw(ctx, p, v) {
     const m = v.view({ xmin: -0.75, xmax: 2.0, ymin: -0.25, ymax: 2.35, equal: true })

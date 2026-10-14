@@ -238,6 +238,39 @@ sub {
   max-width: 920px;
 }
 
+.problem-text.compact {
+  max-width: none;
+  margin-top: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.65;
+  max-height: 11.5em;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Collapsed problem: the key givens stay on one line; a click opens the full text again. */
+.givens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.givens span {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--c-raised);
+  font-size: var(--text-label);
+  color: var(--c-ink);
+  white-space: nowrap;
+}
+
 /* ---------- lab layout ---------- */
 
 .lab {
@@ -2472,6 +2505,15 @@ figure.card {
   font-family: var(--font-readout);
   font-size: var(--text-label);
   color: var(--c-steel);
+}
+
+@media (max-width: 600px) {
+  .lesson-head h1 {
+    font-size: 24px;
+  }
+  .title-row {
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 900px) {
