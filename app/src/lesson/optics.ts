@@ -8,7 +8,7 @@ import { num, symbolsOf, type Scope } from './expr'
 const IDENT = /^[A-Za-z][A-Za-z0-9_]*$/
 
 const SHAPE_KEYS = ['points', 'cx', 'cy', 'r', 'inner', 'from', 'to', 'segment', 'xmin', 'xmax', 'ymin', 'ymax', 'rotate', 'about']
-const MEDIA_KEYS = ['name', 'n', 'shape', 'mirror', 'label', 'color']
+const MEDIA_KEYS = ['name', 'n', 'shape', 'mirror', 'label', 'color', 'hidden']
 const RAY_KEYS = ['name', 'from', 'angle', 'color', 'n', 'label']
 const MIRROR_KEYS = ['line', 'arc']
 const SCREEN_KEYS = ['name', 'line']
@@ -549,6 +549,8 @@ function buildScene(props: Record<string, unknown>, scope: Scope, warnings: stri
     }
 
     media.push({ name, n, contains })
+    // A hidden medium still bends light; it is only left out of the drawing (cut-outs, helper slabs).
+    if (raw.hidden === true) return
     draw.media.push({
       name,
       label: typeof raw.label === 'string' ? raw.label : undefined,
@@ -1181,6 +1183,7 @@ export function opticsIssues(
     else expr(raw.n, `${where}.n`)
     if (typeof raw.label === 'string' && !raw.label.trim()) err(`${where}.label 为空`)
     if (raw.color !== undefined && typeof raw.color !== 'string') err(`${where}.color 应为颜色名`)
+    if (raw.hidden !== undefined && typeof raw.hidden !== 'boolean') err(`${where}.hidden 应为 true 或 false`)
     if (!isObj(raw.shape)) return err(`${where}.shape 应为对象`)
     const shape = raw.shape
     keysOnly(shape, SHAPE_KEYS, `${where}.shape`)
