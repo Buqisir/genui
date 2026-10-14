@@ -274,8 +274,8 @@ $$
 <Answer open={true} items={[
   {label: "(1)", text: "ab 所受安培力竖直向下，cd 所受安培力竖直向上"},
   {label: "(2)", text: "R_1 = R_0 + ΔR，R_2 = R_0 − ΔR，R_3 = R_0 − ΔR，R_4 = R_0 + ΔR"},
-  {label: "(3)", text: "U_ef = αEI_0lB/R_0（U_ef 与 B 成正比）"},
+  {label: "(3)", text: "U_ef = αEI_{0}lB/R_0（U_ef 与 B 成正比）"},
   {label: "阻值变化", symbol: "ΔR", expr: "dR", value: 0.1, unit: "Ω", digits: 3},
-  {label: "e、f 电势差", symbol: "U_ef", expr: "Uef", value: 0.006, unit: "V", digits: 4},
+  {label: "e、f 电势差", symbol: "U_ef", expr: "Uef*1000", value: 6, unit: "mV", digits: 2},
   {label: "反推磁场", symbol: "B", expr: "Bcalc", value: 0.2, unit: "T", digits: 3}
 ]} />

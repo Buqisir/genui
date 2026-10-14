@@ -764,6 +764,36 @@ input[type='range']:focus-visible {
   padding-left: 16px;
 }
 
+/* A sentence-long answer takes its own row and wraps instead of spilling into its neighbours. */
+.answer-item.wide {
+  grid-column: 1 / -1;
+  padding-left: 0;
+  border-left: none;
+  border-bottom: 1px solid var(--c-hairline);
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+}
+
+.answer-item.wide .value {
+  white-space: normal;
+}
+
+.answer-item.wide .num {
+  font-family: inherit;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.answer-item.wide + .answer-item:not(.wide) {
+  border-left: none;
+  padding-left: 0;
+}
+
+/* Segmented lessons show the derivation on the same page as the answers. */
+.seg-lesson .answer-link {
+  display: none;
+}
+
 .answer-label {
   font-size: var(--text-micro);
   color: var(--c-graphite);
