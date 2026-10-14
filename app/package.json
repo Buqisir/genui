@@ -10,7 +10,7 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "docs:check": "tsx scripts/docs.ts check",
-    "validate:lessons": "tsx scripts/validate.ts ../lessons/*.md ../generated-grok/bank2/*.md",
+    "validate:lessons": "tsx scripts/validate.ts ../lessons/*.md ../generated-grok/bank2/*.md ../generated-grok/sd25/*.md",
     "verify": "npm run build && npm test && npm run docs:check && npm run validate:lessons"
   },
   "dependencies": {
