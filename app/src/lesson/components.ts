@@ -61,6 +61,7 @@ export const COMPONENTS: Record<string, Record<string, PropSpec>> = {
   },
   Segment: {
     title: { kind: 'string', required: true, doc: '这一段讲什么（导航上显示）' },
+    quote: { kind: 'string', doc: '这一段用到的原题句子，**…** 标出关键条件' },
     hint: { kind: 'string', doc: '动手：拖哪个量、点哪个按钮' },
     watch: { kind: 'string', doc: '注意看：拖动时该盯住什么' },
   },

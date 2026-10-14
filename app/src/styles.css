@@ -2446,6 +2446,38 @@ figure.card {
   min-width: 0;
 }
 
+.seg-quote {
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-hairline);
+  background: var(--c-card);
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--c-graphite);
+}
+
+.seg-quote-tag {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--c-ink);
+  color: var(--c-inverse);
+  font-size: var(--text-micro);
+  line-height: 20px;
+  vertical-align: 1px;
+}
+
+/* The givens this segment uses: ink text on an underline in the hint colour. */
+.seg-quote mark {
+  background: none;
+  color: var(--c-ink);
+  font-weight: 500;
+  border-bottom: 2px solid var(--c-charge);
+  padding-bottom: 1px;
+}
+
 .seg-hint {
   margin: 0 0 20px;
   padding: 14px 18px;
@@ -2525,6 +2557,10 @@ figure.card {
   }
   .seg-text {
     display: contents;
+  }
+  .seg-quote {
+    order: -2;
+    margin: 0;
   }
   .seg-hint {
     order: -1;

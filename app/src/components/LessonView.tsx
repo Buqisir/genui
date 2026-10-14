@@ -165,6 +165,25 @@ function splitSegments(blocks: Block[]) {
   return { intro, segs }
 }
 
+/** Problem sentence quoted at the top of a segment; `**…**` marks the givens this segment uses. */
+function Quote({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g)
+  return (
+    <blockquote className="seg-quote">
+      <span className="seg-quote-tag">题目</span>
+      {parts.map((p, i) =>
+        i % 2 ? (
+          <mark key={i}>
+            <Rich html text={p} />
+          </mark>
+        ) : (
+          <Rich key={i} html text={p} />
+        ),
+      )}
+    </blockquote>
+  )
+}
+
 const SEG_CONTROLS = ['Param', 'Preset', 'Status', 'Readout']
 
 function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }) {
@@ -177,6 +196,7 @@ function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }
   const hint = typeof seg.head.props.hint === 'string' ? seg.head.props.hint : ''
   const watch = typeof seg.head.props.watch === 'string' ? seg.head.props.watch : ''
   const hasVisual = visuals.length > 0
+  const quote = typeof seg.head.props.quote === 'string' ? seg.head.props.quote : ''
   return (
     <div className={`seg-page ${hasVisual ? '' : 'seg-text-only'}`}>
       {hasVisual && (
@@ -191,6 +211,7 @@ function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }
         </div>
       )}
       <div className="seg-text">
+        {quote && <Quote text={quote} />}
         {(hint || watch) && (
           <div className="seg-hint">
             {hint && (
@@ -274,7 +295,9 @@ export function LessonView({ source }: { source: string }) {
   // A segmented lesson keeps the problem in view: students check the givens while they read each segment.
   const segmented = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment'), [lesson])
   // On a phone the full text would push the figure off the first screen; the givens line stands in for it.
-  const [showProblem, setShowProblem] = useState(() => segmented && (typeof window === 'undefined' || window.innerWidth > 900))
+  // When every segment quotes its own sentences, the full text starts folded on any screen.
+  const quoted = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment' && typeof b.props.quote === 'string'), [lesson])
+  const [showProblem, setShowProblem] = useState(() => segmented && !quoted && (typeof window === 'undefined' || window.innerWidth > 900))
   const problems = [...lesson.errors.map((e) => `第 ${e.line} 行：${e.message}`), ...registry.errors]
 
   useEffect(() => {
