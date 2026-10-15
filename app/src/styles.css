@@ -3075,3 +3075,183 @@ figure.card {
   letter-spacing: var(--tracking-wide);
   color: var(--c-steel);
 }
+
+/* ---------- Panorama: the problem as one chain of figures ---------- */
+
+.pano {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pano-chain {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.pano-card {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pano-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-label);
+  font-weight: 600;
+  color: var(--c-ink);
+}
+
+.pano-step {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 64px;
+  text-align: center;
+}
+
+.pano-arrow {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--c-charge);
+}
+
+.pano-step-label {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--c-graphite);
+}
+
+.pano-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.pano-slider {
+  padding: 12px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  box-shadow: var(--card-shadow);
+}
+
+.seg-pano {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.seg-pano .seg-hint {
+  margin: 0;
+}
+
+.teach-pano {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  padding: 16px 28px;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.teach-pano-ask {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.teach-pano-ask .teach-ask {
+  font-size: 24px;
+}
+
+.teach-pano-ask .teach-tag {
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+  vertical-align: 2px;
+}
+
+.teach-pano-ask .teach-reveal {
+  flex: 1 1 100%;
+  font-size: 18px;
+  padding: 10px 16px;
+}
+
+@media (max-width: 900px) {
+  .pano-chain {
+    flex-direction: column;
+  }
+
+  .pano-step {
+    flex-direction: row;
+    width: auto;
+  }
+
+  .pano-arrow {
+    transform: rotate(90deg);
+  }
+
+  .pano-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Class mode: the teacher's pen ---------- */
+
+.teach-pen-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.teach-pen-wrap.on {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.teach-pen {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.teach-pen polyline {
+  fill: none;
+  stroke: var(--c-force);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* In the chain the card title names each figure; keep only the drawing, at a common height. */
+.pano-card .stage-head,
+.pano-card .stage-note {
+  display: none;
+}
+
+.pano-card .stage-canvas,
+.pano-card .stage-canvas iframe {
+  height: 240px !important;
+}
+
+.pano-card .circuit-canvas svg {
+  height: 240px;
+  width: 100%;
+}
+
+.pano-card .stage {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}

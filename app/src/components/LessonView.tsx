@@ -1,10 +1,10 @@
-import { Component, memo, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { Component, Fragment, memo, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import { parseLesson, type Block, type Props } from '../lesson/parse'
-import { buildRegistry, StoreProvider, useStore } from '../lesson/store'
+import { buildRegistry, StoreProvider, useScopeFor, useStore } from '../lesson/store'
 import { ThemeContext, type ThemeName } from '../theme'
 import { Answer, ParamControl, Preset, QuestionList, Readout, Status } from './controls'
 import { Bars, Dial, Ledger } from './charts'
@@ -186,7 +186,66 @@ function Quote({ text }: { text: string }) {
 
 const SEG_CONTROLS = ['Param', 'Preset', 'Status', 'Readout']
 
-function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }) {
+type Seg = { head: ComponentBlock; blocks: Block[] }
+
+/**
+ * The whole problem as one chain: the main figure of each listed segment side by side, joined by
+ * the relation that carries one into the next, all driven by one slider. Segments keep their own
+ * copies of a quantity (each starts from the problem's value); `link` moves them together here.
+ */
+function Panorama({ seg, segs, all, shown }: { seg: Seg; segs: Seg[]; all: Block[]; shown: boolean }) {
+  const store = useStore()
+  const chain = (Array.isArray(seg.head.props.chain) ? seg.head.props.chain : []).map(Number)
+  const link = (Array.isArray(seg.head.props.link) ? seg.head.props.link : []).filter((n): n is string => typeof n === 'string')
+  const steps = (Array.isArray(seg.head.props.steps) ? seg.head.props.steps : []).map((x) => str(x))
+  const lead = link[0] ?? ''
+  const scope = useScopeFor(lead ? [lead] : [])
+  const v = lead ? scope[lead] : undefined
+  useEffect(() => {
+    if (v === undefined || link.length < 2) return
+    store.set(Object.fromEntries(link.slice(1).map((n) => [n, v])))
+  }, [store, v, link.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+  const leadParam = all.find((b): b is ComponentBlock => b.kind === 'component' && b.name === 'Param' && b.props.name === lead)
+  const own = seg.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
+  const outputs = own.filter((b) => b.name === 'Readout' || b.name === 'Status')
+  const cards = chain
+    .map((n) => ({ n, s: segs[n - 1] }))
+    .filter((c) => c.s)
+    .map((c) => ({ ...c, visual: c.s.blocks.find((b): b is ComponentBlock => b.kind === 'component' && MAIN.has(b.name)) }))
+  return (
+    <div className="pano">
+      <div className="pano-chain">
+        {cards.map((c, i) => (
+          <Fragment key={c.n}>
+            {i > 0 && (
+              <div className="pano-step" aria-hidden>
+                <span className="pano-arrow">→</span>
+                {steps[i - 1] && (
+                  <span className="pano-step-label">
+                    <Rich html text={steps[i - 1]} />
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="pano-card">
+              <div className="pano-card-title">
+                <span className="seg-num">{c.n}</span>
+                {str(c.s.head.props.title)}
+              </div>
+              {c.visual && boxed(c.visual, `pv${c.n}`)}
+            </div>
+          </Fragment>
+        ))}
+      </div>
+      <div className="pano-controls">
+        {leadParam && <div className="pano-slider">{boxed(leadParam, 'lead')}</div>}
+        {shown && outputs.map((b, i) => boxed(b, `po${i}`))}
+      </div>
+    </div>
+  )
+}
+
+function SegmentPage({ seg, segs, all }: { seg: Seg; segs: Seg[]; all: Block[] }) {
   const comps = seg.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
   const visuals = comps.filter((b) => MAIN.has(b.name))
   const controls = comps.filter((b) => SEG_CONTROLS.includes(b.name) && !(b.name === 'Param' && b.props.hidden))
@@ -197,6 +256,34 @@ function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }
   const watch = typeof seg.head.props.watch === 'string' ? seg.head.props.watch : ''
   const hasVisual = visuals.length > 0
   const quote = typeof seg.head.props.quote === 'string' ? seg.head.props.quote : ''
+  if (Array.isArray(seg.head.props.chain)) {
+    return (
+      <div className="seg-pano">
+        {(hint || watch) && (
+          <div className="seg-hint">
+            {hint && (
+              <p>
+                <b>动手</b>
+                <Rich html text={hint} />
+              </p>
+            )}
+            {watch && (
+              <p>
+                <b>注意看</b>
+                <Rich html text={watch} />
+              </p>
+            )}
+          </div>
+        )}
+        <Panorama seg={seg} segs={segs} all={all} shown />
+        <div className="solution seg-solution">
+          {texts.map((b, i) => (
+            <Markdown key={i} text={b.text} />
+          ))}
+        </div>
+      </div>
+    )
+  }
   return (
     <div className={`seg-page ${hasVisual ? '' : 'seg-text-only'}`}>
       {hasVisual && (
@@ -219,13 +306,13 @@ function SegmentPage({ seg }: { seg: { head: ComponentBlock; blocks: Block[] } }
             {hint && (
               <p>
                 <b>动手</b>
-                {hint}
+                <Rich html text={hint} />
               </p>
             )}
             {watch && (
               <p>
                 <b>注意看</b>
-                {watch}
+                <Rich html text={watch} />
               </p>
             )}
           </div>
@@ -273,7 +360,7 @@ function SegmentedLesson({ blocks }: { blocks: Block[] }) {
         ))}
       </ol>
       {/* key: a fresh page per segment, so its figures start from their own initial state */}
-      <SegmentPage key={cur} seg={segs[cur]} />
+      <SegmentPage key={cur} seg={segs[cur]} segs={segs} all={blocks} />
       <div className="seg-footer">
         <button className="pill" disabled={cur === 0} onClick={() => go(cur - 1)}>
           ← 上一段
@@ -329,13 +416,13 @@ function TeachNotes({ seg, intro }: { seg: { head: ComponentBlock; blocks: Block
           {hint && (
             <p>
               <b>操作</b>
-              {hint}
+              <Rich html text={hint} />
             </p>
           )}
           {watch && (
             <p>
               <b>引导看</b>
-              {watch}
+              <Rich html text={watch} />
             </p>
           )}
         </div>
@@ -350,7 +437,7 @@ function TeachNotes({ seg, intro }: { seg: { head: ComponentBlock; blocks: Block
   )
 }
 
-function TeachPage({ seg, shown, onReveal }: { seg: { head: ComponentBlock; blocks: Block[] }; shown: boolean; onReveal: () => void }) {
+function TeachPage({ seg, segs, all, shown, onReveal }: { seg: Seg; segs: Seg[]; all: Block[]; shown: boolean; onReveal: () => void }) {
   const store = useStore()
   const comps = seg.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
   const visuals = comps.filter((b) => MAIN.has(b.name))
@@ -368,6 +455,34 @@ function TeachPage({ seg, shown, onReveal }: { seg: { head: ComponentBlock; bloc
     store.set({ [revealParam]: open ? 1 : 0 })
   }, [store, revealParam, open])
   useEffect(() => (revealParam ? () => store.set({ [revealParam]: 1 }) : undefined), [store, revealParam])
+  const askBox = (
+    <>
+      {ask && (
+        <div className="teach-ask">
+          <span className="teach-tag">问</span>
+          <Rich html text={ask} />
+        </div>
+      )}
+      {reveal &&
+        (shown ? (
+          <div className="teach-reveal">
+            <Rich html text={reveal} />
+          </div>
+        ) : (
+          <button className="teach-reveal-btn" onClick={onReveal}>
+            揭晓 <kbd>空格</kbd>
+          </button>
+        ))}
+    </>
+  )
+  if (Array.isArray(seg.head.props.chain)) {
+    return (
+      <div className="teach-pano">
+        <div className="teach-pano-ask">{askBox}</div>
+        <Panorama seg={seg} segs={segs} all={all} shown={open} />
+      </div>
+    )
+  }
   if (visuals.length === 0) {
     // The worked solution: written out large, as it would go on the board.
     const texts = seg.blocks.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
@@ -388,26 +503,45 @@ function TeachPage({ seg, shown, onReveal }: { seg: { head: ComponentBlock; bloc
       <div className="teach-side">
         {/* Once answered, the quote makes room for the readouts and the graph. */}
         {quote && !(shown && (outputs.length > 0 || visuals.length > 1)) && <Quote text={quote} />}
-        {ask && (
-          <div className="teach-ask">
-            <span className="teach-tag">问</span>
-            <Rich html text={ask} />
-          </div>
-        )}
-        {reveal &&
-          (shown ? (
-            <div className="teach-reveal">
-              <Rich html text={reveal} />
-            </div>
-          ) : (
-            <button className="teach-reveal-btn" onClick={onReveal}>
-              揭晓 <kbd>空格</kbd>
-            </button>
-          ))}
+        {askBox}
         {open && outputs.map((b, i) => boxed(b, `o${i}`))}
         {open && visuals.slice(1).map((b, i) => boxed(b, `v${i + 1}`))}
       </div>
     </div>
+  )
+}
+
+/** The teacher's pen: freehand marks over the page, wiped when the page turns. */
+function PenLayer({ strokes, setStrokes }: { strokes: number[][][]; setStrokes: (f: (s: number[][][]) => number[][][]) => void }) {
+  const ref = useRef<SVGSVGElement>(null)
+  const drawing = useRef(false)
+  // The stage is scaled with CSS zoom; map the pointer back to stage pixels.
+  const at = (e: React.PointerEvent) => {
+    const el = ref.current!
+    const r = el.getBoundingClientRect()
+    return [((e.clientX - r.left) * el.clientWidth) / r.width, ((e.clientY - r.top) * el.clientHeight) / r.height]
+  }
+  return (
+    <svg
+      ref={ref}
+      className="teach-pen"
+      onPointerDown={(e) => {
+        drawing.current = true
+        ;(e.target as Element).setPointerCapture(e.pointerId)
+        const pt = at(e)
+        setStrokes((s) => [...s, [pt]])
+      }}
+      onPointerMove={(e) => {
+        if (!drawing.current) return
+        const pt = at(e)
+        setStrokes((s) => [...s.slice(0, -1), [...s[s.length - 1], pt]])
+      }}
+      onPointerUp={() => (drawing.current = false)}
+    >
+      {strokes.map((st, i) => (
+        <polyline key={i} points={st.map((p) => p.join(',')).join(' ')} />
+      ))}
+    </svg>
   )
 }
 
@@ -423,11 +557,14 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
   const [at, setAt] = useState(0)
   const [shown, setShown] = useState(false)
   const [notes, setNotes] = useState(false)
+  const [pen, setPen] = useState(false)
+  const [strokes, setStrokes] = useState<number[][][]>([])
   const seg = at > 0 ? segs[at - 1] : null
   const hasReveal = !!seg && str(seg.head.props.reveal) !== ''
   const go = (i: number) => {
     setAt(Math.max(0, Math.min(segs.length, i)))
     setShown(false)
+    setStrokes([])
   }
   const next = () => (hasReveal && !shown ? setShown(true) : go(at + 1))
   const fullscreen = () => {
@@ -444,6 +581,9 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
       else if (k === 'ArrowLeft' || k === 'PageUp') go(at - 1)
       else if (k === 'n' || k === 'N') setNotes((v) => !v)
       else if (k === 'f' || k === 'F') fullscreen()
+      else if (k === 'p' || k === 'P') setPen((v) => !v)
+      else if (k === 'c' || k === 'C') setStrokes([])
+      else if (k === 'Escape' && pen) setPen(false)
       else if (k === 'Escape' && !document.fullscreenElement) onExit()
       else return
       // Space on a focused button would click it as well.
@@ -472,6 +612,14 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
             <button className={`pill ${notes ? 'active' : ''}`} aria-pressed={notes} onClick={() => setNotes(!notes)} title="N">
               讲稿
             </button>
+            <button className={`pill ${pen ? 'active' : ''}`} aria-pressed={pen} onClick={() => setPen(!pen)} title="P">
+              画笔
+            </button>
+            {strokes.length > 0 && (
+              <button className="pill" onClick={() => setStrokes([])} title="C">
+                擦除
+              </button>
+            )}
             <button className={`pill ${theme === 'night' ? 'active' : ''}`} aria-pressed={theme === 'night'} onClick={() => setTheme(theme === 'night' ? 'light' : 'night')}>
               {moonIcon}
             </button>
@@ -492,7 +640,7 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
         <div className="teach-body">
           {seg ? (
             // key: each page starts its figures from their own initial state
-            <TeachPage key={at} seg={seg} shown={shown} onReveal={() => setShown(true)} />
+            <TeachPage key={at} seg={seg} segs={segs} all={blocks} shown={shown} onReveal={() => setShown(true)} />
           ) : (
             <div className="teach-cover">
               {problem && (
@@ -515,6 +663,11 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
                   </li>
                 ))}
               </ol>
+            </div>
+          )}
+          {(pen || strokes.length > 0) && (
+            <div className={`teach-pen-wrap ${pen ? 'on' : ''}`}>
+              <PenLayer strokes={strokes} setStrokes={setStrokes} />
             </div>
           )}
           {notes && <TeachNotes seg={seg} intro={intro} />}

@@ -251,6 +251,20 @@ $U_{ef}$ 与 $B$ 成正比，测出 $U_{ef}$ 就能读出 $B$。$R_3$ 变小，�
   cursor="B"
 />
 
+<Segment title="全景：B → F → ΔR → U_ef" chain={[1, 2, 3]} link={["B", "Ba", "Bb"]} steps={["ΔR = αF", "U_ef = EΔR/R_0"]} hint="拖动 B，从 0.2 T 拖到 0.4 T。" watch="三张图一起变：两个 F 变长，梁弯得更厉害，R₁、R₄ 变大、R₂、R₃ 变小，U_ef 跟着变大。" ask="B 加倍，这条链上每一环怎么变？" reveal="每一环都加倍：F = BI_{0}l ∝ B，ΔR = αF ∝ F，U_ef = EΔR/R_0 ∝ ΔR。所以 U_ef ∝ B。" />
+
+三问其实是一条链：磁场产生安培力，安培力让梁弯曲、改变应变片阻值，阻值变化让电桥输出电压。每一环都是正比，所以整条链也是正比：
+
+$$
+B \xrightarrow{\;F = BI_0l\;} F \xrightarrow{\;\Delta R = \alpha F\;} \Delta R \xrightarrow{\;U_{ef} = E\Delta R/R_0\;} U_{ef}
+$$
+
+<Readout items={[
+  {label: "安培力", symbol: "F", expr: "F*1000", unit: "mN", digits: 2, color: "force"},
+  {label: "阻值变化", symbol: "ΔR", expr: "dR", unit: "Ω", digits: 3, color: "charge"},
+  {label: "e、f 电势差", symbol: "U_ef", expr: "Uef*1000", unit: "mV", digits: 2, color: "charge"}
+]} />
+
 <Segment title="完整解答" />
 
 **(1)** 从正面看，$ab$ 中电流垂直纸面向里、$cd$ 中电流垂直纸面向外，磁场水平向右，由左手定则：**$ab$ 所受安培力竖直向下，$cd$ 所受安培力竖直向上**，大小都是 $BI_0l$。

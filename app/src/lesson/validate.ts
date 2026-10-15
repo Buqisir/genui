@@ -484,6 +484,10 @@ function checkComponent(
   switch (b.name) {
     case 'Segment': {
       if (props.revealParam !== undefined) nameRef(props.revealParam, 'revealParam', true)
+      if (Array.isArray(props.link)) props.link.forEach((n, i) => nameRef(n, `link[${i}]`, true))
+      if (props.chain !== undefined && !(Array.isArray(props.chain) && props.chain.length >= 2 && props.chain.every((n) => Number.isInteger(n) && (n as number) >= 1)))
+        err('chain 写两个以上的段号（从 1 数的整数）')
+      if (props.chain !== undefined && !Array.isArray(props.link)) err('全景段要写 link：哪些参数一起联动')
       break
     }
     case 'Param': {
