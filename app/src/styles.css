@@ -3410,3 +3410,157 @@ figure.card {
   bottom: 0;
   z-index: 4;
 }
+
+/* ---------- Class mode on an open board (React Flow) ---------- */
+
+.fb-view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.fb .react-flow {
+  --xy-background-color: var(--c-page);
+  --xy-background-pattern-color: var(--c-hairline);
+  --xy-minimap-background-color: var(--c-card);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--c-page) 70%, transparent);
+  --xy-minimap-node-background-color: var(--c-hairline);
+  --xy-attribution-background-color: transparent;
+  background: var(--c-page);
+}
+
+.fb .react-flow__node {
+  cursor: grab;
+}
+
+.fb-zoom {
+  color: var(--c-ink);
+  font-size: var(--text-body);
+}
+
+.fb-zoom .nodrag {
+  cursor: default;
+}
+
+.fb-handle {
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  pointer-events: none;
+}
+
+.fb-title {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-family: var(--font-display);
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: var(--c-ink);
+}
+
+.fb-title-num {
+  display: inline-grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--c-ink);
+  color: var(--c-inverse);
+  font-family: var(--font-readout);
+  font-size: 48px;
+  font-weight: 500;
+}
+
+.fb-problem {
+  font-size: 21px;
+  line-height: 1.85;
+}
+
+.fb-inputs {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 14px 8px;
+  margin-top: 16px;
+  padding: 4px 8px;
+}
+
+.fb-inputs > :not(.preset) {
+  flex: 1 1 100%;
+}
+
+.fb-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fb-side .seg-quote {
+  margin: 0;
+}
+
+.fb-outputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fb-solution.solution {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 18px;
+}
+
+.fb-edge {
+  stroke: var(--c-charge) !important;
+  stroke-width: 6 !important;
+  stroke-linecap: round;
+}
+
+.fb-edge-label {
+  position: absolute;
+  padding: 6px 18px;
+  border-radius: var(--radius-pill);
+  background: var(--c-page);
+  font-family: var(--font-display);
+  font-size: 52px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--c-ink);
+  pointer-events: none;
+}
+
+.fb-pen-capture {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.fb-ink {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.fb-ink path {
+  fill: var(--c-force);
+}
+
+.fb-minimap {
+  border-radius: var(--radius-md);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}

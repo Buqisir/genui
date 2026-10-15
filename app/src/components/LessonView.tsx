@@ -19,11 +19,12 @@ import { Plot } from './Plot'
 import { Sim } from './Sim'
 import { TickerTape } from './TickerTape'
 import { Wiring } from './Wiring'
+import { FlowBoard } from './FlowBoard'
 import { Rich } from './rich'
 
 type ComponentBlock = Extract<Block, { kind: 'component' }>
 
-const Markdown = memo(function Markdown({ text }: { text: string }) {
+export const Markdown = memo(function Markdown({ text }: { text: string }) {
   return (
     <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
       {text}
@@ -96,14 +97,14 @@ function renderComponent(b: ComponentBlock): ReactNode {
   }
 }
 
-const boxed = (b: ComponentBlock, key: number | string) => (
+export const boxed = (b: ComponentBlock, key: number | string) => (
   <Boundary key={key} name={b.name}>
     {renderComponent(b)}
   </Boundary>
 )
 
 const SCENES = new Set(['Sim', 'Figure', 'Circuit', 'ForceDiagram', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes'])
-const MAIN = new Set([...SCENES, 'Plot', 'Bars', 'Ledger', 'Dial'])
+export const MAIN = new Set([...SCENES, 'Plot', 'Bars', 'Ledger', 'Dial'])
 const SIDE = new Set(['Question', 'Param', 'Preset', 'Status', 'Readout', 'Answer'])
 
 type Size = 'full' | 'wide' | 'narrow'
@@ -147,14 +148,14 @@ const docIcon = (
     <path d="M4.8 4.8h4.4M4.8 7h4.4M4.8 9.2h2.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
   </svg>
 )
-const moonIcon = (
+export const moonIcon = (
   <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
     <path d="M11.5 8.6A4.8 4.8 0 0 1 5.4 2.5a4.8 4.8 0 1 0 6.1 6.1Z" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
   </svg>
 )
 
 /** A lesson split by <Segment> markers: what comes before the first one is the opening, then one segment per screen. */
-function splitSegments(blocks: Block[]) {
+export function splitSegments(blocks: Block[]) {
   const intro: Block[] = []
   const segs: { head: ComponentBlock; blocks: Block[] }[] = []
   for (const b of blocks) {
@@ -166,7 +167,7 @@ function splitSegments(blocks: Block[]) {
 }
 
 /** Problem sentence quoted at the top of a segment; `**…**` marks the givens this segment uses. */
-function Quote({ text }: { text: string }) {
+export function Quote({ text }: { text: string }) {
   const parts = text.split(/\*\*(.+?)\*\*/g)
   return (
     <blockquote className="seg-quote">
@@ -186,7 +187,7 @@ function Quote({ text }: { text: string }) {
 
 const SEG_CONTROLS = ['Param', 'Preset', 'Status', 'Readout']
 
-type Seg = { head: ComponentBlock; blocks: Block[] }
+export type Seg = { head: ComponentBlock; blocks: Block[] }
 
 /**
  * The whole problem as one chain: the main figure of each listed segment side by side, joined by
@@ -399,10 +400,10 @@ function useStageScale() {
   return scale
 }
 
-const str = (v: unknown) => (typeof v === 'string' ? v : '')
+export const str = (v: unknown) => (typeof v === 'string' ? v : '')
 
 /** What the teacher reads before showing a page: how to drive the figure and the explanation itself. */
-function TeachNotes({ seg, intro }: { seg: { head: ComponentBlock; blocks: Block[] } | null; intro: Block[] }) {
+export function TeachNotes({ seg, intro }: { seg: { head: ComponentBlock; blocks: Block[] } | null; intro: Block[] }) {
   const blocks = seg ? seg.blocks : intro
   const texts = blocks.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
   const answers = blocks.filter((b): b is ComponentBlock => b.kind === 'component' && b.name === 'Answer')
@@ -573,7 +574,7 @@ function TeachCover({ problem, segs, onGo }: { problem: string | null; segs: Seg
 }
 
 /** One linked quantity: whichever copy the teacher moves, the others follow. */
-function LinkAll({ names }: { names: string[] }) {
+export function LinkAll({ names }: { names: string[] }) {
   const store = useStore()
   const scope = useScopeFor(names)
   const prev = useRef<Record<string, number>>({})
@@ -959,8 +960,8 @@ function BoardPen({ on, w, h }: { on: boolean; w: number; h: number }) {
  * with the figure large and one question for the class. The explanation is in notes only the
  * teacher opens. A clicker's "next" first reveals the answer to the question, then turns the page.
  */
-function TeachView(props: { blocks: Block[]; title: string; problem: string | null; theme: ThemeName; setTheme: (t: ThemeName) => void; onExit: () => void; onCanvas: () => void }) {
-  const { blocks, title, problem, theme, setTheme, onExit, onCanvas } = props
+function TeachView(props: { blocks: Block[]; title: string; problem: string | null; theme: ThemeName; setTheme: (t: ThemeName) => void; onExit: () => void; onCanvas: () => void; onOldCanvas: () => void }) {
+  const { blocks, title, problem, theme, setTheme, onExit, onCanvas, onOldCanvas } = props
   const { intro, segs } = useMemo(() => splitSegments(blocks), [blocks])
   const scale = useStageScale()
   const [at, setAt] = useState(0)
@@ -1044,6 +1045,9 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
             <button className="pill" onClick={onCanvas} title="整道题铺在一张画布上">
               画布
             </button>
+            <button className="pill" onClick={onOldCanvas} title="上一版：每段一张白底卡片">
+              旧画布
+            </button>
             <button className="pill" onClick={onExit} title="Esc">
               退出
             </button>
@@ -1078,7 +1082,7 @@ export function LessonView({ source }: { source: string }) {
   // On a phone the full text would push the figure off the first screen; the givens line stands in for it.
   // When every segment quotes its own sentences, the full text starts folded on any screen.
   const quoted = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment' && typeof b.props.quote === 'string'), [lesson])
-  const [teach, setTeach] = useState<'' | 'pages' | 'canvas'>('')
+  const [teach, setTeach] = useState<'' | 'pages' | 'canvas' | 'board'>('')
   const [showProblem, setShowProblem] = useState(() => segmented && !quoted && (typeof window === 'undefined' || window.innerWidth > 900))
   const problems = [...lesson.errors.map((e) => `第 ${e.line} 行：${e.message}`), ...registry.errors]
 
@@ -1117,7 +1121,19 @@ export function LessonView({ source }: { source: string }) {
             theme={theme}
             setTheme={setTheme}
             onExit={() => setTeach('')}
-            onCanvas={() => setTeach('canvas')}
+            onCanvas={() => setTeach('board')}
+            onOldCanvas={() => setTeach('canvas')}
+          />
+        )}
+        {teach === 'board' && (
+          <FlowBoard
+            blocks={lesson.blocks}
+            title={typeof meta.title === 'string' ? meta.title : ''}
+            problem={problemText}
+            theme={theme}
+            setTheme={setTheme}
+            onExit={() => setTeach('')}
+            onPages={() => setTeach('pages')}
           />
         )}
         {teach === 'canvas' && (
@@ -1144,7 +1160,7 @@ export function LessonView({ source }: { source: string }) {
               {typeof meta.title === 'string' && <h1>{meta.title}</h1>}
               <div className="head-actions">
                 {segmented && (
-                    <button className="pill" onClick={() => setTeach('canvas')} title="投影到教室屏幕：整道题铺在一张画布上，讲解收进讲稿">
+                    <button className="pill" onClick={() => setTeach('board')} title="投影到教室屏幕：整道题铺在一张画布上，讲解收进讲稿">
                     {screenIcon}上课
                   </button>
                 )}
