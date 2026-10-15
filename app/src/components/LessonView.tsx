@@ -4,7 +4,7 @@ import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import { parseLesson, type Block, type Props } from '../lesson/parse'
-import { buildRegistry, StoreProvider, useScopeFor, useStore } from '../lesson/store'
+import { buildRegistry, reducedMotion, StoreProvider, useScopeFor, useStore } from '../lesson/store'
 import { ThemeContext, type ThemeName } from '../theme'
 import { Answer, ParamControl, Preset, QuestionList, Readout, Status } from './controls'
 import { Bars, Dial, Ledger } from './charts'
@@ -545,13 +545,422 @@ function PenLayer({ strokes, setStrokes }: { strokes: number[][][]; setStrokes: 
   )
 }
 
+function TeachCover({ problem, segs, onGo }: { problem: string | null; segs: Seg[]; onGo: (i: number) => void }) {
+  return (
+    <div className="teach-cover">
+      {problem && (
+        <div className="teach-problem">
+          <Rich html text={problem} />
+        </div>
+      )}
+      <ol className="teach-agenda">
+        {segs.map((s, i) => (
+          <li key={i}>
+            <button onClick={() => onGo(i + 1)}>
+              <span className="seg-num">{i + 1}</span>
+              {str(s.head.props.title)}
+              {str(s.head.props.ask) && (
+                <span className="teach-agenda-ask">
+                  <Rich html text={str(s.head.props.ask)} />
+                </span>
+              )}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
+/** One linked quantity: whichever copy the teacher moves, the others follow. */
+function LinkAll({ names }: { names: string[] }) {
+  const store = useStore()
+  const scope = useScopeFor(names)
+  const prev = useRef<Record<string, number>>({})
+  useEffect(() => {
+    const changed = names.find((n) => prev.current[n] !== undefined && prev.current[n] !== scope[n])
+    prev.current = Object.fromEntries(names.map((n) => [n, scope[n]]))
+    if (changed === undefined) return
+    const v = scope[changed]
+    const patch = Object.fromEntries(names.filter((n) => n !== changed && scope[n] !== v).map((n) => [n, v]))
+    if (Object.keys(patch).length) store.set(patch)
+  })
+  return null
+}
+
+// Canvas layout: every station is a class-mode page at its native size, laid along the chain.
+const ST_W = 1280
+const ST_H = 668
+const ST_HEAD = 96
+const ST_GAP = 320
+const ROW_GAP = 240
+const PEN_PAD = 4000
+
+type Cam = { x: number; y: number; s: number }
+
+/**
+ * Class mode on one board: the problem, each segment and the solution sit side by side along the
+ * chain, joined by arrows that carry the relation from one to the next. "Next" flies the camera to
+ * the next station; O pulls back to the whole board, where every figure is still live. Pen marks
+ * stay on the board where they were written.
+ */
+function CanvasView(props: { blocks: Block[]; title: string; problem: string | null; theme: ThemeName; setTheme: (t: ThemeName) => void; onExit: () => void; onPages: () => void }) {
+  const { blocks, title, problem, theme, setTheme, onExit, onPages } = props
+  const { intro, segs } = useMemo(() => splitSegments(blocks), [blocks])
+  // The panorama segment is the board itself here: its links tie every station together and its
+  // steps label the arrows between the stations it chains.
+  const chainSeg = segs.find((s) => Array.isArray(s.head.props.chain))
+  const chain = chainSeg ? (chainSeg.head.props.chain as unknown[]).map(Number) : []
+  const steps = chainSeg && Array.isArray(chainSeg.head.props.steps) ? (chainSeg.head.props.steps as unknown[]).map((x) => str(x)) : []
+  const link = chainSeg && Array.isArray(chainSeg.head.props.link) ? (chainSeg.head.props.link as unknown[]).filter((n): n is string => typeof n === 'string') : []
+  // Stations: 0 is the problem, then every segment except the panorama, by number.
+  const stations = useMemo(() => [0, ...segs.map((_, i) => i + 1).filter((n) => !Array.isArray(segs[n - 1].head.props.chain))], [segs])
+  // Laid out like a snake, three to a row, so the whole board fits a projector at a readable size.
+  const cols = stations.length > 4 ? 3 : stations.length
+  const rows = Math.ceil(stations.length / cols)
+  const pos = (i: number) => {
+    const r = Math.floor(i / cols)
+    const c = r % 2 ? cols - 1 - (i % cols) : i % cols
+    return { x: c * (ST_W + ST_GAP), y: r * (ST_H + ST_HEAD + ROW_GAP) }
+  }
+  const worldW = cols * (ST_W + ST_GAP) - ST_GAP
+  const worldH = rows * (ST_H + ST_HEAD + ROW_GAP) - ROW_GAP
+  // The arrow from station k to k + 1: sideways within a row, straight down between rows.
+  const link2 = (k: number) => {
+    const a = pos(k)
+    const b = pos(k + 1)
+    const midA = a.y + ST_HEAD + ST_H / 2
+    const midB = b.y + ST_HEAD + ST_H / 2
+    if (a.y === b.y) {
+      const dir = b.x > a.x ? 1 : -1
+      const x1 = dir > 0 ? a.x + ST_W + 24 : a.x - 24
+      const x2 = dir > 0 ? b.x - 24 : b.x + ST_W + 24
+      return {
+        d: `M${x1},${midA} C${x1 + dir * 140},${midA} ${x2 - dir * 140},${midB} ${x2},${midB}`,
+        head: `M${x2 - dir * 18},${midB - 12} L${x2},${midB} L${x2 - dir * 18},${midB + 12}`,
+        label: { left: Math.min(x1, x2), top: midA - 110, width: Math.abs(x2 - x1) },
+      }
+    }
+    const x = a.x + ST_W / 2
+    const y1 = a.y + ST_HEAD + ST_H + 24
+    const y2 = b.y + 12
+    return {
+      d: `M${x},${y1} L${x},${y2}`,
+      head: `M${x - 12},${y2 - 18} L${x},${y2} L${x + 12},${y2 - 18}`,
+      label: { left: x + 32, top: (y1 + y2) / 2 - 26, width: ST_W / 2 },
+    }
+  }
+
+  const viewRef = useRef<HTMLDivElement>(null)
+  const panRef = useRef<HTMLDivElement>(null)
+  const worldRef = useRef<HTMLDivElement>(null)
+  const cam = useRef<Cam>({ x: 0, y: 0, s: 0.3 })
+  const anim = useRef(0)
+  const settle = useRef(0)
+  const [at, setAt] = useState(0)
+  const [overview, setOverview] = useState(true)
+  const [shown, setShown] = useState<Record<number, boolean>>({})
+  const [notes, setNotes] = useState(false)
+  const [pen, setPen] = useState(false)
+
+  // At rest the board is laid out with CSS zoom, so figures redraw crisply at the new size; while
+  // the camera moves it is scaled with a transform, which is cheap to change every frame.
+  const apply = (moving: boolean) => {
+    const pan = panRef.current
+    const world = worldRef.current
+    if (!pan || !world) return
+    const { x, y, s } = cam.current
+    pan.style.transform = `translate(${x}px, ${y}px)`
+    if (moving) {
+      world.style.zoom = '1'
+      world.style.transform = `scale(${s})`
+    } else {
+      world.style.transform = 'none'
+      world.style.zoom = String(s)
+    }
+  }
+  const restSoon = () => {
+    clearTimeout(settle.current)
+    settle.current = window.setTimeout(() => apply(false), 160)
+  }
+  const fit = (bx: number, by: number, bw: number, bh: number, pad = 0.94): Cam => {
+    const v = viewRef.current!
+    const s = Math.min((v.clientWidth / bw) * pad, (v.clientHeight / bh) * pad)
+    return { s, x: v.clientWidth / 2 - (bx + bw / 2) * s, y: v.clientHeight / 2 - (by + bh / 2) * s }
+  }
+  const fly = (to: Cam, ms = 700) => {
+    cancelAnimationFrame(anim.current)
+    clearTimeout(settle.current)
+    const from = { ...cam.current }
+    const t0 = performance.now()
+    const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+    const dur = reducedMotion() ? 1 : ms
+    const step = (now: number) => {
+      const t = Math.min(1, (now - t0) / dur)
+      const k = ease(t)
+      // Interpolate scale geometrically so zooming feels even.
+      const s = from.s * Math.pow(to.s / from.s, k)
+      cam.current = { s, x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k }
+      apply(t < 1)
+      if (t < 1) anim.current = requestAnimationFrame(step)
+    }
+    anim.current = requestAnimationFrame(step)
+  }
+  const flyTo = (i: number) => {
+    const k = Math.max(0, Math.min(stations.length - 1, i))
+    const p = pos(k)
+    setAt(k)
+    setOverview(false)
+    fly(fit(p.x, p.y, ST_W, ST_H + ST_HEAD, 0.98))
+  }
+  const flyAll = () => {
+    setOverview(true)
+    fly(fit(-60, -60, worldW + 120, worldH + 120))
+  }
+
+  useEffect(() => {
+    const c = fit(-60, -60, worldW + 120, worldH + 120)
+    cam.current = c
+    apply(false)
+    const onResize = () => (overview ? flyAll() : flyTo(at))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const segOf = (k: number) => (stations[k] > 0 ? segs[stations[k] - 1] : null)
+  const cur = segOf(at)
+  const hasReveal = !!cur && str(cur.head.props.reveal) !== '' && !overview
+  const next = () => {
+    if (overview) return flyTo(at)
+    if (hasReveal && !shown[at]) return setShown({ ...shown, [at]: true })
+    if (at < stations.length - 1) flyTo(at + 1)
+  }
+  const fullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+    else void document.documentElement.requestFullscreen?.().catch(() => {})
+  }
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') return
+      const k = e.key
+      if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') next()
+      else if (k === 'ArrowLeft' || k === 'PageUp') flyTo(overview ? at : at - 1)
+      else if (k === 'o' || k === 'O') (overview ? flyTo(at) : flyAll())
+      else if (k === 'n' || k === 'N') setNotes((v) => !v)
+      else if (k === 'f' || k === 'F') fullscreen()
+      else if (k === 'p' || k === 'P') setPen((v) => !v)
+      else if (k === 'Escape' && pen) setPen(false)
+      else if (k === 'Escape' && !document.fullscreenElement) onExit()
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
+  // Wheel zooms about the pointer; a sideways swipe pans.
+  useEffect(() => {
+    const v = viewRef.current
+    if (!v) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      cancelAnimationFrame(anim.current)
+      const r = v.getBoundingClientRect()
+      const px = e.clientX - r.left
+      const py = e.clientY - r.top
+      const c = cam.current
+      if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        cam.current = { ...c, x: c.x - e.deltaX }
+      } else {
+        const s = Math.max(0.08, Math.min(3, c.s * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))))
+        cam.current = { s, x: px - ((px - c.x) * s) / c.s, y: py - ((py - c.y) * s) / c.s }
+      }
+      setOverview(false)
+      apply(true)
+      restSoon()
+    }
+    v.addEventListener('wheel', onWheel, { passive: false })
+    return () => v.removeEventListener('wheel', onWheel)
+  })
+
+  // Dragging empty board pans.
+  const drag = useRef<{ x: number; y: number; cx: number; cy: number } | null>(null)
+  const onDown = (e: React.PointerEvent) => {
+    if (pen || !(e.target as HTMLElement).closest('[data-pan]')) return
+    if ((e.target as HTMLElement).closest('[data-nopan]')) return
+    cancelAnimationFrame(anim.current)
+    drag.current = { x: e.clientX, y: e.clientY, cx: cam.current.x, cy: cam.current.y }
+    viewRef.current?.setPointerCapture(e.pointerId)
+  }
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current
+    if (!d) return
+    cam.current = { ...cam.current, x: d.cx + e.clientX - d.x, y: d.cy + e.clientY - d.y }
+    apply(true)
+  }
+  const onUp = () => {
+    if (!drag.current) return
+    drag.current = null
+    setOverview(false)
+    apply(false)
+  }
+
+  const arrowLabel = (k: number) => {
+    // Between two chained stations, the relation that carries one into the next.
+    const a = stations[k]
+    const b = stations[k + 1]
+    const ia = chain.indexOf(a)
+    return ia >= 0 && chain[ia + 1] === b ? steps[ia] ?? '' : ''
+  }
+
+  return (
+    <div className="teach canvas-mode">
+      {link.length > 1 && <LinkAll names={link} />}
+      <div className="teach-bar canvas-bar">
+        <span className="teach-title">{title}</span>
+        <ol className="teach-pages">
+          {stations.map((n, k) => (
+            <li key={k}>
+              <button className={k === at && !overview ? 'active' : ''} onClick={() => flyTo(k)}>
+                {n > 0 && <span className="seg-num">{n}</span>}
+                {k === at && !overview ? (n > 0 ? str(segs[n - 1].head.props.title) : '题目') : n === 0 ? '题目' : ''}
+              </button>
+            </li>
+          ))}
+        </ol>
+        <div className="teach-actions">
+          <button className={`pill ${overview ? 'active' : ''}`} onClick={() => (overview ? flyTo(at) : flyAll())} title="O">
+            全览
+          </button>
+          <button className={`pill ${notes ? 'active' : ''}`} aria-pressed={notes} onClick={() => setNotes(!notes)} title="N">
+            讲稿
+          </button>
+          <button className={`pill ${pen ? 'active' : ''}`} aria-pressed={pen} onClick={() => setPen(!pen)} title="P">
+            画笔
+          </button>
+          <button className={`pill ${theme === 'night' ? 'active' : ''}`} aria-pressed={theme === 'night'} onClick={() => setTheme(theme === 'night' ? 'light' : 'night')}>
+            {moonIcon}
+          </button>
+          <button className="pill" onClick={fullscreen} title="F">
+            全屏
+          </button>
+          <button className="pill teach-next" onClick={next} aria-label="下一步">
+            →
+          </button>
+          <button className="pill" onClick={onPages} title="一页一段">
+            翻页
+          </button>
+          <button className="pill" onClick={onExit} title="Esc">
+            退出
+          </button>
+        </div>
+      </div>
+      <div className={`canvas-view ${pen ? 'pen-on' : ''}`} ref={viewRef} data-pan onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
+        <div className="canvas-pan" ref={panRef}>
+          <div className="canvas-world" ref={worldRef} style={{ width: worldW, height: worldH }} data-pan>
+            <svg className="canvas-links" width={worldW} height={worldH} aria-hidden>
+              {stations.slice(0, -1).map((_, k) => {
+                const l = link2(k)
+                return (
+                  <g key={k}>
+                    <path d={l.d} className="canvas-link" />
+                    <path d={l.head} className="canvas-link" />
+                  </g>
+                )
+              })}
+            </svg>
+            {stations.slice(0, -1).map((_, k) => {
+              const label = arrowLabel(k)
+              if (!label) return null
+              const l = link2(k)
+              return (
+                <div key={k} className="canvas-link-label" style={l.label}>
+                  <span>
+                    <Rich html text={label} />
+                  </span>
+                </div>
+              )
+            })}
+            {stations.map((n, k) => {
+              const p = pos(k)
+              const seg = segOf(k)
+              return (
+                <section key={k} className={`canvas-station ${k === at && !overview ? 'current' : ''}`} style={{ left: p.x, top: p.y, width: ST_W }}>
+                  <button className="canvas-station-head" onClick={() => flyTo(k)}>
+                    {n > 0 && <span className="canvas-station-num">{n}</span>}
+                    {n > 0 ? str(segs[n - 1].head.props.title) : '题目'}
+                  </button>
+                  <div className="canvas-station-body" style={{ height: ST_H }} data-nopan>
+                    {seg ? (
+                      <TeachPage seg={seg} segs={segs} all={blocks} shown={!!shown[k]} onReveal={() => setShown((v) => ({ ...v, [k]: true }))} />
+                    ) : (
+                      <TeachCover problem={problem} segs={segs} onGo={(i) => (stations.includes(i) ? flyTo(stations.indexOf(i)) : flyAll())} />
+                    )}
+                  </div>
+                </section>
+              )
+            })}
+            <BoardPen on={pen} w={worldW} h={worldH} />
+          </div>
+        </div>
+      </div>
+      {notes && (
+        <div className="canvas-notes">
+          <TeachNotes seg={cur} intro={intro} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Pen marks in board coordinates: they stay where they were written and scale with the board. */
+function BoardPen({ on, w, h }: { on: boolean; w: number; h: number }) {
+  const ref = useRef<SVGSVGElement>(null)
+  const [strokes, setStrokes] = useState<number[][][]>([])
+  const drawing = useRef(false)
+  const at = (e: React.PointerEvent) => {
+    const el = ref.current!
+    const r = el.getBoundingClientRect()
+    return [((e.clientX - r.left) * el.clientWidth) / r.width - PEN_PAD, ((e.clientY - r.top) * el.clientHeight) / r.height - PEN_PAD]
+  }
+  return (
+    <svg
+      ref={ref}
+      className={`canvas-pen ${on ? 'on' : ''}`}
+      style={{ left: -PEN_PAD, top: -PEN_PAD, width: w + 2 * PEN_PAD, height: h + 2 * PEN_PAD }}
+      viewBox={`${-PEN_PAD} ${-PEN_PAD} ${w + 2 * PEN_PAD} ${h + 2 * PEN_PAD}`}
+      onPointerDown={(e) => {
+        if (!on) return
+        e.stopPropagation()
+        drawing.current = true
+        ;(e.target as Element).setPointerCapture(e.pointerId)
+        const pt = at(e)
+        setStrokes((s) => [...s, [pt]])
+      }}
+      onPointerMove={(e) => {
+        if (!drawing.current) return
+        const pt = at(e)
+        setStrokes((s) => [...s.slice(0, -1), [...s[s.length - 1], pt]])
+      }}
+      onPointerUp={() => (drawing.current = false)}
+      onDoubleClick={() => on && setStrokes([])}
+    >
+      {strokes.map((st, i) => (
+        <polyline key={i} points={st.map((p) => p.join(',')).join(' ')} />
+      ))}
+    </svg>
+  )
+}
+
 /**
  * Class mode for a segmented lesson: a cover page with the problem, then one segment per screen
  * with the figure large and one question for the class. The explanation is in notes only the
  * teacher opens. A clicker's "next" first reveals the answer to the question, then turns the page.
  */
-function TeachView(props: { blocks: Block[]; title: string; problem: string | null; theme: ThemeName; setTheme: (t: ThemeName) => void; onExit: () => void }) {
-  const { blocks, title, problem, theme, setTheme, onExit } = props
+function TeachView(props: { blocks: Block[]; title: string; problem: string | null; theme: ThemeName; setTheme: (t: ThemeName) => void; onExit: () => void; onCanvas: () => void }) {
+  const { blocks, title, problem, theme, setTheme, onExit, onCanvas } = props
   const { intro, segs } = useMemo(() => splitSegments(blocks), [blocks])
   const scale = useStageScale()
   const [at, setAt] = useState(0)
@@ -632,6 +1041,9 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
             <button className="pill teach-next" onClick={next} disabled={at === segs.length && !hasReveal} aria-label="下一步">
               →
             </button>
+            <button className="pill" onClick={onCanvas} title="整道题铺在一张画布上">
+              画布
+            </button>
             <button className="pill" onClick={onExit} title="Esc">
               退出
             </button>
@@ -642,28 +1054,7 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
             // key: each page starts its figures from their own initial state
             <TeachPage key={at} seg={seg} segs={segs} all={blocks} shown={shown} onReveal={() => setShown(true)} />
           ) : (
-            <div className="teach-cover">
-              {problem && (
-                <div className="teach-problem">
-                  <Rich html text={problem} />
-                </div>
-              )}
-              <ol className="teach-agenda">
-                {segs.map((s, i) => (
-                  <li key={i}>
-                    <button onClick={() => go(i + 1)}>
-                      <span className="seg-num">{i + 1}</span>
-                      {str(s.head.props.title)}
-                      {str(s.head.props.ask) && (
-                        <span className="teach-agenda-ask">
-                          <Rich html text={str(s.head.props.ask)} />
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <TeachCover problem={problem} segs={segs} onGo={go} />
           )}
           {(pen || strokes.length > 0) && (
             <div className={`teach-pen-wrap ${pen ? 'on' : ''}`}>
@@ -687,7 +1078,7 @@ export function LessonView({ source }: { source: string }) {
   // On a phone the full text would push the figure off the first screen; the givens line stands in for it.
   // When every segment quotes its own sentences, the full text starts folded on any screen.
   const quoted = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment' && typeof b.props.quote === 'string'), [lesson])
-  const [teach, setTeach] = useState(false)
+  const [teach, setTeach] = useState<'' | 'pages' | 'canvas'>('')
   const [showProblem, setShowProblem] = useState(() => segmented && !quoted && (typeof window === 'undefined' || window.innerWidth > 900))
   const problems = [...lesson.errors.map((e) => `第 ${e.line} 行：${e.message}`), ...registry.errors]
 
@@ -718,17 +1109,29 @@ export function LessonView({ source }: { source: string }) {
   return (
     <ThemeContext.Provider value={theme}>
       <StoreProvider registry={registry}>
-        {teach && (
+        {teach === 'pages' && (
           <TeachView
             blocks={lesson.blocks}
             title={typeof meta.title === 'string' ? meta.title : ''}
             problem={problemText}
             theme={theme}
             setTheme={setTheme}
-            onExit={() => setTeach(false)}
+            onExit={() => setTeach('')}
+            onCanvas={() => setTeach('canvas')}
           />
         )}
-        <article className={`lesson theme-${theme}`} hidden={teach}>
+        {teach === 'canvas' && (
+          <CanvasView
+            blocks={lesson.blocks}
+            title={typeof meta.title === 'string' ? meta.title : ''}
+            problem={problemText}
+            theme={theme}
+            setTheme={setTheme}
+            onExit={() => setTeach('')}
+            onPages={() => setTeach('pages')}
+          />
+        )}
+        <article className={`lesson theme-${theme}`} hidden={!!teach}>
           <header className="lesson-head">
             {crumbs.length > 0 && (
               <div className="crumbs">
@@ -741,7 +1144,7 @@ export function LessonView({ source }: { source: string }) {
               {typeof meta.title === 'string' && <h1>{meta.title}</h1>}
               <div className="head-actions">
                 {segmented && (
-                    <button className="pill" onClick={() => setTeach(true)} title="投影到教室屏幕：一页一段，讲解收进讲稿">
+                    <button className="pill" onClick={() => setTeach('canvas')} title="投影到教室屏幕：整道题铺在一张画布上，讲解收进讲稿">
                     {screenIcon}上课
                   </button>
                 )}

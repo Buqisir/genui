@@ -3255,3 +3255,158 @@ figure.card {
   padding-top: 8px;
   padding-bottom: 8px;
 }
+
+/* ---------- Class mode on one board ---------- */
+
+.canvas-mode {
+  display: flex;
+  flex-direction: column;
+  place-items: stretch;
+}
+
+.canvas-bar {
+  position: relative;
+  z-index: 3;
+  background: var(--c-page);
+}
+
+.canvas-view {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    radial-gradient(circle, var(--c-hairline) 1px, transparent 1.2px) 0 0 / 28px 28px,
+    var(--c-page);
+}
+
+.canvas-view:active {
+  cursor: grabbing;
+}
+
+.canvas-view.pen-on {
+  cursor: crosshair;
+}
+
+.canvas-pan {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.canvas-world {
+  position: relative;
+  transform-origin: 0 0;
+}
+
+.canvas-links {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.canvas-link {
+  fill: none;
+  stroke: var(--c-charge);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.canvas-link-label {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 600;
+  color: var(--c-ink);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.canvas-station {
+  position: absolute;
+  cursor: default;
+}
+
+.canvas-station-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 96px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--c-ink);
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.canvas-station-num {
+  display: inline-grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--c-ink);
+  color: var(--c-inverse);
+  font-family: var(--font-readout);
+  font-size: 32px;
+  font-weight: 500;
+}
+
+.canvas-station-body {
+  position: relative;
+  border-radius: 28px;
+  background: var(--c-page);
+  box-shadow: 0 0 0 1px var(--c-hairline), 0 18px 60px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: box-shadow 0.3s var(--ease);
+}
+
+.canvas-station.current .canvas-station-body {
+  box-shadow: 0 0 0 3px var(--c-ink), 0 18px 60px rgba(0, 0, 0, 0.12);
+}
+
+.canvas-station-body > .teach-cover,
+.canvas-station-body > .teach-page,
+.canvas-station-body > .teach-board,
+.canvas-station-body > .teach-pano {
+  height: 100%;
+}
+
+.canvas-pen {
+  position: absolute;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.canvas-pen.on {
+  pointer-events: auto;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.canvas-pen polyline {
+  fill: none;
+  stroke: var(--c-force);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.canvas-notes .teach-notes {
+  position: fixed;
+  top: 52px;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+}
