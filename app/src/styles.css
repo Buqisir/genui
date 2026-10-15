@@ -2462,10 +2462,16 @@ figure.card {
   min-width: 0;
 }
 
+/* Sliders and readouts take a row each; preset buttons sit side by side. */
+.seg-controls > :not(.preset) {
+  flex: 1 1 100%;
+}
+
 .seg-controls {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 14px 8px;
   padding: 16px 20px;
   border-radius: var(--radius-lg);
   background: var(--c-card);
@@ -2800,3 +2806,272 @@ figure.card {
 .gastube .tube-label { fill: var(--c-ink); font-size: 13px; font-family: var(--font-sans); }
 .gastube-warn { margin: 0; padding: 4px 16px 10px; color: var(--c-graphite); font-size: 13px; }
 .gastube-empty { padding: 48px; text-align: center; color: var(--c-graphite); }
+
+/* ---------- Class mode: a 1280×720 stage scaled to the projector ---------- */
+
+.teach {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--c-page);
+  overflow: hidden;
+}
+
+.teach-stage {
+  position: relative;
+  width: 1280px;
+  height: 720px;
+  display: flex;
+  flex-direction: column;
+  color: var(--c-ink);
+}
+
+.teach-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 52px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--c-hairline);
+  flex: none;
+}
+
+.teach-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.teach-pages {
+  display: flex;
+  gap: 6px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.teach-pages button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--c-graphite);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.teach-pages button:has(.seg-num):not(.active) {
+  padding: 0 4px;
+}
+
+.teach-pages button.active {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+  color: var(--c-inverse);
+}
+
+.teach-pages button.active .seg-num {
+  background: var(--c-inverse);
+  color: var(--c-ink);
+}
+
+.teach-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.teach-actions .pill {
+  height: 32px;
+  padding: 0 12px;
+}
+
+.teach-next:not(:disabled) {
+  background: var(--c-ink);
+  color: var(--c-inverse);
+  border-color: var(--c-ink);
+}
+
+.teach-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.teach-page {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 28px;
+  height: 100%;
+  padding: 20px 28px;
+  box-sizing: border-box;
+}
+
+.teach-visual,
+.teach-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.teach-side .seg-quote {
+  margin: 0;
+  font-size: 15px;
+}
+
+.teach-ask {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+
+.teach-tag {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+  border-radius: 50%;
+  background: var(--c-charge);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 20px;
+  vertical-align: 4px;
+}
+
+.teach-reveal-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 20px;
+  border: 1.5px dashed var(--c-steel);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--c-graphite);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.teach-reveal-btn kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--c-hairline);
+  border-radius: 4px;
+}
+
+.teach-reveal {
+  padding: 14px 18px;
+  border-left: 4px solid var(--c-charge);
+  border-radius: var(--radius-md);
+  background: var(--c-raised);
+  font-size: 21px;
+  line-height: 1.6;
+  animation: rise 0.35s var(--ease);
+}
+
+.teach-cover {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 40px;
+  height: 100%;
+  padding: 36px 48px;
+  box-sizing: border-box;
+}
+
+.teach-problem {
+  font-size: 21px;
+  line-height: 1.85;
+  overflow: auto;
+}
+
+.teach-agenda {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.teach-agenda button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: inherit;
+  font-size: 19px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.teach-agenda .teach-agenda-ask {
+  grid-column: 2;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--c-graphite);
+}
+
+.teach-board {
+  height: 100%;
+  padding: 28px 48px;
+  box-sizing: border-box;
+  overflow: auto;
+  font-size: 19px;
+  line-height: 1.8;
+}
+
+.teach-board.solution {
+  max-width: 1100px;
+  margin: 0 auto;
+  border: 0;
+  font-size: 18px;
+}
+
+.teach-notes {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 460px;
+  padding: 20px 24px;
+  box-sizing: border-box;
+  overflow: auto;
+  background: var(--c-card);
+  border-left: 1px solid var(--c-hairline);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.12);
+  animation: rise 0.25s var(--ease);
+}
+
+.teach-notes-title {
+  margin-bottom: 12px;
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-wide);
+  color: var(--c-steel);
+}

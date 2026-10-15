@@ -20,7 +20,7 @@ answers:
 
 题目只给字母，演示取 $I_0 = 0.5\ \mathrm{A}$、$l = 2\ \mathrm{cm}$、$\alpha = 50\ \Omega/\mathrm{N}$、$R_0 = 100\ \Omega$、$E = 6\ \mathrm{V}$。
 
-<Segment title="安培力：一个向下一个向上" quote="长度均为 l、通有恒定电流 I_0（**方向相反**）的两刚性金属杆 ab、cd……现施加待测磁场，其方向**水平向右、且垂直于金属杆**……(1) 判断金属杆 ab 和 cd 所受安培力的方向。" hint="先看立体图，再把「视角」切到「正面看」；然后拖动 B。" watch="正面看时 ab 中电流朝里（⊗）、cd 中电流朝外（⊙）；两个 F 一个向下、一个向上，大小相等，随 B 一起变长。" />
+<Segment title="安培力：一个向下一个向上" quote="长度均为 l、通有恒定电流 I_0（**方向相反**）的两刚性金属杆 ab、cd……现施加待测磁场，其方向**水平向右、且垂直于金属杆**……(1) 判断金属杆 ab 和 cd 所受安培力的方向。" hint="先看立体图，再把「视角」切到「正面看」；然后拖动 B。" watch="正面看时 ab 中电流朝里（⊗）、cd 中电流朝外（⊙）；两个 F 一个向下、一个向上，大小相等，随 B 一起变长。" ask="ab 和 cd 受的安培力，各朝哪个方向？" reveal="ab 向下，cd 向上，大小都是 BI_{0}l。两根杆电流反向，所以力也反向。" revealParam="showF" />
 
 立体图里，$a$、$d$ 在前，$b$、$c$ 在后。$ab$ 中电流从 $a$ 流向 $b$，也就是**从前往后**；$cd$ 中电流从 $c$ 流向 $d$，**从后往前**。
 
@@ -39,16 +39,18 @@ answers:
 
 <Param name="l" label="杆长" value={0.02} hidden />
 
+<Param name="showF" label="画出安培力" value={1} hidden />
+
 <Define name="Fa" expr="Ba*I0*l" />
 
 <Readout items={[
   {label: "每根杆受的安培力", symbol: "F", expr: "Fa*1000", unit: "mN", digits: 2, color: "force"}
 ]} />
 
-<Figure title="H 形支架与安培力" height={320} params={["view", "Fa"]} legend={[{kind: "field", label: "磁场 B"}, {kind: "charge", label: "杆中电流"}, {kind: "force", label: "安培力 F"}]} note="尺寸不按比例；a、d 在前，b、c 在后">
+<Figure title="H 形支架与安培力" height={320} params={["view", "Fa", "showF"]} legend={[{kind: "field", label: "磁场 B"}, {kind: "charge", label: "杆中电流"}, {kind: "force", label: "安培力 F"}]} note="尺寸不按比例；a、d 在前，b、c 在后">
 figure({
   draw(ctx, p, v) {
-    const len = 60 * p.Fa
+    const len = p.showF > 0.5 ? 60 * p.Fa : 0
     if (p.view < 0.5) {
       const m = v.view({ xmin: -1.45, xmax: 1.55, ymin: -0.55, ymax: 0.75, equal: true })
       const k = 0.5 * Math.SQRT1_2
@@ -101,7 +103,7 @@ figure({
 })
 </Figure>
 
-<Segment title="形变：哪面拉长、哪面压短" quote="在悬梁**上、下表面对称安装四个相同的电阻应变片**……金属杆 ab、cd 受安培力作用，使悬梁 OA、OD 产生形变，四个应变片的阻值发生相应变化，其**变化量的绝对值均为 ΔR**……(2) 写出上述四个电阻的阻值（用 R_0 和 ΔR 表示）。" hint="拖动 B，从 0 拖到 0.5 T。" watch="左梁向下弯：上表面的 R₁ 被拉长，下表面的 R₃ 被压短；右梁向上弯，正好相反。被拉长的阻值变大，被压短的变小。" />
+<Segment title="形变：哪面拉长、哪面压短" quote="在悬梁**上、下表面对称安装四个相同的电阻应变片**……金属杆 ab、cd 受安培力作用，使悬梁 OA、OD 产生形变，四个应变片的阻值发生相应变化，其**变化量的绝对值均为 ΔR**……(2) 写出上述四个电阻的阻值（用 R_0 和 ΔR 表示）。" hint="拖动 B，从 0 拖到 0.5 T。" watch="左梁向下弯：上表面的 R₁ 被拉长，下表面的 R₃ 被压短；右梁向上弯，正好相反。被拉长的阻值变大，被压短的变小。" ask="B 增大时，R_1～R_4 哪些变大、哪些变小？" reveal="R_1、R_4 变大，R_2、R_3 变小。被拉长的变大，被压短的变小。" />
 
 悬梁中间固定在 $O$，两端受力，每一半都像一根**一端固定的悬臂梁**。
 
@@ -182,7 +184,7 @@ figure({
 })
 </Figure>
 
-<Segment title="电桥：输出与 B 成正比" quote="将它们按图2方式与**电动势为 E 的电源（不计内阻）**相连。未加磁场时……**测得 e、f 两端的电势差为 0**……(3) 已知**电阻变化量和所受的安培力成正比关系，且比例系数为 α**，求 U_ef 与 B 之间的关系。" hint="拖动 B，从 0 拖到 0.5 T；再点「磁场加倍」。" watch="每条支路里一个电阻变大、一个变小，支路总电阻一直是 2R₀，电流不变；所以 U_ef 只跟 ΔR 有关，B 加倍，U_ef 也加倍——下面是一条过原点的直线。" />
+<Segment title="电桥：输出与 B 成正比" quote="将它们按图2方式与**电动势为 E 的电源（不计内阻）**相连。未加磁场时……**测得 e、f 两端的电势差为 0**……(3) 已知**电阻变化量和所受的安培力成正比关系，且比例系数为 α**，求 U_ef 与 B 之间的关系。" hint="拖动 B，从 0 拖到 0.5 T；再点「磁场加倍」。" watch="每条支路里一个电阻变大、一个变小，支路总电阻一直是 2R₀，电流不变；所以 U_ef 只跟 ΔR 有关，B 加倍，U_ef 也加倍——下面是一条过原点的直线。" ask="B 加倍，U_ef 怎么变？" reveal="也加倍。每条支路总电阻始终是 2R_0，电流不变，U_ef = EΔR/R_0，而 ΔR ∝ B。" />
 
 图 2 中 $R_1$、$R_2$ 串成上支路，$R_3$、$R_4$ 串成下支路，两条支路并联接在电源上；$f$ 在 $R_1$、$R_2$ 之间，$e$ 在 $R_3$、$R_4$ 之间。
 

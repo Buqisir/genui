@@ -482,6 +482,10 @@ function checkComponent(
   })
 
   switch (b.name) {
+    case 'Segment': {
+      if (props.revealParam !== undefined) nameRef(props.revealParam, 'revealParam', true)
+      break
+    }
     case 'Param': {
       for (const k of ['min', 'max', 'step'] as const) if (props[k] !== undefined) expr(props[k], k)
       color(props.color, 'color')
