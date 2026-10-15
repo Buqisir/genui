@@ -21,11 +21,12 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { getStroke } from 'perfect-freehand'
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Block } from '../lesson/parse'
-import { useScopeFor, useStore } from '../lesson/store'
+import { useScope, useStore } from '../lesson/store'
 import type { ThemeName } from '../theme'
 import { boxed, LinkAll, MAIN, Markdown, moonIcon, Quote, splitSegments, str, TeachNotes, type Seg } from './LessonView'
+import { Sym, Value } from './controls'
 import { Rich } from './rich'
 
 type ComponentBlock = Extract<Block, { kind: 'component' }>
@@ -34,15 +35,30 @@ type ComponentBlock = Extract<Block, { kind: 'component' }>
 // projector at about 1:1 and figures stay crisp; the overview only ever scales them down.
 const Z = 1.5
 
+/** A Readout's item, as controls.tsx formats it. */
+type ReadoutItem = { label: string; expr: string; unit?: string; digits?: number; symbol?: string; color?: string; format?: string }
+
+/** The variant on the board: which one, and the values the board held before it was applied. */
+type Active = { id: string; label: string; before: Record<string, number> }
+
 type Board = {
   segs: Seg[]
   shown: Record<number, boolean>
   reveal: (k: number) => void
   problem: string | null
   blocks: Block[]
+  active: Active | null
+  apply: (id: string, v: VariantData) => void
+  restore: () => void
+  /** The quantities a variant card compares: the panorama's readouts, or the first few in the lesson. */
+  compare: ReadoutItem[]
 }
 const BoardContext = createContext<Board | null>(null)
 const useBoard = () => useContext(BoardContext)!
+
+/** Two readings differ when they are not equal to within a part in a billion; NaN only matches NaN. */
+const differs = (a: number, b: number) =>
+  Number.isFinite(a) && Number.isFinite(b) ? Math.abs(a - b) > 1e-9 * Math.max(Math.abs(a), Math.abs(b)) : a !== b && !(Number.isNaN(a) && Number.isNaN(b))
 
 const handles = (
   <>
@@ -66,12 +82,14 @@ function Zoomed({ width, children, className = '' }: { width: number; children: 
 type Data = { k: number; n: number }
 
 function TitleNode({ data }: NodeProps<Node<Data>>) {
-  const { segs } = useBoard()
+  const { segs, active } = useBoard()
   return (
     <div className="fb-title">
       <Handle type="target" position={Position.Top} id="t" className="fb-handle" />
       {data.n > 0 && <span className="fb-title-num">{data.n}</span>}
-      {data.n > 0 ? str(segs[data.n - 1].head.props.title) : '题目'}
+      {data.n > 0 ? str(segs[data.n - 1].head.props.title) : data.n < 0 ? '如果……' : '题目'}
+      {/* A segment's title states the original problem's result. */}
+      {active && data.n > 0 && <span className="fb-title-orig">原题</span>}
     </div>
   )
 }
@@ -102,9 +120,24 @@ function VisualNode({ data }: NodeProps<Node<Data>>) {
   )
 }
 
-/** Quote, the question to the class, and what comes with the answer. */
+/** Says which variant the board is showing; the station's own words are put away under it. */
+function VariantBanner({ line }: { line: string }) {
+  const { active } = useBoard()
+  if (!active) return null
+  return (
+    <div className="fb-variant-banner">
+      <div className="fb-variant-line">
+        <span className="fb-variant-pill">如果</span>
+        <b>{active.label}</b>
+      </div>
+      <div>{line}</div>
+    </div>
+  )
+}
+
+/** Quote, the question to the class, and what comes with the answer. While a variant is applied, the readouts and charts show its numbers and the original words are put away. */
 function SideNode({ data }: NodeProps<Node<Data>>) {
-  const { segs, shown, reveal } = useBoard()
+  const { segs, shown, reveal, active } = useBoard()
   const store = useStore()
   const seg = segs[data.n - 1]
   const comps = seg.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
@@ -115,7 +148,9 @@ function SideNode({ data }: NodeProps<Node<Data>>) {
   const answer = str(seg.head.props.reveal)
   const revealParam = str(seg.head.props.revealParam)
   const isShown = !!shown[data.k]
-  const open = !answer || isShown
+  const varied = !!active
+  // Under a variant the figure shows everything it computes, answer included.
+  const open = !answer || isShown || varied
   useEffect(() => {
     if (revealParam) store.set({ [revealParam]: open ? 1 : 0 })
   }, [store, revealParam, open])
@@ -123,14 +158,16 @@ function SideNode({ data }: NodeProps<Node<Data>>) {
   return (
     <Zoomed width={560} className="fb-side">
       {handles}
-      {quote && !(isShown && (outputs.length > 0 || visuals.length > 1)) && <Quote text={quote} />}
-      {ask && (
+      {varied && <VariantBanner line="这一站已按变式重新计算。原题的提问和讲解先收起。" />}
+      {!varied && quote && !(isShown && (outputs.length > 0 || visuals.length > 1)) && <Quote text={quote} />}
+      {!varied && ask && (
         <div className="teach-ask">
           <span className="teach-tag">问</span>
           <Rich html text={ask} />
         </div>
       )}
-      {answer &&
+      {!varied &&
+        answer &&
         (isShown ? (
           <div className="teach-reveal">
             <Rich html text={answer} />
@@ -140,22 +177,25 @@ function SideNode({ data }: NodeProps<Node<Data>>) {
             揭晓 <kbd>空格</kbd>
           </button>
         ))}
-      {open && outputs.length > 0 && <div className="fb-outputs nodrag">{outputs.map((b, i) => boxed(b, `o${i}`))}</div>}
-      {open && visuals.slice(1).map((b, i) => <div key={i} className="nodrag nowheel">{boxed(b, `v${i}`)}</div>)}
+      {(open || varied) && outputs.length > 0 && <div className="fb-outputs nodrag">{outputs.map((b, i) => boxed(b, `o${i}`))}</div>}
+      {(open || varied) && visuals.slice(1).map((b, i) => <div key={i} className="nodrag nowheel">{boxed(b, `v${i}`)}</div>)}
     </Zoomed>
   )
 }
 
 function SolutionNode({ data }: NodeProps<Node<Data>>) {
-  const { segs } = useBoard()
+  const { segs, active } = useBoard()
   const seg = segs[data.n - 1]
   const texts = seg.blocks.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
   return (
     <Zoomed width={980} className="fb-solution solution">
       {handles}
-      {texts.map((b, i) => (
-        <Markdown key={i} text={b.text} />
-      ))}
+      {active && <VariantBanner line="完整解答是原题的。" />}
+      <div className={active ? 'fb-muted' : undefined}>
+        {texts.map((b, i) => (
+          <Markdown key={i} text={b.text} />
+        ))}
+      </div>
     </Zoomed>
   )
 }
@@ -171,11 +211,20 @@ function numbers(v: unknown): Record<string, number> {
   return Object.fromEntries(Object.entries(v).filter((e): e is [string, number] => typeof e[1] === 'number'))
 }
 
+const isReadoutItem = (x: unknown): x is ReadoutItem => !!x && typeof x === 'object' && typeof (x as ReadoutItem).expr === 'string'
+
 /** The × in a teacher-made node's corner. */
-function DelButton({ id }: { id: string }) {
+function DelButton({ id, onDelete }: { id: string; onDelete?: () => void }) {
   const { deleteElements } = useReactFlow()
   return (
-    <button className="fb-del nodrag" aria-label="删除" onClick={() => void deleteElements({ nodes: [{ id }] })}>
+    <button
+      className="fb-del nodrag"
+      aria-label="删除"
+      onClick={() => {
+        onDelete?.()
+        void deleteElements({ nodes: [{ id }] })
+      }}
+    >
       ×
     </button>
   )
@@ -205,35 +254,27 @@ function SliderNode({ id, data }: NodeProps<Node<SliderData>>) {
   )
 }
 
-/** A Variant: setting its values on the board, and putting them back. Restored on removal too. */
+/**
+ * A Variant: applied on the board, one at a time (the board owns which). The table sets the
+ * original values against the variant's, live, for the quantities the board compares.
+ */
 function VariantNode({ id, data }: NodeProps<Node<VariantData>>) {
+  const { active, apply, restore, compare } = useBoard()
   const store = useStore()
-  const keys = Object.keys(data.set)
-  const scope = useScopeFor(keys)
-  const [applied, setApplied] = useState(false)
+  const scope = useScope()
   const [revealed, setRevealed] = useState(false)
-  const before = useRef<Record<string, number>>({})
-  const appliedRef = useRef(false)
-  useEffect(
-    () => () => {
-      if (appliedRef.current) store.set(before.current)
-    },
-    [store],
-  )
-  const apply = () => {
-    before.current = Object.fromEntries(keys.map((k) => [k, scope[k] as number]))
-    store.set(data.set)
-    appliedRef.current = true
-    setApplied(true)
-  }
-  const restore = () => {
-    store.set(before.current)
-    appliedRef.current = false
-    setApplied(false)
-  }
+  const applied = active?.id === id
+  // The original problem: the board's values before any variant; while this one is applied, its own.
+  const origin = active ? store.scopeWith(active.before) : scope
+  const variant = applied ? scope : store.scopeWith({ ...active?.before, ...data.set })
+  const rows = compare.map((it) => {
+    const a = store.reading(it.expr, origin)
+    const b = store.reading(it.expr, variant)
+    return { it, a, b, changed: differs(a, b) }
+  })
   return (
     <Zoomed width={560} className={`fb-variant${applied ? ' applied' : ''}`}>
-      <DelButton id={id} />
+      <DelButton id={id} onDelete={() => applied && restore()} />
       <div className="fb-variant-head">
         <span className="teach-tag">如果</span>
         <span className="fb-variant-label">{data.label}</span>
@@ -244,7 +285,7 @@ function VariantNode({ id, data }: NodeProps<Node<VariantData>>) {
         </div>
       )}
       <div className="fb-variant-actions">
-        <button className="pill nodrag" onClick={applied ? restore : apply}>
+        <button className="pill nodrag" onClick={() => (applied ? restore() : apply(id, data))}>
           {applied ? '复原' : '应用'}
         </button>
         {data.reveal && !revealed && (
@@ -257,6 +298,33 @@ function VariantNode({ id, data }: NodeProps<Node<VariantData>>) {
         <div className="teach-reveal">
           <Rich html text={data.reveal} />
         </div>
+      )}
+      {rows.length > 0 && (
+        <table className="fb-compare nodrag">
+          <thead>
+            <tr>
+              <th>量</th>
+              <th>原题</th>
+              <th>如果</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ it, a, b, changed }, i) => (
+              <tr key={i} className={changed ? 'changed' : undefined}>
+                <th scope="row">
+                  <Sym text={it.symbol} color={it.color} />
+                  <Rich text={it.label} html />
+                </th>
+                <td>
+                  <Value value={a} unit={it.unit} digits={it.digits} format={it.format} />
+                </td>
+                <td>
+                  <Value value={b} unit={it.unit} digits={it.digits} format={it.format} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </Zoomed>
   )
@@ -367,9 +435,28 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
   // Stations: the problem, then each segment except the panorama (the board is the panorama).
   const stations = useMemo(() => [0, ...segs.map((_, i) => i + 1).filter((n) => !Array.isArray(segs[n - 1].head.props.chain))], [segs])
   const hasVisual = (n: number) => n > 0 && segs[n - 1].blocks.some((b) => b.kind === 'component' && MAIN.has(b.name))
+  const variants = useMemo(
+    () =>
+      blocks.flatMap((b): VariantData[] =>
+        b.kind === 'component' && b.name === 'Variant'
+          ? [{ label: str(b.props.label), set: numbers(b.props.set), ask: str(b.props.ask), reveal: str(b.props.reveal) }]
+          : [],
+      ),
+    [blocks],
+  )
+  // The 如果…… station after the segments, one card per Variant; its title is n = -1.
+  const extra = variants.length > 0
+  const navs = useMemo(() => (extra ? [...stations, -1] : stations), [stations, extra])
+  // The panorama's readouts, else the first few in the lesson: what a variant card compares.
+  const compare = useMemo((): ReadoutItem[] => {
+    const items = (bs: Block[]) =>
+      bs.flatMap((b) => (b.kind === 'component' && b.name === 'Readout' && Array.isArray(b.props.items) ? (b.props.items as unknown[]).filter(isReadoutItem) : []))
+    const pano = chainSeg ? items(chainSeg.blocks) : []
+    return pano.length > 0 ? pano : items(blocks).slice(0, 4)
+  }, [chainSeg, blocks])
 
   const { nodes: laidOut, edges, ids } = useMemo(() => {
-    const cols = stations.length > 4 ? 3 : stations.length
+    const cols = navs.length > 4 ? 3 : navs.length
     const place = (k: number) => {
       const r = Math.floor(k / cols)
       const c = r % 2 ? cols - 1 - (k % cols) : k % cols
@@ -399,6 +486,18 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
       }
       ids.push(own)
     })
+    if (extra) {
+      const k = stations.length
+      const p = place(k)
+      nodes.push({ id: `t${k}`, type: 'title', position: { x: p.x, y: p.y }, data: { k, n: -1 } })
+      const own = [`t${k}`]
+      variants.forEach((v, i) => {
+        const id = `w${i}`
+        nodes.push({ id, type: 'variant', position: { x: p.x, y: p.y + 150 + i * 720 }, data: v })
+        own.push(id)
+      })
+      ids.push(own)
+    }
     const edges: Edge<{ label?: string }>[] = stations.slice(0, -1).map((a, k) => {
       const pa = place(k)
       const pb = place(k + 1)
@@ -419,7 +518,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
       }
     })
     return { nodes, edges, ids }
-  }, [stations, segs]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stations, segs, navs, extra, variants]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Teachers may drag things about the board; the layout above is only where they start.
   const [nodes, setNodes, onNodesChange] = useNodesState(laidOut)
@@ -440,15 +539,6 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
     }
     return out
   }, [blocks])
-  const variants = useMemo(
-    () =>
-      blocks.flatMap((b): VariantData[] =>
-        b.kind === 'component' && b.name === 'Variant'
-          ? [{ label: str(b.props.label), set: numbers(b.props.set), ask: str(b.props.ask), reveal: str(b.props.reveal) }]
-          : [],
-      ),
-    [blocks],
-  )
   const addNode = (type: string, at: { x: number; y: number }, data: AnyData) => {
     const id = `u${++uid.current}`
     setNodes((ns) => [...ns, { id, type, position: at, data }])
@@ -469,8 +559,41 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
   const [pen, setPen] = useState(false)
   const [strokes, setStrokes] = useState<Stroke[]>([])
 
+  // One variant at a time, owned here. The ref is what the callbacks and the unmount cleanup read.
+  const store = useStore()
+  const [active, setActive] = useState<Active | null>(null)
+  const activeRef = useRef<Active | null>(null)
+  const apply = useCallback(
+    (id: string, v: VariantData) => {
+      const prev = activeRef.current
+      if (prev) store.set(prev.before)
+      const scope = store.scopeWith({})
+      const before = Object.fromEntries(Object.keys(v.set).map((k) => [k, scope[k] as number]))
+      store.set(v.set)
+      const next = { id, label: v.label, before }
+      activeRef.current = next
+      setActive(next)
+    },
+    [store],
+  )
+  const restore = useCallback(() => {
+    const prev = activeRef.current
+    if (!prev) return
+    store.set(prev.before)
+    activeRef.current = null
+    setActive(null)
+  }, [store])
+  // Leaving the board with a variant applied puts the lesson's own values back.
+  useEffect(
+    () => () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- the latest applied variant, not the one at mount
+      if (activeRef.current) store.set(activeRef.current.before)
+    },
+    [store],
+  )
+
   const flyTo = (i: number) => {
-    const k = Math.max(0, Math.min(stations.length - 1, i))
+    const k = Math.max(0, Math.min(navs.length - 1, i))
     setAt(k)
     setOverview(false)
     void rf.fitBounds(rf.getNodesBounds(ids[k]), { duration: 800, padding: 0.04 })
@@ -479,12 +602,14 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
     setOverview(true)
     void rf.fitBounds(rf.getNodesBounds(rf.getNodes()), { duration: 800, padding: 0.04 })
   }
-  const cur = stations[at] > 0 ? segs[stations[at] - 1] : null
+  // The 如果…… station has no segment: no question, no reveal.
+  const curN = at < navs.length ? navs[at] : -1
+  const cur = curN > 0 ? segs[curN - 1] : null
   const hasReveal = !!cur && str(cur.head.props.reveal) !== '' && !overview
   const next = () => {
     if (overview) return flyTo(at)
     if (hasReveal && !shown[at]) return setShown({ ...shown, [at]: true })
-    if (at < stations.length - 1) flyTo(at + 1)
+    if (at < navs.length - 1) flyTo(at + 1)
   }
   const fullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
@@ -513,20 +638,39 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  const board = useMemo(() => ({ segs, shown, problem, blocks, reveal: (k: number) => setShown((v) => ({ ...v, [k]: true })) }), [segs, shown, problem, blocks])
+  const board = useMemo(
+    () => ({
+      segs,
+      shown,
+      problem,
+      blocks,
+      reveal: (k: number) => setShown((v) => ({ ...v, [k]: true })),
+      active,
+      apply,
+      restore,
+      compare,
+    }),
+    [segs, shown, problem, blocks, active, apply, restore, compare],
+  )
 
   return (
     <BoardContext.Provider value={board}>
-      <div className="teach canvas-mode fb">
+      <div className={`teach canvas-mode fb${active ? ' variant-on' : ''}`}>
         {link.length > 1 && <LinkAll names={link} />}
         <div className="teach-bar canvas-bar">
           <span className="teach-title">{title}</span>
           <ol className="teach-pages">
-            {stations.map((n, k) => (
+            {navs.map((n, k) => (
               <li key={k}>
                 <button className={k === at && !overview ? 'active' : ''} onClick={() => flyTo(k)}>
                   {n > 0 && <span className="seg-num">{n}</span>}
-                  {k === at && !overview ? (n > 0 ? str(segs[n - 1].head.props.title) : '题目') : n === 0 ? '题目' : ''}
+                  {n < 0
+                    ? '如果'
+                    : n === 0
+                      ? '题目'
+                      : k === at && !overview
+                        ? str(segs[n - 1].head.props.title)
+                        : ''}
                 </button>
               </li>
             ))}
