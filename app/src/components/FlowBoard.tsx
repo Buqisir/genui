@@ -23,10 +23,10 @@ import '@xyflow/react/dist/base.css'
 import { getStroke } from 'perfect-freehand'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Block } from '../lesson/parse'
-import { useScope, useStore } from '../lesson/store'
+import { useScope, useScopeFor, useStore, namesIn } from '../lesson/store'
 import type { ThemeName } from '../theme'
 import { boxed, LinkAll, MAIN, Markdown, moonIcon, Quote, splitSegments, str, TeachNotes, type Seg } from './LessonView'
-import { Sym, Value } from './controls'
+import { formatValue, Sym, Value } from './controls'
 import { Rich } from './rich'
 
 type ComponentBlock = Extract<Block, { kind: 'component' }>
@@ -34,6 +34,9 @@ type ComponentBlock = Extract<Block, { kind: 'component' }>
 // Node contents are laid out at class-mode size and enlarged with CSS zoom, so a station fills a
 // projector at about 1:1 and figures stay crisp; the overview only ever scales them down.
 const Z = 1.5
+
+/** Below this zoom the board is read from across the room: nodes switch to their far rendering. */
+const FAR_ZOOM = 0.4
 
 /** A Readout's item, as controls.tsx formats it. */
 type ReadoutItem = { label: string; expr: string; unit?: string; digits?: number; symbol?: string; color?: string; format?: string }
@@ -52,6 +55,8 @@ type Board = {
   restore: () => void
   /** The quantities a variant card compares: the panorama's readouts, or the first few in the lesson. */
   compare: ReadoutItem[]
+  /** Far mode: the one quantity each segment station shows as its big number (keyed by segment number). */
+  quantity: Record<number, ReadoutItem | null>
 }
 const BoardContext = createContext<Board | null>(null)
 const useBoard = () => useContext(BoardContext)!
@@ -59,6 +64,38 @@ const useBoard = () => useContext(BoardContext)!
 /** Two readings differ when they are not equal to within a part in a billion; NaN only matches NaN. */
 const differs = (a: number, b: number) =>
   Number.isFinite(a) && Number.isFinite(b) ? Math.abs(a - b) > 1e-9 * Math.max(Math.abs(a), Math.abs(b)) : a !== b && !(Number.isNaN(a) && Number.isNaN(b))
+
+/** Viewport zoom. Nodes re-render as it changes; far-mode components are kept light for that. */
+const useZoom = () => useViewport().zoom
+const useFar = () => useZoom() < FAR_ZOOM
+
+/** Screen px to board px inside a Zoomed node (its CSS zoom is Z, the viewport's is `zoom`). */
+// Far sizes are set for a 1920×1080 screen and shrink with smaller ones, since the board's zoom shrinks with them.
+const screenScale = () => Math.min(1, window.innerWidth / 1920, window.innerHeight / 1080)
+const inZoomed = (zoom: number, px: number) => (px * screenScale()) / (zoom * Z)
+
+/** The panorama's first Readout items: what the chain's big numbers are taken from. */
+const firstReadoutItems = (bs: Block[]): ReadoutItem[] => {
+  const r = bs.find((b): b is ComponentBlock => b.kind === 'component' && b.name === 'Readout')
+  return r && Array.isArray(r.props.items) ? (r.props.items as unknown[]).filter(isReadoutItem) : []
+}
+
+/**
+ * The quantity a station's big number shows. A station on the panorama's chain takes its place
+ * in the panorama's readout when that readout lists one item per chain step; otherwise the
+ * station's own first readout's first item.
+ */
+function quantityFor(seg: Seg, n: number, chain: number[], pano: ReadoutItem[]): ReadoutItem | null {
+  const i = chain.indexOf(n)
+  if (pano.length === chain.length && i >= 0) return pano[i] ?? null
+  return firstReadoutItems(seg.blocks)[0] ?? null
+}
+
+/** The problem's first sentence, through its 。 (or the whole text when it has none). */
+const firstSentence = (text: string) => {
+  const i = text.indexOf('。')
+  return i >= 0 ? text.slice(0, i + 1) : text
+}
 
 const handles = (
   <>
@@ -83,30 +120,48 @@ type Data = { k: number; n: number }
 
 function TitleNode({ data }: NodeProps<Node<Data>>) {
   const { segs, active } = useBoard()
+  // Not in a Zoomed node: board px are screen px divided by zoom. Never smaller than at full size.
+  const zoom = useZoom()
+  const px = Math.max(72, (30 * screenScale()) / zoom)
   return (
-    <div className="fb-title">
+    <div className="fb-title" style={{ fontSize: px }}>
       <Handle type="target" position={Position.Top} id="t" className="fb-handle" />
-      {data.n > 0 && <span className="fb-title-num">{data.n}</span>}
+      {data.n > 0 && (
+        <span className="fb-title-num" style={{ width: (px * 96) / 72, height: (px * 96) / 72, fontSize: (px * 48) / 72 }}>
+          {data.n}
+        </span>
+      )}
       {data.n > 0 ? str(segs[data.n - 1].head.props.title) : data.n < 0 ? '如果……' : '题目'}
       {/* A segment's title states the original problem's result. */}
-      {active && data.n > 0 && <span className="fb-title-orig">原题</span>}
+      {active && data.n > 0 && <span className="fb-title-orig" style={{ fontSize: Math.max(30, (16 * screenScale()) / zoom) }}>原题</span>}
     </div>
   )
 }
 
+/** Far: the first sentence only, at 30 screen px. */
 function ProblemNode() {
   const { problem } = useBoard()
+  const zoom = useZoom()
+  const far = zoom < FAR_ZOOM
   return (
     <Zoomed width={900} className="fb-problem">
       {handles}
-      {problem && <Rich html text={problem} />}
+      {problem &&
+        (far ? (
+          <div className="fb-far-problem" style={{ fontSize: inZoomed(zoom, 30) }}>
+            <Rich html text={firstSentence(problem)} />
+          </div>
+        ) : (
+          <Rich html text={problem} />
+        ))}
     </Zoomed>
   )
 }
 
-/** The segment's main figure with its sliders and presets right under it. */
+/** The segment's main figure with its sliders and presets right under it. Far: the figure alone. */
 function VisualNode({ data }: NodeProps<Node<Data>>) {
   const { segs } = useBoard()
+  const far = useFar()
   const seg = segs[data.n - 1]
   const comps = seg.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
   const visual = comps.find((b) => MAIN.has(b.name))
@@ -115,7 +170,7 @@ function VisualNode({ data }: NodeProps<Node<Data>>) {
     <Zoomed width={760}>
       {handles}
       {visual && boxed(visual, 'v')}
-      {inputs.length > 0 && <div className="fb-inputs nodrag nowheel">{inputs.map((b, i) => boxed(b, `c${i}`))}</div>}
+      {!far && inputs.length > 0 && <div className="fb-inputs nodrag nowheel">{inputs.map((b, i) => boxed(b, `c${i}`))}</div>}
     </Zoomed>
   )
 }
@@ -135,10 +190,76 @@ function VariantBanner({ line }: { line: string }) {
   )
 }
 
-/** Quote, the question to the class, and what comes with the answer. While a variant is applied, the readouts and charts show its numbers and the original words are put away. */
-function SideNode({ data }: NodeProps<Node<Data>>) {
-  const { segs, shown, reveal, active } = useBoard()
+/** The far rendering's text: symbol and label small, the value big, optionally 原题 → 如果 and the pill. Sizes are screen px. */
+function FarText({ item, now, was, pill }: { item: ReadoutItem; now: number; was?: number; pill?: string }) {
+  const k = screenScale() / (useZoom() * Z)
+  const u = item.format === 'percent' ? '%' : item.unit
+  const changed = was !== undefined && differs(was, now)
+  const fmt = (v: number) => formatValue(v, item.digits, item.format)
+  // `changed` cannot narrow `was` for the compiler, so the original is tested on its own.
+  return (
+    <div className="fb-far">
+      {pill !== undefined && (
+        <div className="fb-far-pill" style={{ fontSize: 18 * k }}>
+          如果：{pill}
+        </div>
+      )}
+      <div className="fb-far-label" style={{ fontSize: 22 * k }}>
+        <Sym text={item.symbol} color={item.color} />
+        <Rich text={item.label} html />
+      </div>
+      {/* Under a variant the original sits on its own small line, so the new value keeps the big size and fits. */}
+      {changed && was !== undefined && (
+        <div className="fb-far-was" style={{ fontSize: 26 * k }}>
+          原题 {fmt(was)}
+          {u && (
+            <>
+              {' '}
+              <Rich text={u} html />
+            </>
+          )}{' '}
+          <span className="fb-far-arrow">→</span>
+        </div>
+      )}
+      <div className="fb-far-value" style={{ fontSize: 64 * k }}>
+        <span className={changed ? 'fb-far-num fb-far-new' : 'fb-far-num'}>{fmt(now)}</span>
+        {u && (
+          <span className="fb-far-unit" style={{ fontSize: 24 * k }}>
+            <Rich text={u} html />
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Without a variant: the live reading only. */
+function FarNumber({ item }: { item: ReadoutItem }) {
   const store = useStore()
+  const scope = useScopeFor(namesIn([item.expr]))
+  return <FarText item={item} now={store.reading(item.expr, scope)} />
+}
+
+/** With a variant applied: the original problem's reading against the variant's, with the pill. */
+function FarVaried({ item, active }: { item: ReadoutItem; active: Active }) {
+  const store = useStore()
+  const scope = useScope()
+  // The original is the live board with the variant's own values put back; it moves with the board.
+  const origin = useMemo(() => store.scopeWith(active.before), [store, active, scope])
+  return <FarText item={item} now={store.reading(item.expr, scope)} was={store.reading(item.expr, origin)} pill={active.label} />
+}
+
+/** Far mode: the station's one big number, nothing else. */
+function FarStation({ item, active }: { item: ReadoutItem | null; active: Active | null }) {
+  if (!item) return null
+  return active ? <FarVaried item={item} active={active} /> : <FarNumber item={item} />
+}
+
+/** Quote, the question to the class, and what comes with the answer. While a variant is applied, the readouts and charts show its numbers and the original words are put away. Far: one big number. */
+function SideNode({ data }: NodeProps<Node<Data>>) {
+  const { segs, shown, reveal, active, quantity } = useBoard()
+  const store = useStore()
+  const far = useFar()
   const seg = segs[data.n - 1]
   const comps = seg.blocks.filter((b): b is ComponentBlock => b.kind === 'component')
   const visuals = comps.filter((b) => MAIN.has(b.name))
@@ -155,6 +276,13 @@ function SideNode({ data }: NodeProps<Node<Data>>) {
     if (revealParam) store.set({ [revealParam]: open ? 1 : 0 })
   }, [store, revealParam, open])
   useEffect(() => (revealParam ? () => store.set({ [revealParam]: 1 }) : undefined), [store, revealParam])
+  if (far)
+    return (
+      <Zoomed width={560} className="fb-side">
+        {handles}
+        <FarStation item={quantity[data.n] ?? null} active={active} />
+      </Zoomed>
+    )
   return (
     <Zoomed width={560} className="fb-side">
       {handles}
@@ -183,10 +311,18 @@ function SideNode({ data }: NodeProps<Node<Data>>) {
   )
 }
 
+/** Far: no text at all; the handles stay so the chain's arrows still land on the station. */
 function SolutionNode({ data }: NodeProps<Node<Data>>) {
   const { segs, active } = useBoard()
+  const far = useFar()
   const seg = segs[data.n - 1]
   const texts = seg.blocks.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
+  if (far)
+    return (
+      <Zoomed width={980} className="fb-solution solution">
+        {handles}
+      </Zoomed>
+    )
   return (
     <Zoomed width={980} className="fb-solution solution">
       {handles}
@@ -262,6 +398,8 @@ function VariantNode({ id, data }: NodeProps<Node<VariantData>>) {
   const { active, apply, restore, compare } = useBoard()
   const store = useStore()
   const scope = useScope()
+  const zoom = useZoom()
+  const far = zoom < FAR_ZOOM
   const [revealed, setRevealed] = useState(false)
   const applied = active?.id === id
   // The original problem: the board's values before any variant; while this one is applied, its own.
@@ -272,6 +410,28 @@ function VariantNode({ id, data }: NodeProps<Node<VariantData>>) {
     const b = store.reading(it.expr, variant)
     return { it, a, b, changed: differs(a, b) }
   })
+  if (far) {
+    // Far: the tag and label, and while applied, the first quantity it changes.
+    const first = applied ? rows.find((r) => r.changed) : undefined
+    return (
+      <Zoomed width={560} className={`fb-variant${applied ? ' applied' : ''}`}>
+        <div className="fb-variant-head">
+          <span className="teach-tag" style={{ fontSize: inZoomed(zoom, 20) }}>
+            如果
+          </span>
+          <span className="fb-variant-label" style={{ fontSize: inZoomed(zoom, 34) }}>
+            {data.label}
+          </span>
+        </div>
+        {first && (
+          <div className="fb-far-row" style={{ fontSize: inZoomed(zoom, 28) }}>
+            <Rich text={first.it.label} html /> {formatValue(first.a, first.it.digits, first.it.format)} → {formatValue(first.b, first.it.digits, first.it.format)}
+            {first.it.unit && <> {first.it.unit}</>}
+          </div>
+        )}
+      </Zoomed>
+    )
+  }
   return (
     <Zoomed width={560} className={`fb-variant${applied ? ' applied' : ''}`}>
       <DelButton id={id} onDelete={() => applied && restore()} />
@@ -333,12 +493,14 @@ function VariantNode({ id, data }: NodeProps<Node<VariantData>>) {
 /** An arrow along the chain, labelled with the relation that carries one step into the next. */
 function ChainEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, data }: EdgeProps<Edge<{ label?: string }>>) {
   const [path, lx, ly] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, curvature: 0.35 })
+  // Board px, outside any Zoomed node: 26 screen px when zoomed out, never below the full-size 52.
+  const zoom = useZoom()
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} className="fb-edge" />
       {data?.label && (
         <EdgeLabelRenderer>
-          <div className="fb-edge-label" style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)` }}>
+          <div className="fb-edge-label" style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`, fontSize: Math.max(52, (26 * screenScale()) / zoom) }}>
             <Rich html text={data.label} />
           </div>
         </EdgeLabelRenderer>
@@ -355,6 +517,17 @@ const COL_W = 2700
 const ROW_H = 1700
 const VIS_W = 760 * Z
 const GAP = 90
+
+/** Far mode: the one slider that moves the whole chain, fixed over the board. Hidden at normal zoom. */
+function FarOverview({ param }: { param: ComponentBlock | null }) {
+  const far = useFar()
+  if (!far || !param) return null
+  return (
+    <div className="fb-far-overview nodrag nowheel nopan" onPointerDown={(e) => e.stopPropagation()}>
+      {boxed(param, 'far-lead')}
+    </div>
+  )
+}
 
 /** SVG path for a perfect-freehand outline. */
 function strokePath(points: number[][]) {
@@ -454,6 +627,24 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
     const pano = chainSeg ? items(chainSeg.blocks) : []
     return pano.length > 0 ? pano : items(blocks).slice(0, 4)
   }, [chainSeg, blocks])
+
+  // Far mode: each segment's one big number. Keyed by segment number, as SideNode looks it up.
+  const quantity = useMemo(() => {
+    const pano = chainSeg ? firstReadoutItems(chainSeg.blocks) : []
+    const chainNs = chainSeg ? (chainSeg.head.props.chain as unknown[]).map(Number) : []
+    return Object.fromEntries(segs.map((seg, i) => [i + 1, quantityFor(seg, i + 1, chainNs, pano)])) as Record<number, ReadoutItem | null>
+  }, [segs, chainSeg])
+  // Far mode's fixed slider: the Param the panorama's first link names (the one that moves the chain).
+  const lead = link[0]
+  const farParam = useMemo(
+    () =>
+      lead
+        ? ([...(chainSeg?.blocks ?? []), ...blocks].find(
+            (b): b is ComponentBlock => b.kind === 'component' && b.name === 'Param' && b.props.name === lead,
+          ) ?? null)
+        : null,
+    [chainSeg, blocks, lead],
+  )
 
   const { nodes: laidOut, edges, ids } = useMemo(() => {
     const cols = navs.length > 4 ? 3 : navs.length
@@ -649,8 +840,9 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
       apply,
       restore,
       compare,
+      quantity,
     }),
-    [segs, shown, problem, blocks, active, apply, restore, compare],
+    [segs, shown, problem, blocks, active, apply, restore, compare, quantity],
   )
 
   return (
@@ -739,6 +931,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
             <MiniMap pannable zoomable className="fb-minimap" style={{ width: 160, height: 100 }} />
             <BoardPen on={pen} strokes={strokes} setStrokes={setStrokes} />
           </ReactFlow>
+          <FarOverview param={farParam} />
           {menu && (
             <div className="fb-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
               <button role="menuitem" onClick={() => addNode('note', menu.at, {})}>

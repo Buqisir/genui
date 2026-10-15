@@ -3704,3 +3704,109 @@ figure.card {
   font-weight: 500;
   color: var(--c-charge);
 }
+
+/* Far mode (semantic zoom): the board zoomed out to read from across the room. Sizes are set
+   inline in screen px converted to the node's own coordinates; these rules only set the rest. */
+.fb-far {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--c-ink);
+}
+
+.fb-far-pill {
+  padding: 2px 16px;
+  border: 2px solid var(--c-charge);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--c-charge);
+  white-space: nowrap;
+}
+
+.fb-far-label {
+  font-weight: 500;
+  color: var(--c-graphite);
+  white-space: nowrap;
+}
+
+.fb-far-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.2em;
+  font-family: var(--font-readout);
+  font-weight: 300;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-ink);
+  white-space: nowrap;
+}
+
+.fb-far-num {
+  color: inherit;
+}
+
+.fb-far-new,
+.fb-far-arrow {
+  color: var(--c-charge);
+}
+
+.fb-far-unit {
+  margin-left: 0.1em;
+  color: var(--c-steel);
+}
+
+.fb-far-problem {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--c-ink);
+}
+
+.fb-far-row {
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--c-charge);
+}
+
+.fb-far-overview {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 5;
+  width: 560px;
+  padding: 12px 20px;
+  transform: translateX(-50%);
+  border-radius: 16px;
+  background: var(--c-card);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Far numbers stay on one line; they may run past the node into the empty board beside it. */
+.fb-far-value,
+.fb-far-row {
+  white-space: nowrap;
+}
+
+.fb-far-value {
+  flex-wrap: nowrap;
+}
+
+.fb-variant-head .teach-tag {
+  flex: none;
+  white-space: nowrap;
+  width: auto;
+  height: auto;
+  padding: 0.15em 0.6em;
+  border-radius: var(--radius-pill);
+}
+
+.fb-far-was {
+  white-space: nowrap;
+  color: var(--c-graphite);
+  font-family: var(--font-readout);
+  font-variant-numeric: tabular-nums;
+}
