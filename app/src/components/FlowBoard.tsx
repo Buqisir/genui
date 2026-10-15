@@ -23,7 +23,7 @@ import '@xyflow/react/dist/base.css'
 import { getStroke } from 'perfect-freehand'
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Block } from '../lesson/parse'
-import { useStore } from '../lesson/store'
+import { useScopeFor, useStore } from '../lesson/store'
 import type { ThemeName } from '../theme'
 import { boxed, LinkAll, MAIN, Markdown, moonIcon, Quote, splitSegments, str, TeachNotes, type Seg } from './LessonView'
 import { Rich } from './rich'
@@ -39,6 +39,7 @@ type Board = {
   shown: Record<number, boolean>
   reveal: (k: number) => void
   problem: string | null
+  blocks: Block[]
 }
 const BoardContext = createContext<Board | null>(null)
 const useBoard = () => useContext(BoardContext)!
@@ -159,6 +160,108 @@ function SolutionNode({ data }: NodeProps<Node<Data>>) {
   )
 }
 
+type AnyData = Record<string, unknown>
+type SliderData = { name: string }
+type VariantData = { label: string; set: Record<string, number>; ask: string; reveal: string }
+type MenuAt = { x: number; y: number; at: { x: number; y: number } }
+
+/** A Variant's set={...}: only the numbers count. */
+function numbers(v: unknown): Record<string, number> {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {}
+  return Object.fromEntries(Object.entries(v).filter((e): e is [string, number] => typeof e[1] === 'number'))
+}
+
+/** The × in a teacher-made node's corner. */
+function DelButton({ id }: { id: string }) {
+  const { deleteElements } = useReactFlow()
+  return (
+    <button className="fb-del nodrag" aria-label="删除" onClick={() => void deleteElements({ nodes: [{ id }] })}>
+      ×
+    </button>
+  )
+}
+
+function NoteNode({ id }: NodeProps) {
+  const text = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    text.current?.focus({ preventScroll: true })
+  }, [])
+  return (
+    <Zoomed width={320} className="fb-note">
+      <DelButton id={id} />
+      <div ref={text} className="fb-note-text nodrag nowheel" contentEditable suppressContentEditableWarning />
+    </Zoomed>
+  )
+}
+
+function SliderNode({ id, data }: NodeProps<Node<SliderData>>) {
+  const { blocks } = useBoard()
+  const param = blocks.find((b): b is ComponentBlock => b.kind === 'component' && b.name === 'Param' && b.props.name === data.name)
+  return (
+    <Zoomed width={520} className="fb-slider">
+      <DelButton id={id} />
+      {param && <div className="fb-inputs nodrag nowheel">{boxed(param, 'p')}</div>}
+    </Zoomed>
+  )
+}
+
+/** A Variant: setting its values on the board, and putting them back. Restored on removal too. */
+function VariantNode({ id, data }: NodeProps<Node<VariantData>>) {
+  const store = useStore()
+  const keys = Object.keys(data.set)
+  const scope = useScopeFor(keys)
+  const [applied, setApplied] = useState(false)
+  const [revealed, setRevealed] = useState(false)
+  const before = useRef<Record<string, number>>({})
+  const appliedRef = useRef(false)
+  useEffect(
+    () => () => {
+      if (appliedRef.current) store.set(before.current)
+    },
+    [store],
+  )
+  const apply = () => {
+    before.current = Object.fromEntries(keys.map((k) => [k, scope[k] as number]))
+    store.set(data.set)
+    appliedRef.current = true
+    setApplied(true)
+  }
+  const restore = () => {
+    store.set(before.current)
+    appliedRef.current = false
+    setApplied(false)
+  }
+  return (
+    <Zoomed width={560} className={`fb-variant${applied ? ' applied' : ''}`}>
+      <DelButton id={id} />
+      <div className="fb-variant-head">
+        <span className="teach-tag">如果</span>
+        <span className="fb-variant-label">{data.label}</span>
+      </div>
+      {data.ask && (
+        <div className="fb-variant-ask">
+          <Rich html text={data.ask} />
+        </div>
+      )}
+      <div className="fb-variant-actions">
+        <button className="pill nodrag" onClick={applied ? restore : apply}>
+          {applied ? '复原' : '应用'}
+        </button>
+        {data.reveal && !revealed && (
+          <button className="pill nodrag" onClick={() => setRevealed(true)}>
+            揭晓
+          </button>
+        )}
+      </div>
+      {data.reveal && revealed && (
+        <div className="teach-reveal">
+          <Rich html text={data.reveal} />
+        </div>
+      )}
+    </Zoomed>
+  )
+}
+
 /** An arrow along the chain, labelled with the relation that carries one step into the next. */
 function ChainEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, data }: EdgeProps<Edge<{ label?: string }>>) {
   const [path, lx, ly] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, curvature: 0.35 })
@@ -176,7 +279,7 @@ function ChainEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, tar
   )
 }
 
-const nodeTypes = { title: TitleNode, problem: ProblemNode, visual: VisualNode, side: SideNode, solution: SolutionNode }
+const nodeTypes = { title: TitleNode, problem: ProblemNode, visual: VisualNode, side: SideNode, solution: SolutionNode, note: NoteNode, slider: SliderNode, variant: VariantNode }
 const edgeTypes = { chain: ChainEdge }
 
 // Board layout, in board pixels after the zoom above.
@@ -272,7 +375,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
       const c = r % 2 ? cols - 1 - (k % cols) : k % cols
       return { x: c * COL_W, y: r * ROW_H, r, c }
     }
-    const nodes: Node<Data>[] = []
+    const nodes: Node<AnyData>[] = []
     const ids: string[][] = []
     const anchor: string[] = []
     stations.forEach((n, k) => {
@@ -319,7 +422,46 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
   }, [stations, segs]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Teachers may drag things about the board; the layout above is only where they start.
-  const [nodes, , onNodesChange] = useNodesState(laidOut)
+  const [nodes, setNodes, onNodesChange] = useNodesState(laidOut)
+  const [menu, setMenu] = useState<MenuAt | null>(null)
+  const uid = useRef(0)
+  // What a double-click on empty board can add: a slider per visible quantity, a card per Variant.
+  const sliders = useMemo(() => {
+    const seen = new Set<string>()
+    const out: { name: string; label: string }[] = []
+    for (const b of blocks) {
+      if (b.kind !== 'component' || b.name !== 'Param' || b.props.hidden) continue
+      const name = str(b.props.name)
+      const label = str(b.props.label) || name
+      // Segments keep their own copy of a quantity under the same label; the board links them, so one will do.
+      if (!name || seen.has(label)) continue
+      seen.add(label)
+      out.push({ name, label })
+    }
+    return out
+  }, [blocks])
+  const variants = useMemo(
+    () =>
+      blocks.flatMap((b): VariantData[] =>
+        b.kind === 'component' && b.name === 'Variant'
+          ? [{ label: str(b.props.label), set: numbers(b.props.set), ask: str(b.props.ask), reveal: str(b.props.reveal) }]
+          : [],
+      ),
+    [blocks],
+  )
+  const addNode = (type: string, at: { x: number; y: number }, data: AnyData) => {
+    const id = `u${++uid.current}`
+    setNodes((ns) => [...ns, { id, type, position: at, data }])
+    setMenu(null)
+  }
+  useEffect(() => {
+    if (!menu) return
+    const away = (e: PointerEvent) => {
+      if (!(e.target as HTMLElement).closest('.fb-menu')) setMenu(null)
+    }
+    window.addEventListener('pointerdown', away)
+    return () => window.removeEventListener('pointerdown', away)
+  }, [menu])
   const [at, setAt] = useState(0)
   const [overview, setOverview] = useState(true)
   const [shown, setShown] = useState<Record<number, boolean>>({})
@@ -352,9 +494,10 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement
-      if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') return
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return
       const k = e.key
-      if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') next()
+      if (k === 'Escape' && menu) setMenu(null)
+      else if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') next()
       else if (k === 'ArrowLeft' || k === 'PageUp') flyTo(overview ? at : at - 1)
       else if (k === 'o' || k === 'O') (overview ? flyTo(at) : flyAll())
       else if (k === 'n' || k === 'N') setNotes((v) => !v)
@@ -370,7 +513,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  const board = useMemo(() => ({ segs, shown, problem, reveal: (k: number) => setShown((v) => ({ ...v, [k]: true })) }), [segs, shown, problem])
+  const board = useMemo(() => ({ segs, shown, problem, blocks, reveal: (k: number) => setShown((v) => ({ ...v, [k]: true })) }), [segs, shown, problem, blocks])
 
   return (
     <BoardContext.Provider value={board}>
@@ -388,6 +531,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
               </li>
             ))}
           </ol>
+          <span className="fb-hint">双击空白处：便签 · 滑块 · 如果……</span>
           <div className="teach-actions">
             <button className={`pill ${overview ? 'active' : ''}`} onClick={() => (overview ? flyTo(at) : flyAll())} title="O">
               全览
@@ -420,7 +564,14 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
             </button>
           </div>
         </div>
-        <div className="fb-view">
+        <div
+          className="fb-view"
+          onDoubleClick={(e) => {
+            if (!(e.target as HTMLElement).classList.contains('react-flow__pane')) return
+            const r = e.currentTarget.getBoundingClientRect()
+            setMenu({ x: e.clientX - r.left, y: e.clientY - r.top, at: rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
+          }}
+        >
           <ReactFlow
             nodes={nodes}
             onNodesChange={onNodesChange}
@@ -444,6 +595,23 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
             <MiniMap pannable zoomable className="fb-minimap" style={{ width: 160, height: 100 }} />
             <BoardPen on={pen} strokes={strokes} setStrokes={setStrokes} />
           </ReactFlow>
+          {menu && (
+            <div className="fb-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
+              <button role="menuitem" onClick={() => addNode('note', menu.at, {})}>
+                便签
+              </button>
+              {sliders.map((s) => (
+                <button key={`${s.name}\n${s.label}`} role="menuitem" onClick={() => addNode('slider', menu.at, { name: s.name })}>
+                  滑块：{s.label}
+                </button>
+              ))}
+              {variants.map((v, i) => (
+                <button key={i} role="menuitem" onClick={() => addNode('variant', menu.at, v)}>
+                  如果：{v.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {notes && (
           <div className="canvas-notes">

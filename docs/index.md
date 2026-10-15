@@ -71,6 +71,7 @@ sim({ at(t, p) { … }, draw(ctx, s, v) { … } })
 | 能量转化、各种能的增减 | `<Ledger>` | `ledger` |
 | 只盯一个量（额定、临界） | `<Dial>` | `dial` |
 | 按难点分段讲解（样板） | `<Segment>` | `segment` |
+| 「如果……」变式，上课画布上一键改条件 | `<Variant>` | `variant` |
 | 受力分析、平衡、牛顿第二定律求未知力 | `<ForceDiagram>`（`solve`，三力平衡加 `triangle`） | `force-diagram` |
 | 电路图、电表读数、电容充放电、自感、LC、交流电 | `<Circuit>`（暂态写 `transient`） | `circuit` |
 | 实物连线、电表接法、电桥 | `<Wiring>` | `wiring` |

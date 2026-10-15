@@ -511,6 +511,10 @@ function checkComponent(
     case 'Preset':
       setMap(props.set, 'set')
       break
+    case 'Variant':
+      if (!props.set || typeof props.set !== 'object' || Array.isArray(props.set)) err('要写 set：应用时写入哪些参数')
+      else setMap(props.set, 'set')
+      break
     case 'Question':
       if (props.set !== undefined) setMap(props.set, 'set')
       break

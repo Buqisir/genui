@@ -73,6 +73,12 @@ export const COMPONENTS: Record<string, Record<string, PropSpec>> = {
   },
   Question: { text: { kind: 'string', required: true, doc: '题干' }, hint: { kind: 'string', doc: '选中时显示的提示' }, set: { kind: 'object', doc: '切到这一问时设置的参数' } },
   Preset: { label: { kind: 'string', required: true, doc: '按钮上的文字' }, set: { kind: 'object', required: true, doc: '要点进去的参数值' } },
+  Variant: {
+    label: { kind: 'string', required: true, doc: '变式的名字，如「两杆电流同向」' },
+    set: { kind: 'object', required: true, doc: '应用变式时写入的参数，如 {same: 1}；键必须是 Param' },
+    ask: { kind: 'string', doc: '变式提出的问题' },
+    reveal: { kind: 'string', doc: '揭晓的答案，一两句' },
+  },
   Readout: { items: { kind: 'array', required: true, doc: '读数条目 {label, expr, …}' } },
   Status: { cases: { kind: 'array', required: true, doc: '按顺序匹配的条件列表' } },
   Answer: { items: { kind: 'array', required: true, doc: '答案条目，见规范原文' }, title: { kind: 'string', doc: '收起时的按钮文字' }, open: { kind: 'boolean', doc: '为真时默认展开' } },

@@ -41,13 +41,21 @@ answers:
 
 <Param name="showF" label="画出安培力" value={1} hidden />
 
+<Param name="same" label="cd 电流同向" value={0} hidden />
+
+<Param name="flip" label="磁场反向" value={0} hidden />
+
 <Define name="Fa" expr="Ba*I0*l" />
+
+<Define name="sgn" expr="1 - 2*flip" />
+
+<Define name="sc" expr="1 - 2*same" />
 
 <Readout items={[
   {label: "每根杆受的安培力", symbol: "F", expr: "Fa*1000", unit: "mN", digits: 2, color: "force"}
 ]} />
 
-<Figure title="H 形支架与安培力" height={320} params={["view", "Fa", "showF"]} legend={[{kind: "field", label: "磁场 B"}, {kind: "charge", label: "杆中电流"}, {kind: "force", label: "安培力 F"}]} note="尺寸不按比例；a、d 在前，b、c 在后">
+<Figure title="H 形支架与安培力" height={320} params={["view", "Fa", "showF", "sgn", "sc"]} legend={[{kind: "field", label: "磁场 B"}, {kind: "charge", label: "杆中电流"}, {kind: "force", label: "安培力 F"}]} note="尺寸不按比例；a、d 在前，b、c 在后">
 figure({
   draw(ctx, p, v) {
     const len = p.showF > 0.5 ? 60 * p.Fa : 0
@@ -67,8 +75,10 @@ figure({
       const ia = P(-1.0, 0.09, -0.3), ib = P(-1.0, 0.09, 0.42)
       v.arrow(m, ia[0], ia[1], ib[0], ib[1], { color: v.color.charge, width: 2 })
       const ic = P(1.0, 0.09, 0.42), id = P(1.0, 0.09, -0.3)
-      v.arrow(m, ic[0], ic[1], id[0], id[1], { color: v.color.charge, width: 2 })
-      v.arrow(m, -0.45, 0.62, 0.55, 0.62, { color: v.color.field, width: 2 })
+      if (p.sc < 0) v.arrow(m, id[0], id[1], ic[0], ic[1], { color: v.color.charge, width: 2 })
+      else v.arrow(m, ic[0], ic[1], id[0], id[1], { color: v.color.charge, width: 2 })
+      if (p.sgn < 0) v.arrow(m, 0.55, 0.62, -0.45, 0.62, { color: v.color.field, width: 2 })
+      else v.arrow(m, -0.45, 0.62, 0.55, 0.62, { color: v.color.field, width: 2 })
       v.label(m, 0.05, 0.69, 'B')
       const la = P(-1.0, 0.065, -0.56), lb = P(-1.0, 0.065, 0.62)
       v.label(m, la[0], la[1], 'a')
@@ -77,9 +87,10 @@ figure({
       v.label(m, lc[0], lc[1], 'c')
       v.label(m, ld[0], ld[1], 'd')
       if (len > 0.01) {
-        const fa = P(-1.0, 0.0, 0.05), fd = P(1.0, 0.1, 0.05)
-        v.vec(m, fa[0], fa[1], 0, -len, { kind: 'force', label: 'F' })
-        v.vec(m, fd[0], fd[1], 0, len, { kind: 'force', label: 'F' })
+        const dA = -p.sgn, dD = p.sgn * p.sc
+        const fa = P(-1.0, dA < 0 ? 0.0 : 0.1, 0.05), fd = P(1.0, dD < 0 ? 0.0 : 0.1, 0.05)
+        v.vec(m, fa[0], fa[1], 0, dA * len, { kind: 'force', label: 'F' })
+        v.vec(m, fd[0], fd[1], 0, dD * len, { kind: 'force', label: 'F' })
       }
       const lo = P(0, 0.2, -0.08)
       v.label(m, lo[0], lo[1], 'O')
@@ -90,12 +101,14 @@ figure({
       v.block(m, 0, -0.035, 2.02, 0.07, { shadow: false })
       v.label(m, 0.2, -0.3, 'O')
       v.wire(m, -1.01, 0, { dir: 'in', rings: [], label: 'ab' })
-      v.wire(m, 1.01, 0, { dir: 'out', rings: [], label: 'cd' })
+      v.wire(m, 1.01, 0, { dir: p.sc < 0 ? 'in' : 'out', rings: [], label: 'cd' })
       if (len > 0.01) {
-        v.vec(m, -1.01, -0.07, 0, -len, { kind: 'force', label: 'F' })
-        v.vec(m, 1.01, 0.07, 0, len, { kind: 'force', label: 'F' })
+        const dA = -p.sgn, dD = p.sgn * p.sc
+        v.vec(m, -1.01, dA < 0 ? -0.07 : 0.07, 0, dA * len, { kind: 'force', label: 'F' })
+        v.vec(m, 1.01, dD < 0 ? -0.07 : 0.07, 0, dD * len, { kind: 'force', label: 'F' })
       }
-      v.arrow(m, -0.5, 0.56, 0.5, 0.56, { color: v.color.field, width: 2 })
+      if (p.sgn < 0) v.arrow(m, 0.5, 0.56, -0.5, 0.56, { color: v.color.field, width: 2 })
+      else v.arrow(m, -0.5, 0.56, 0.5, 0.56, { color: v.color.field, width: 2 })
       v.label(m, 0, 0.63, 'B')
       v.text(m, 0, -0.6, '从 a、d 一侧（正面）看')
     }
@@ -130,14 +143,18 @@ $$
 
 <Define name="dRb" expr="alpha*Fb" />
 
+<Define name="abU2" expr="-Fb*sgn" />
+
+<Define name="cdU2" expr="Fb*sgn*sc" />
+
 <Readout items={[
-  {label: "R₁（左上）", expr: "R0 + dRb", unit: "Ω", digits: 2, color: "charge"},
-  {label: "R₂（右上）", expr: "R0 - dRb", unit: "Ω", digits: 2},
-  {label: "R₃（左下）", expr: "R0 - dRb", unit: "Ω", digits: 2},
-  {label: "R₄（右下）", expr: "R0 + dRb", unit: "Ω", digits: 2, color: "charge"}
+  {label: "R₁（左上）", expr: "R0 - alpha*abU2", unit: "Ω", digits: 2, color: "charge"},
+  {label: "R₂（右上）", expr: "R0 - alpha*cdU2", unit: "Ω", digits: 2},
+  {label: "R₃（左下）", expr: "R0 + alpha*abU2", unit: "Ω", digits: 2},
+  {label: "R₄（右下）", expr: "R0 + alpha*cdU2", unit: "Ω", digits: 2, color: "charge"}
 ]} />
 
-<Figure title="正面看：悬梁弯曲与应变片" height={320} params={["Fb"]} legend={[{kind: "force", label: "安培力 F"}, {kind: "charge", label: "应变片"}]} note="形变放大画出，不按比例；虚线是未加磁场时的位置">
+<Figure title="正面看：悬梁弯曲与应变片" height={320} params={["Fb", "sgn", "sc"]} legend={[{kind: "force", label: "安培力 F"}, {kind: "charge", label: "应变片"}]} note="形变放大画出，不按比例；虚线是未加磁场时的位置">
 figure({
   draw(ctx, p, v) {
     const m = v.view({ xmin: -1.35, xmax: 1.35, ymin: -0.62, ymax: 0.66, equal: true })
@@ -145,7 +162,8 @@ figure({
     const k = 1 - Math.exp(-p.Fb / 0.004)
     const d = 0.32 * k
     const bend = (s) => { const u = Math.max(0, Math.min(s / L, 1)); return d * u * u * (3 - u) / 2 }
-    const Y = (x) => Math.abs(x) <= x0 ? 0 : (x < 0 ? -bend(-x - x0) : bend(x - x0))
+    const sL = -p.sgn, sR = p.sgn * p.sc
+    const Y = (x) => Math.abs(x) <= x0 ? 0 : (x < 0 ? sL * bend(-x - x0) : sR * bend(x - x0))
     const xs = []
     for (let i = 0; i <= 80; i++) xs.push(-(x0 + L) + (2 * (x0 + L)) * i / 80)
     if (p.Fb > 1e-12) v.line(m, -(x0 + L), 0, x0 + L, 0, { color: v.color.hairline, dash: true })
@@ -167,18 +185,18 @@ figure({
     v.label(m, 0.2, -0.3, 'O')
     const cx = (x0 + 0.37 * L)
     const on = p.Fb > 1e-12
-    v.label(m, -cx, yl + t + 0.1, on ? 'R₁ 拉长' : 'R₁')
-    v.label(m, -cx, yl - t - 0.15, on ? 'R₃ 压短' : 'R₃')
-    v.label(m, cx, yr + t + 0.1, on ? 'R₂ 压短' : 'R₂')
-    v.label(m, cx, yr - t - 0.15, on ? 'R₄ 拉长' : 'R₄')
+    v.label(m, -cx, yl + t + 0.1, on ? (sL < 0 ? 'R₁ 拉长' : 'R₁ 压短') : 'R₁')
+    v.label(m, -cx, yl - t - 0.15, on ? (sL < 0 ? 'R₃ 压短' : 'R₃ 拉长') : 'R₃')
+    v.label(m, cx, yr + t + 0.1, on ? (sR > 0 ? 'R₂ 压短' : 'R₂ 拉长') : 'R₂')
+    v.label(m, cx, yr - t - 0.15, on ? (sR > 0 ? 'R₄ 拉长' : 'R₄ 压短') : 'R₄')
     const xa = -(x0 + L), xd = x0 + L
     const ya = Y(xa), yd = Y(xd)
     v.wire(m, xa, ya, { dir: 'in', rings: [], label: 'ab' })
     v.wire(m, xd, yd, { dir: 'out', rings: [], label: 'cd' })
     if (on) {
       const len = 0.12 + 0.5 * k
-      v.vec(m, xa, ya - 0.07, 0, -len * 0.5, { kind: 'force', label: 'F' })
-      v.vec(m, xd, yd + 0.07, 0, len * 0.5, { kind: 'force', label: 'F' })
+      v.vec(m, xa, ya + (sL < 0 ? -0.07 : 0.07), 0, sL * len * 0.5, { kind: 'force', label: 'F' })
+      v.vec(m, xd, yd + (sR > 0 ? 0.07 : -0.07), 0, sR * len * 0.5, { kind: 'force', label: 'F' })
     }
   },
 })
@@ -220,13 +238,17 @@ $U_{ef}$ 与 $B$ 成正比，测出 $U_{ef}$ 就能读出 $B$。$R_3$ 变小，�
 
 <Define name="dR" expr="alpha*F" />
 
-<Define name="R1" expr="R0 + dR" />
+<Define name="abU" expr="-F*sgn" />
 
-<Define name="R2" expr="R0 - dR" />
+<Define name="cdU" expr="F*sgn*sc" />
 
-<Define name="R3" expr="R0 - dR" />
+<Define name="R1" expr="R0 - alpha*abU" />
 
-<Define name="R4" expr="R0 + dR" />
+<Define name="R2" expr="R0 - alpha*cdU" />
+
+<Define name="R3" expr="R0 + alpha*abU" />
+
+<Define name="R4" expr="R0 + alpha*cdU" />
 
 <Define name="Uef" expr="U1 - U3" />
 
@@ -246,8 +268,8 @@ $U_{ef}$ 与 $B$ 成正比，测出 $U_{ef}$ 就能读出 $B$。$R_3$ 变小，�
 
 <Plot title="输出电压与 B" caption="过原点的直线：U_ef 与 B 成正比" size="full"
   x={{name: "bx", label: "B", unit: "T", min: 0, max: 0.5}}
-  y={{label: "U_ef", unit: "mV", min: 0, max: 16}}
-  series={[{label: "U_ef", expr: "alpha*E*I0*l*bx/R0*1000", color: "charge"}]}
+  y={{label: "U_ef", unit: "mV", min: -16, max: 16}}
+  series={[{label: "U_ef", expr: "E*((R0 + alpha*I0*l*bx*sgn*sc)/(2*R0 + alpha*I0*l*bx*sgn*sc - alpha*I0*l*bx*sgn) - (R0 - alpha*I0*l*bx*sgn*sc)/(2*R0 + alpha*I0*l*bx*sgn - alpha*I0*l*bx*sgn*sc))*1000", color: "charge"}]}
   cursor="B"
 />
 
@@ -264,6 +286,10 @@ $$
   {label: "阻值变化", symbol: "ΔR", expr: "dR", unit: "Ω", digits: 3, color: "charge"},
   {label: "e、f 电势差", symbol: "U_ef", expr: "Uef*1000", unit: "mV", digits: 2, color: "charge"}
 ]} />
+
+<Variant label="两杆电流同向" set={{same: 1, flip: 0}} ask="cd 中的电流改成和 ab 同向，U_ef 会怎样？" reveal="U_ef = 0。两根杆受力同向，两条梁都往下弯：上支路 R_1、R_2 同时变大，下支路 R_3、R_4 同时变小，e、f 两点电势都是 E/2。所以题目让两杆电流反向，输出才和 B 成正比。" />
+
+<Variant label="磁场反向" set={{flip: 1, same: 0}} ask="磁场反过来，U_ef 会怎样？" reveal="U_ef 变成负的，大小不变：所有力反向，变大的电阻变小、变小的变大。U_ef 的正负就能告诉你磁场朝哪边。" />
 
 <Segment title="完整解答" />
 
