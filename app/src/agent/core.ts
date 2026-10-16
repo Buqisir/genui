@@ -6,6 +6,7 @@ import { parse } from 'yaml'
 import { docsRoot, loadDocs, type Doc } from '../docs/index'
 import { validateSource } from '../../scripts/validate'
 import type { Issue } from '../lesson/validate'
+import { formatStructure, isStructural, structureOf } from '../lesson/structure'
 
 export type Layer = 'L0' | 'L1' | 'L2'
 
@@ -42,6 +43,12 @@ export interface PointedIssue {
   block?: string
   /** Correct one-line signature, for prop errors. */
   hint?: string
+  /** Stable kind of the problem, e.g. `unknown-prop`; see Issue.code. */
+  code?: string
+  /** The Param/Define name the issue is about; see Issue.name. */
+  name?: string
+  /** Copied from the parse error: a tag or code fence that never closes. */
+  unclosed?: Issue['unclosed']
 }
 
 export interface ValidationReport {
@@ -563,6 +570,9 @@ function point(issue: Issue): PointedIssue {
   if (issue.line !== undefined) pointed.line = issue.line
   if (issue.block !== undefined) pointed.block = issue.block
   if (issue.hint !== undefined) pointed.hint = issue.hint
+  if (issue.code !== undefined) pointed.code = issue.code
+  if (issue.name !== undefined) pointed.name = issue.name
+  if (issue.unclosed !== undefined) pointed.unclosed = issue.unclosed
   return pointed
 }
 
@@ -583,7 +593,10 @@ export function formatIssue(kind: '错误' | '提醒', issue: PointedIssue): str
 export function formatValidation(label: string, result: { errors: PointedIssue[]; warnings: PointedIssue[] }): string {
   const mark = result.errors.length ? '✗' : '✓'
   const lines = [`${mark} ${label}  (${result.errors.length} 个错误，${result.warnings.length} 个提醒)`]
-  for (const e of result.errors) lines.push(formatIssue('错误', e))
-  for (const w of result.warnings) lines.push(formatIssue('提醒', w))
+  // Structural problems come first, indented under the header; the rest are listed one by one.
+  const structure = formatStructure(structureOf(result), '先补齐结构：', (i) => `读 genui docs ${(i as PointedIssue).doc}`)
+  if (structure) lines.push(...structure.split('\n').map((l) => (l ? `  ${l}` : l)))
+  for (const e of result.errors) if (!isStructural(e)) lines.push(formatIssue('错误', e))
+  for (const w of result.warnings) if (!isStructural(w)) lines.push(formatIssue('提醒', w))
   return lines.join('\n')
 }

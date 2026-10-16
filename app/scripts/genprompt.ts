@@ -8,6 +8,8 @@ import YAML from 'yaml'
 import { docTitle, pointerFor } from '../src/agent/core'
 import type { LessonProblem } from '../src/agent/prompt'
 import { formatKeys, isPatch } from '../src/lesson/patch'
+import { formatStructure, isStructural, structureOf } from '../src/lesson/structure'
+import type { Issue } from '../src/lesson/validate'
 import { checkAnswerKey } from './answerkey'
 import type { ProgressIssue } from './progress'
 
@@ -129,24 +131,30 @@ export function withProgress(progress: string, report: string): string {
   return progress ? `${progress}\n\n${report}` : report
 }
 export function reportOf(
-  r: { errors: { line?: number; block?: string; hint?: string; message: string }[]; warnings: { line?: number; block?: string; hint?: string; message: string }[] },
+  r: { errors: Issue[]; warnings: Issue[] },
   missing: string[],
   /** Blind runs check the key but do not report wrong answers back to the model. */
   blind = false,
 ): string {
+  // Structural problems go first, as one summary; the per-issue list below leaves them out.
   const pointed = (message: string) => {
     const doc = pointerFor(message).doc
     return `${doc}（${docTitle(doc)}）`
   }
+  const head = formatStructure(structureOf(r), undefined, (i) => pointed(i.message))
   const where = (i: { line?: number; block?: string }) => (i.line ? `（第 ${i.line} 行${i.block ? `，${i.block}` : ''}）` : '')
   const hint = (i: { hint?: string }) => (i.hint ? `\n  ${i.hint}` : '')
+  const errors = r.errors.filter((e) => !isStructural(e))
+  const warnings = r.warnings.filter((w) => !isStructural(w))
   const lines = [
-    ...r.errors.map((e) => `- 错误${where(e)}：${e.message}（${pointed(e.message)}）${hint(e)}`),
+    ...errors.map((e) => `- 错误${where(e)}：${e.message}（${pointed(e.message)}）${hint(e)}`),
     ...(blind ? [] : missing).map((q) => `- 答案核对：「${q}」与标准答案不符（或 answers 里缺这一项）。请重新审题：题目文字可能省略了原图里的信息（例如光在某个面上先反射），选择能让题设条件全部成立的解释，不要轻易断定题目矛盾。`),
-    ...r.warnings.map((w) => `- 提醒${where(w)}：${w.message}（${pointed(w.message)}）${hint(w)}`),
+    ...warnings.map((w) => `- 提醒${where(w)}：${w.message}（${pointed(w.message)}）${hint(w)}`),
   ]
-  if (r.errors.length || r.warnings.length) lines.push('', '这些文档 id 在《课件语法规范》里对应标题相同的章节。')
-  return lines.join('\n')
+  if (errors.length || warnings.length) lines.push('', '这些文档 id 在《课件语法规范》里对应标题相同的章节。')
+  const list = lines.join('\n')
+  if (!head) return list
+  return list ? `${head}\n\n## 逐条报告\n\n${list}` : head
 }
 
 // ---------- --solve-first: solve the problem before writing the lesson ----------

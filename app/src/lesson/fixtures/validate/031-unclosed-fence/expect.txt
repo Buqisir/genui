@@ -1,0 +1,6 @@
+errors
+代码块（```）没有闭合
+个组件没有读到
+count: 1
+not: 没有对应的 Param/Define
+not: 没有画出物理情景

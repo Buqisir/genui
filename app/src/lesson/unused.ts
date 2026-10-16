@@ -21,6 +21,7 @@ export function unusedNames(source: string, blocks: Block[]): Issue[] {
     out.push({
       line: b.line,
       code: 'unused-name',
+      name,
       message: `${b.name} ${name} 声明了但没有被用到（图、读数、表达式、answers 里都没出现）；不需要就删掉`,
     })
   }

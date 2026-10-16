@@ -25,9 +25,29 @@ export interface Lesson {
 export interface ParseError {
   line: number
   message: string
+  /** Set when a tag or code fence never closes, so everything from `line` to the end of the file went unread. */
+  unclosed?: Unclosed
+}
+
+export interface Unclosed {
+  /** Component name (`Sim`), or the fence marker (```` ``` ```` / `~~~`) for a code fence. */
+  tag: string
+  /** Last non-blank line of the file, 1-based: the unread range is `line`..`end`. */
+  end: number
+  /** Lines in the unread range (after the first) that start a component tag, i.e. components the parser never saw. */
+  components: number
 }
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/
+/** A line that opens a component tag (checked on the trimmed line plus a space, so a bare `<Sim` counts). */
+const COMPONENT_START = /^<[A-Z][A-Za-z0-9]*[\s/>]/
+
+/** Lines `from`..`to` (0-based, inclusive) of the body that open a component tag. */
+function countComponentLines(lines: string[], from: number, to: number): number {
+  let n = 0
+  for (let k = from; k <= to && k < lines.length; k++) if (COMPONENT_START.test(lines[k].trim() + ' ')) n++
+  return n
+}
 
 export function parseLesson(source: string): Lesson {
   const errors: ParseError[] = []
@@ -50,6 +70,16 @@ export function parseLesson(source: string): Lesson {
   const blocks: Block[] = []
   let md: string[] = []
   let inFence = false
+  // The opening fence of the code block that is open now: its body index and marker (``` or ~~~).
+  let fence: { index: number; mark: string } | null = null
+
+  // Last non-blank body line (0-based). An unread range runs from its start line to this one.
+  let lastNonBlank = lines.length - 1
+  while (lastNonBlank > 0 && lines[lastNonBlank].trim() === '') lastNonBlank--
+  const endLine = lastNonBlank + 1 + lineOffset
+
+  /** The 「（第 a–b 行）」 part of an unclosed message: the unread range, from its start line to the end of the file. */
+  const unreadSpan = (startLine: number) => `（第 ${startLine}–${endLine} 行）`
 
   const flushMarkdown = () => {
     const text = md.join('\n')
@@ -62,9 +92,13 @@ export function parseLesson(source: string): Lesson {
     const line = lines[i]
     const trimmed = line.trim()
 
-    if (/^(```|~~~)/.test(trimmed)) inFence = !inFence
+    const fenceMark = /^(```|~~~)/.exec(trimmed)?.[1]
+    if (fenceMark) {
+      if (!inFence) fence = { index: i, mark: fenceMark }
+      inFence = !inFence
+    }
 
-    if (!inFence && /^<[A-Z][A-Za-z0-9]*[\s/>]/.test(trimmed + ' ')) {
+    if (!inFence && COMPONENT_START.test(trimmed + ' ')) {
       const startLine = i + 1 + lineOffset
       // A tag may span several lines; accumulate until the opening tag closes.
       let text = lines[i]
@@ -75,10 +109,23 @@ export function parseLesson(source: string): Lesson {
         text += '\n' + lines[j]
         tag = tryParseTag(text)
       }
-      if (tag === 'incomplete' || tag instanceof Error) {
+      if (tag instanceof Error) {
+        errors.push({ line: startLine, message: tag.message })
+        md.push(...lines.slice(i, j + 1))
+        i = j + 1
+        continue
+      }
+      if (tag === 'incomplete') {
+        // The opening tag runs to the end of the file: nothing after it was read.
+        const name = /<([A-Z][A-Za-z0-9]*)/.exec(text)?.[1] ?? ''
+        const n = countComponentLines(lines, i + 1, lastNonBlank)
+        const tail = n === 0
+          ? '。这段里没有别的组件，看起来输出在这里中断了：补全这个标签（以 > 或 /> 结尾）和后面没写完的内容'
+          : `，其中还有 ${n} 个组件。补全这个标签（以 > 或 /> 结尾）`
         errors.push({
           line: startLine,
-          message: tag instanceof Error ? tag.message : '组件标签没有闭合',
+          message: `组件标签没有闭合：从这里到文件末尾${unreadSpan(startLine)}都没有读到${tail}`,
+          unclosed: { tag: name, end: endLine, components: n },
         })
         md.push(...lines.slice(i, j + 1))
         i = j + 1
@@ -100,7 +147,16 @@ export function parseLesson(source: string): Lesson {
       let k = j + 1
       while (k < lines.length && lines[k].trim() !== close) k++
       if (k >= lines.length) {
-        errors.push({ line: startLine, message: `缺少 ${close}` })
+        // No closing tag: everything from the opening tag to the end of the file went unread.
+        const n = countComponentLines(lines, i + 1, lastNonBlank)
+        const tail = n === 0
+          ? `。这段里没有别的组件，看起来输出在这里中断了：补上 ${close} 和后面没写完的内容`
+          : `，其中还有 ${n} 个组件。在 <${tag.name}> 的内容结束处补上 ${close}`
+        errors.push({
+          line: startLine,
+          message: `缺少 ${close}：从这里到文件末尾${unreadSpan(startLine)}都没有读到${tail}`,
+          unclosed: { tag: tag.name, end: endLine, components: n },
+        })
         i = lines.length
         continue
       }
@@ -118,6 +174,19 @@ export function parseLesson(source: string): Lesson {
 
     md.push(line)
     i++
+  }
+  if (inFence && fence) {
+    // The code block never closed, so the components after it were read as code and never parsed.
+    const startLine = fence.index + 1 + lineOffset
+    const n = countComponentLines(lines, fence.index + 1, lastNonBlank)
+    const tail = n === 0
+      ? `。这段里没有组件，看起来输出在这里中断了：补上 ${fence.mark} 和后面没写完的内容`
+      : `，其中 ${n} 个组件没有读到。在代码结束处补上 ${fence.mark}`
+    errors.push({
+      line: startLine,
+      message: `代码块（${fence.mark}）没有闭合：从这里到文件末尾${unreadSpan(startLine)}都被当成了代码${tail}`,
+      unclosed: { tag: fence.mark, end: endLine, components: n },
+    })
   }
   flushMarkdown()
 

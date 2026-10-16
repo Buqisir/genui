@@ -1,6 +1,6 @@
 import { COLOR_NAMES } from '../theme'
 import { symbolsOf } from './expr'
-import { parseLesson, type Block, type Props } from './parse'
+import { parseLesson, type Block, type ParseError, type Props, type Unclosed } from './parse'
 import { connectedWires, schematicNetlist, schematicSolves, solves, solveWiring, type SchematicNode, WIRING_TYPES, wiringTerminals, type WiringPart, type WiringWire } from './circuit'
 import { GASES } from './gas'
 import { MOTION_RESERVED, motionOutputs, parseRead } from './motion'
@@ -34,6 +34,13 @@ export interface Issue {
   hint?: string
   /** Stable kind of the problem, e.g. `unknown-prop`; tests and doc pointers compare this, never the message. */
   code?: string
+  /**
+   * The Param/Define name the issue is about: the missing name for `undeclared-name`, `answer-unknown-name`,
+   * `variant-unknown-name`; the unused one for `unused-name`. structure.ts groups issues by it.
+   */
+  name?: string
+  /** Copied from the parse error: a tag or code fence that never closes. */
+  unclosed?: Unclosed
 }
 
 export interface ValidationResult {
@@ -154,6 +161,22 @@ function undeclaredName(message: string): string | undefined {
   return /引用了未声明的名字 ([^\s：（]+)/.exec(message)?.[1]
 }
 
+/** Raw lines no parser read: each unclosed tag or code fence runs from its line to the end of the file. */
+function unreadLines(raw: string[], parseErrors: ParseError[]): string[] {
+  const out: string[] = []
+  for (const e of parseErrors) if (e.unclosed) out.push(...raw.slice(e.line - 1, e.unclosed.end))
+  return out
+}
+
+/** True when `name` occurs in `text` as a whole identifier, not glued to a letter, digit, `_` or `$`. */
+function namesIn(text: string, name: string): boolean {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(?<![A-Za-z0-9_$])${escaped}(?![A-Za-z0-9_$])`).test(text)
+}
+
+/** Errors that reference a name: they are cascades when the name is declared in text no parser read. */
+const UNREAD_CASCADE_CODES = new Set(['undeclared-name', 'answer-unknown-name', 'variant-unknown-name'])
+
 /** The 「（是不是 X？）」 suffix for an undeclared name, or '' when no declared name is close enough. */
 function didYouMean(name: string, candidates: Iterable<string>): string {
   const hint = closestName(name, candidates)
@@ -178,7 +201,9 @@ export function validateLesson(source: string): ValidationResult {
   const lesson = parseLesson(source)
   // Raw lines, for recovering what a tag that failed to parse was meant to say.
   const raw = source.split('\n')
-  for (const e of lesson.errors) errors.push({ line: e.line, message: e.message, code: e.message.startsWith(BAD_YAML) ? 'front-matter' : 'parse' })
+  for (const e of lesson.errors) {
+    errors.push({ line: e.line, message: e.message, code: e.message.startsWith(BAD_YAML) ? 'front-matter' : 'parse', ...(e.unclosed ? { unclosed: e.unclosed } : {}) })
+  }
 
   const meta = lesson.meta
   // With broken YAML the meta is empty: the missing-field and demo checks would only repeat that error.
@@ -236,13 +261,16 @@ export function validateLesson(source: string): ValidationResult {
   )
   for (const b of comps) {
     if (b.name === 'Circuit' && typeof b.props.motion === 'string' && !motionCircuits.has(b.props.motion)) {
-      errors.push({ line: b.line, message: `<Circuit> motion="${b.props.motion}" 必须指向本课件里带 circuit 的 <Motion>`, code: 'undeclared-name' })
+      errors.push({ line: b.line, message: `<Circuit> motion="${b.props.motion}" 必须指向本课件里带 circuit 的 <Motion>`, code: 'undeclared-name', name: b.props.motion })
     }
   }
 
   const SCENES = ['Sim', 'Figure', 'ForceDiagram', 'Circuit', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes']
   // A scene tag that is unclosed or failed to parse is already reported; the lesson did not lose its scene.
-  const sceneBroken = lesson.errors.some((e) => SCENES.includes(tagAt(raw, e.line) ?? ''))
+  // A scene tag in text no parser read (an unclosed range) counts too: the lesson did not lose its scene, it was cut off.
+  const unread = unreadLines(raw, lesson.errors)
+  const SCENE_START = new RegExp(`^<(${SCENES.join('|')})(?=[\\s/>]|$)`)
+  const sceneBroken = lesson.errors.some((e) => SCENES.includes(tagAt(raw, e.line) ?? '')) || unread.some((l) => SCENE_START.test(l.trim()))
   if (!metaBroken && meta.demo !== true && !sceneBroken && !comps.some((b) => SCENES.includes(b.name))) {
     errors.push({ message: '课件没有画出物理情景：至少要有一个 Sim、Figure、ForceDiagram、Circuit、Instrument、TickerTape、EnergyLevels、Wiring、GasBox、GasTube 或 Fringes（只有 Plot 不够）', code: 'no-scene' })
   }
@@ -269,7 +297,7 @@ export function validateLesson(source: string): ValidationResult {
         continue
       }
       if (!(a.name in scope)) {
-        errors.push({ message: `answers 里的 ${a.name} 没有对应的 Param/Define${didYouMean(a.name, Object.keys(scope))}，无法核对`, code: 'answer-unknown-name' })
+        errors.push({ message: `answers 里的 ${a.name} 没有对应的 Param/Define${didYouMean(a.name, Object.keys(scope))}，无法核对`, code: 'answer-unknown-name', name: a.name })
         continue
       }
       const got: number = scope[a.name]
@@ -294,7 +322,7 @@ export function validateLesson(source: string): ValidationResult {
       for (const [name, want] of Object.entries(b.props.expect as Record<string, unknown>)) {
         if (typeof want !== 'number' || !Number.isFinite(want)) continue // checkComponent reports non-numeric values
         if (!(name in after)) {
-          errors.push({ line: b.line, message: `变式「${label}」的 expect 里的 ${name} 没有对应的 Param/Define${didYouMean(name, Object.keys(after))}`, code: 'variant-unknown-name' })
+          errors.push({ line: b.line, message: `变式「${label}」的 expect 里的 ${name} 没有对应的 Param/Define${didYouMean(name, Object.keys(after))}`, code: 'variant-unknown-name', name })
           continue
         }
         const got = after[name]
@@ -394,6 +422,15 @@ export function validateLesson(source: string): ValidationResult {
   // Safety net: an issue pushed without a code gets its severity's default. Every push above sets one.
   for (const e of errors) if (!e.code) e.code = 'component-invalid'
   for (const w of warnings) if (!w.code) w.code = 'component-warning'
+
+  // Name for each undeclared-name issue, from its message when the pusher did not pass it.
+  for (const issue of [...errors, ...warnings]) {
+    if (issue.code === 'undeclared-name' && issue.name === undefined) issue.name = undeclaredName(issue.message)
+  }
+  // A reference to a name declared in text no parser read is a cascade of that unclosed tag or fence, which is reported there.
+  const unreadText = unread.join('\n')
+  const fromUnread = (issue: Issue) => UNREAD_CASCADE_CODES.has(issue.code ?? '') && issue.name !== undefined && namesIn(unreadText, issue.name)
+  errors.splice(0, errors.length, ...errors.filter((e) => !fromUnread(e)))
 
   // Point each located issue at the block that contains its line, so messages can name the statement.
   const keys = listKeys(source)
