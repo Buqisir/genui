@@ -20,10 +20,16 @@ import { runTransient, transientOf, transientReads, transientSpec } from './tran
 import { afterElement, checkSourceChains, extensionChildren, readValueNames, transformerDcWarning, usesLadderBlock, walkSpdt } from './circuitElements'
 import { buildRegistry, ParamStore, type ParamDef } from './store'
 import { COMPONENTS, type PropKind } from './components'
+import { listKeys } from './patch'
+import { signature } from './signature'
 
 export interface Issue {
   line?: number
   message: string
+  /** Block key of the component the line belongs to, e.g. `Define:R1`; set at the end of validateLesson. */
+  block?: string
+  /** Correct one-line signature, for prop errors. */
+  hint?: string
 }
 
 export interface ValidationResult {
@@ -62,6 +68,9 @@ const TONES = new Set(['neutral', 'info', 'success', 'warning', 'danger'])
 const FORMATS = new Set(['sci', 'percent'])
 const SIZES = new Set(['full', 'wide', 'narrow'])
 const LEGEND_KINDS = new Set([...COLOR_NAMES.flatMap((c) => [c, `${c}-dash`]), 'strobe'])
+
+/** Prop-level messages from checkComponent that get a `正确写法` hint: missing, unknown, or wrong kind. */
+const PROP_ERROR = /缺少属性|未知属性|类型不对，应为/
 
 function kindOf(v: unknown): Kind[] {
   if (typeof v === 'string') return ['string', 'expr', 'name']
@@ -266,6 +275,15 @@ export function validateLesson(source: string): ValidationResult {
     }
   }
 
+  // Point each located issue at the block that contains its line, so messages can name the statement.
+  const keys = listKeys(source)
+  for (const issue of [...errors, ...warnings]) {
+    if (issue.line === undefined) continue
+    const line = issue.line
+    const block = keys.find((k) => line >= k.line && line <= k.end)
+    if (block) issue.block = block.key
+  }
+
   return { errors, warnings, scope }
 }
 
@@ -403,7 +421,8 @@ function checkComponent(
   const line = b.line
   const spec = COMPONENTS[b.name]
   const err = (message: string): void => {
-    errors.push({ line, message: `<${b.name}> ${message}` })
+    const sig = PROP_ERROR.test(message) ? signature(b.name) : null
+    errors.push(sig ? { line, message: `<${b.name}> ${message}`, hint: `正确写法：${sig}` } : { line, message: `<${b.name}> ${message}` })
   }
   const warn = (message: string): void => {
     warnings.push({ line, message: `<${b.name}> ${message}` })

@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { parse } from 'yaml'
 import { docsRoot, loadDocs, type Doc } from '../docs/index'
 import { validateSource } from '../../scripts/validate'
+import type { Issue } from '../lesson/validate'
 
 export type Layer = 'L0' | 'L1' | 'L2'
 
@@ -37,6 +38,10 @@ export interface PointedIssue {
   line?: number
   message: string
   doc: string
+  /** Block key the line belongs to, e.g. `Define:R1`. */
+  block?: string
+  /** Correct one-line signature, for prop errors. */
+  hint?: string
 }
 
 export interface ValidationReport {
@@ -524,9 +529,12 @@ export function pointerFor(message: string): Pointer {
   return { doc: FALLBACK_DOC, via: 'fallback' }
 }
 
-function point(issue: { line?: number; message: string }): PointedIssue {
-  const doc = pointerFor(issue.message).doc
-  return issue.line === undefined ? { message: issue.message, doc } : { line: issue.line, message: issue.message, doc }
+function point(issue: Issue): PointedIssue {
+  const pointed: PointedIssue = { message: issue.message, doc: pointerFor(issue.message).doc }
+  if (issue.line !== undefined) pointed.line = issue.line
+  if (issue.block !== undefined) pointed.block = issue.block
+  if (issue.hint !== undefined) pointed.hint = issue.hint
+  return pointed
 }
 
 /** Structural checks plus the Sim/Figure smoke run. `ok` ignores warnings. */
@@ -538,8 +546,9 @@ export function validateLesson(source: string): ValidationReport {
 }
 
 export function formatIssue(kind: '错误' | '提醒', issue: PointedIssue): string {
-  const at = issue.line ? ` 第 ${issue.line} 行` : ''
-  return `  ${kind}${at}：${issue.message}（读 genui docs ${issue.doc}）`
+  const at = issue.line ? ` 第 ${issue.line} 行${issue.block ? `（${issue.block}）` : ''}` : ''
+  const head = `  ${kind}${at}：${issue.message}（读 genui docs ${issue.doc}）`
+  return issue.hint ? `${head}\n    ${issue.hint}` : head
 }
 
 export function formatValidation(label: string, result: { errors: PointedIssue[]; warnings: PointedIssue[] }): string {

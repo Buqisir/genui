@@ -356,15 +356,20 @@ function withSelectionCost(note: string, extra: number): string {
   return note.replace(found[0], `，$${(Number(found[1]) + extra).toFixed(4)}`)
 }
 
-function reportOf(r: { errors: { line?: number; message: string }[]; warnings: { line?: number; message: string }[] }, missing: string[]): string {
+function reportOf(
+  r: { errors: { line?: number; block?: string; hint?: string; message: string }[]; warnings: { line?: number; block?: string; hint?: string; message: string }[] },
+  missing: string[],
+): string {
   const pointed = (message: string) => {
     const doc = pointerFor(message).doc
     return `${doc}（${docTitle(doc)}）`
   }
+  const where = (i: { line?: number; block?: string }) => (i.line ? `（第 ${i.line} 行${i.block ? `，${i.block}` : ''}）` : '')
+  const hint = (i: { hint?: string }) => (i.hint ? `\n  ${i.hint}` : '')
   const lines = [
-    ...r.errors.map((e) => `- 错误${e.line ? `（第 ${e.line} 行）` : ''}：${e.message}（${pointed(e.message)}）`),
+    ...r.errors.map((e) => `- 错误${where(e)}：${e.message}（${pointed(e.message)}）${hint(e)}`),
     ...(blind ? [] : missing).map((q) => `- 答案核对：「${q}」与标准答案不符（或 answers 里缺这一项）。请重新审题：题目文字可能省略了原图里的信息（例如光在某个面上先反射），选择能让题设条件全部成立的解释，不要轻易断定题目矛盾。`),
-    ...r.warnings.map((w) => `- 提醒${w.line ? `（第 ${w.line} 行）` : ''}：${w.message}（${pointed(w.message)}）`),
+    ...r.warnings.map((w) => `- 提醒${where(w)}：${w.message}（${pointed(w.message)}）${hint(w)}`),
   ]
   if (r.errors.length || r.warnings.length) lines.push('', '这些文档 id 在《课件语法规范》里对应标题相同的章节。')
   return lines.join('\n')
