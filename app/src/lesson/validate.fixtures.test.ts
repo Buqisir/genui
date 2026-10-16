@@ -7,7 +7,8 @@ import { validateLesson } from './validate'
 // Plain-text conformance cases for the lesson parser and validator. Each directory holds
 // lesson.md and expect.txt. First line: `ok` (no errors; warnings allowed) or `errors`.
 // Then, per line: `warn: <substring>` must appear in some warning; `line: N` right after an
-// error substring means the error matching that substring must be on line N; any other
+// error substring means the error matching that substring must be on line N; `not: <substring>`
+// means no error or warning may contain it; `count: N` means exactly N errors; any other
 // non-blank line is a substring that must appear in some error message.
 const FIXTURES = fileURLToPath(new URL('./fixtures/validate', import.meta.url))
 const read = (path: string) => readFileSync(path, 'utf8')
@@ -16,15 +17,19 @@ interface Expect {
   ok: boolean
   errors: { text: string; line?: number }[]
   warns: string[]
+  nots: string[]
+  count?: number
 }
 
 function parseExpect(src: string): Expect {
   const lines = src.split('\n').map((l) => l.trim()).filter(Boolean)
   const [head, ...rest] = lines
   if (head !== 'ok' && head !== 'errors') throw new Error(`expect.txt 第一行要写 ok 或 errors，实际是「${head}」`)
-  const out: Expect = { ok: head === 'ok', errors: [], warns: [] }
+  const out: Expect = { ok: head === 'ok', errors: [], warns: [], nots: [] }
   for (const l of rest) {
     if (l.startsWith('warn: ')) out.warns.push(l.slice('warn: '.length))
+    else if (l.startsWith('not: ')) out.nots.push(l.slice('not: '.length))
+    else if (l.startsWith('count: ')) out.count = Number(l.slice('count: '.length))
     else if (l.startsWith('line: ')) {
       const last = out.errors[out.errors.length - 1]
       if (!last || last.line !== undefined) throw new Error(`「${l}」前面要有一条错误文字`)
@@ -58,6 +63,13 @@ describe('validate fixtures', () => {
       }
       for (const w of want.warns) {
         expect(r.warnings.some((x) => x.message.includes(w)), `no warning contains「${w}」in ${JSON.stringify(r.warnings)}`).toBe(true)
+      }
+      const all = [...r.errors, ...r.warnings]
+      for (const n of want.nots) {
+        expect(all.some((x) => x.message.includes(n)), `「${n}」must not appear in ${JSON.stringify(all)}`).toBe(false)
+      }
+      if (want.count !== undefined) {
+        expect(r.errors.length, JSON.stringify(r.errors)).toBe(want.count)
       }
     })
   }

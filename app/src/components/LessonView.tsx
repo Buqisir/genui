@@ -727,7 +727,10 @@ export function LessonView({ source }: { source: string }) {
   const quoted = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment' && typeof b.props.quote === 'string'), [lesson])
   const [teach, setTeach] = useState<'' | 'pages' | 'board'>('')
   const [showProblem, setShowProblem] = useState(() => segmented && !quoted && (typeof window === 'undefined' || window.innerWidth > 900))
-  const problems = [...lesson.errors.map((e) => `第 ${e.line} 行：${e.message}`), ...registry.errors]
+  const problems = [
+    ...lesson.errors.map((e) => `第 ${e.line} 行：${e.message}`),
+    ...registry.errors.map((e) => (e.line === undefined ? e.message : `第 ${e.line} 行：${e.message}`)),
+  ]
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme

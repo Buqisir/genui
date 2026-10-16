@@ -1,3 +1,5 @@
 errors
 头信息不是合法的 YAML
 line: 1
+count: 1
+not: 头信息缺少

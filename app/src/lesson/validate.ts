@@ -112,15 +112,57 @@ export function eventNames(blocks: Block[]): Set<string> {
   return out
 }
 
+/** Message parse.ts gives when the front matter is not YAML. */
+const BAD_YAML = '头信息不是合法的 YAML'
+
+/** Component name of the tag that opens on this line, if any. */
+function tagAt(raw: string[], line: number | undefined): string | undefined {
+  return line === undefined ? undefined : /^\s*<([A-Z]\w*)/.exec(raw[line - 1] ?? '')?.[1]
+}
+
+/** Name a Param/Define tag was meant to declare, read from the raw text of the tag (it did not parse). */
+function declaredNameAt(raw: string[], line: number | undefined): string | undefined {
+  if (line === undefined || !/^\s*<(Param|Define)\b/.test(raw[line - 1] ?? '')) return undefined
+  // The opening tag may span several lines; read until the line that closes it.
+  const text: string[] = []
+  for (let i = line - 1; i < raw.length && i < line + 19; i++) {
+    text.push(raw[i])
+    if (raw[i].includes('>')) break
+  }
+  const m = /\bname=(?:"([A-Za-z_]\w*)"|([A-Za-z_]\w*))/.exec(text.join('\n'))
+  return m ? (m[1] ?? m[2]) : undefined
+}
+
+/** The name in a 「引用了未声明的名字 X」 message. */
+function undeclaredName(message: string): string | undefined {
+  return /引用了未声明的名字 ([^\s：]+)/.exec(message)?.[1]
+}
+
+/**
+ * A registry error and a checkComponent error on the same line that report the same mistake:
+ * the same missing prop, or the same undeclared name. The checkComponent one is kept (it has the signature hint).
+ */
+function samePlace(reg: { line?: number; message: string }, issue: Issue): boolean {
+  if (reg.line === undefined || issue.line !== reg.line) return false
+  const missing = /缺少 (\w+)$/.exec(reg.message)?.[1]
+  if (missing && new RegExp(`属性 ${missing}(?!\\w)`).test(issue.message)) return true
+  const name = undeclaredName(reg.message)
+  return name !== undefined && undeclaredName(issue.message) === name
+}
+
 export function validateLesson(source: string): ValidationResult {
   const errors: Issue[] = []
   const warnings: Issue[] = []
   const lesson = parseLesson(source)
+  // Raw lines, for recovering what a tag that failed to parse was meant to say.
+  const raw = source.split('\n')
   for (const e of lesson.errors) errors.push({ line: e.line, message: e.message })
 
   const meta = lesson.meta
+  // With broken YAML the meta is empty: the missing-field and demo checks would only repeat that error.
+  const metaBroken = lesson.errors.some((e) => e.message.startsWith(BAD_YAML))
   const required = meta.demo === true ? ['title'] : ['id', 'title', 'question', ...(meta.choice === undefined ? ['answers'] : [])]
-  for (const key of required) {
+  for (const key of metaBroken ? [] : required) {
     if (meta[key] === undefined) errors.push({ message: `头信息缺少 ${key}` })
   }
   if (meta.choice !== undefined) {
@@ -137,13 +179,33 @@ export function validateLesson(source: string): ValidationResult {
   }
 
   const reg = buildRegistry(lesson.blocks)
-  for (const e of reg.errors) errors.push({ message: e })
   const declared = new Set([...reg.params.map((p) => p.name), ...reg.defines.map((d) => d.name)])
   const params = new Set(reg.params.map((p) => p.name))
   const userNames = new Set<string>([...reg.params.map((p) => p.name), ...reg.defines.filter((d) => !d.solver).map((d) => d.name)])
 
   const comps = lesson.blocks.filter((b): b is Extract<Block, { kind: 'component' }> => b.kind === 'component')
-  for (const b of comps) checkComponent(b, declared, params, errors, warnings, reg.params, userNames)
+  const compErrors: Issue[] = []
+  for (const b of comps) checkComponent(b, declared, params, compErrors, warnings, reg.params, userNames)
+
+  // One mistake, one report. Names whose declaration is itself broken are reported there, so references to them are cascades.
+  const errorLines = new Set<number>()
+  for (const e of [...lesson.errors, ...reg.errors, ...compErrors]) if (e.line !== undefined) errorLines.add(e.line)
+  const broken = new Set<string>()
+  for (const b of comps) {
+    if ((b.name === 'Param' || b.name === 'Define') && errorLines.has(b.line) && typeof b.props.name === 'string') broken.add(b.props.name)
+  }
+  for (const e of lesson.errors) {
+    const name = declaredNameAt(raw, e.line)
+    if (name) broken.add(name)
+  }
+  const cascade = (message: string) => {
+    const name = undeclaredName(message)
+    return name !== undefined && broken.has(name)
+  }
+  for (const e of reg.errors) {
+    if (!cascade(e.message) && !compErrors.some((c) => samePlace(e, c))) errors.push({ line: e.line, message: e.message })
+  }
+  errors.push(...compErrors.filter((e) => !cascade(e.message)))
 
   const motionCircuits = new Set(
     comps.filter((b) => b.name === 'Motion' && b.props.circuit && typeof b.props.name === 'string').map((b) => String(b.props.name)),
@@ -155,7 +217,9 @@ export function validateLesson(source: string): ValidationResult {
   }
 
   const SCENES = ['Sim', 'Figure', 'ForceDiagram', 'Circuit', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes']
-  if (meta.demo !== true && !comps.some((b) => SCENES.includes(b.name))) {
+  // A scene tag that is unclosed or failed to parse is already reported; the lesson did not lose its scene.
+  const sceneBroken = lesson.errors.some((e) => SCENES.includes(tagAt(raw, e.line) ?? ''))
+  if (!metaBroken && meta.demo !== true && !sceneBroken && !comps.some((b) => SCENES.includes(b.name))) {
     errors.push({ message: '课件没有画出物理情景：至少要有一个 Sim、Figure、ForceDiagram、Circuit、Instrument、TickerTape、EnergyLevels、Wiring、GasBox、GasTube 或 Fringes（只有 Plot 不够）' })
   }
 

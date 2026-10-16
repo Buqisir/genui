@@ -88,7 +88,7 @@ describe('registry', () => {
     expect(store.getScope().b).toBe(11)
 
     const cyc = buildRegistry(parseLesson('<Define name="p" expr="q" />\n\n<Define name="q" expr="p" />\n').blocks)
-    expect(cyc.errors.some((e) => e.includes('循环引用'))).toBe(true)
+    expect(cyc.errors.some((e) => e.message.includes('循环引用'))).toBe(true)
   })
 
   it('publishes Wiring solver readings as names that Defines and answers can use', () => {

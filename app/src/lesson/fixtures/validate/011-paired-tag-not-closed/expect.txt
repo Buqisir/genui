@@ -1,3 +1,5 @@
 errors
 缺少 </Figure>
 line: 14
+count: 1
+not: 课件没有画出物理情景
