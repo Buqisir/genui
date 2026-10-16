@@ -1,6 +1,6 @@
 // CLI for coding agents. Same core as the function-calling tools.
 // Exit 0: ok. Exit 1: the lesson has errors (or layout/render reported problems). Exit 2: usage.
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, isAbsolute, join, resolve } from 'node:path'
 import { checkLayout, formatLayoutReport } from '../src/agent/layout'
 import { renderLesson } from '../src/agent/render'
@@ -14,6 +14,7 @@ import {
   type DocText,
 } from '../src/agent/core'
 import { repoRoot } from '../src/docs/index'
+import { applyPatch, formatKeys } from '../src/lesson/patch'
 
 function usage(): never {
   console.error(`用法：
@@ -22,7 +23,9 @@ function usage(): never {
   genui docs --search <词>
   genui validate <课件.md> [--json]
   genui layout <课件.md> [--json]
-  genui shot <课件.md> [--out 目录]`)
+  genui shot <课件.md> [--out 目录]
+  genui patch <课件.md> <补丁.md> [--dry]   补丁只写要改的块，按名字合并进课件
+  genui patch <课件.md> --keys              列出可以在补丁里引用的块名`)
   process.exit(2)
 }
 
@@ -30,18 +33,23 @@ function isDocError(doc: DocText | DocError): doc is DocError {
   return 'error' in doc
 }
 
-function readLesson(file: string): string {
+function lessonPath(file: string): string {
   // Relative paths try the caller's cwd first, then the repo root, so the CLI works from any directory.
   const candidates = isAbsolute(file) ? [file] : [resolve(process.cwd(), file), resolve(repoRoot, file)]
   for (const path of candidates) {
     try {
-      return readFileSync(path, 'utf8')
+      readFileSync(path, 'utf8')
+      return path
     } catch {
       // try the next candidate
     }
   }
   console.error(`找不到文件：${file}`)
   process.exit(2)
+}
+
+function readLesson(file: string): string {
+  return readFileSync(lessonPath(file), 'utf8')
 }
 
 function flag(args: string[], name: string): boolean {
@@ -106,6 +114,35 @@ async function validate(args: string[]) {
   process.exit(report.ok ? 0 : 1)
 }
 
+async function patch(args: string[]) {
+  const dry = flag(args, '--dry')
+  const keysOnly = flag(args, '--keys')
+  const files = args.filter((a) => a !== '--dry' && a !== '--keys')
+  if (keysOnly) {
+    if (files.length !== 1 || dry) usage()
+    console.log(formatKeys(readLesson(files[0])))
+    return
+  }
+  if (files.length !== 2) usage()
+  const [lessonFile, patchFile] = files
+  const path = lessonPath(lessonFile)
+  const result = applyPatch(readLesson(lessonFile), readLesson(patchFile))
+  if (!result.ok) {
+    for (const e of result.errors) console.error(`- ${e}`)
+    console.error(`补丁没有应用（${result.errors.length} 个错误），课件没有改动。`)
+    process.exit(1)
+  }
+  // With --dry the lesson goes to stdout and the report to stderr, so stdout stays a clean lesson.
+  const report = dry ? console.error : console.log
+  if (dry) process.stdout.write(result.text.endsWith('\n') ? result.text : result.text + '\n')
+  else writeFileSync(path, result.text)
+  report(`${dry ? '预览，未写入' : '已写入'} ${basename(path)}，应用 ${result.applied.length} 处修改：`)
+  for (const a of result.applied) report(`- ${a}`)
+  const validation = validateLesson(result.text)
+  report(formatValidation(basename(path), validation))
+  process.exit(validation.ok ? 0 : 1)
+}
+
 async function layout(args: string[]) {
   const json = flag(args, '--json')
   const files = args.filter((a) => a !== '--json')
@@ -165,6 +202,7 @@ async function main() {
   if (cmd === 'validate') return validate(args)
   if (cmd === 'layout') return layout(args)
   if (cmd === 'shot') return shot(args)
+  if (cmd === 'patch') return patch(args)
   console.error(`未知命令：${cmd}`)
   usage()
 }

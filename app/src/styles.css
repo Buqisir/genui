@@ -3810,3 +3810,34 @@ figure.card {
   font-family: var(--font-readout);
   font-variant-numeric: tabular-nums;
 }
+
+/* The 板书 pill's menu hangs under the pill, right-aligned to it. */
+.fb-board-wrap {
+  position: relative;
+}
+
+.fb-board-menu {
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+}
+
+/* Saved-board notice, under the bar. The hairline keeps the card visible on the night board, where the shadow does not show. */
+.fb-toast {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  z-index: 20;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border: 1px solid var(--c-hairline);
+  border-radius: 12px;
+  background: var(--c-card);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  color: var(--c-ink);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}

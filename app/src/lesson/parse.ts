@@ -5,7 +5,16 @@ export type Props = Record<string, unknown>
 
 export type Block =
   | { kind: 'markdown'; text: string }
-  | { kind: 'component'; name: string; props: Props; body?: string; line: number }
+  | {
+      kind: 'component'
+      name: string
+      props: Props
+      body?: string
+      /** 1-based line of the opening tag. */
+      line: number
+      /** 1-based line of the block's last line: the closing tag for paired tags, the opening tag's last line otherwise. */
+      end: number
+    }
 
 export interface Lesson {
   meta: Record<string, unknown>
@@ -82,7 +91,7 @@ export function parseLesson(source: string): Lesson {
       }
 
       if (tag.selfClosing) {
-        blocks.push({ kind: 'component', name: tag.name, props: tag.props, line: startLine })
+        blocks.push({ kind: 'component', name: tag.name, props: tag.props, line: startLine, end: j + 1 + lineOffset })
         i = j + 1
         continue
       }
@@ -101,6 +110,7 @@ export function parseLesson(source: string): Lesson {
         props: tag.props,
         body: lines.slice(j + 1, k).join('\n'),
         line: startLine,
+        end: k + 1 + lineOffset,
       })
       i = k + 1
       continue
@@ -112,6 +122,13 @@ export function parseLesson(source: string): Lesson {
   flushMarkdown()
 
   return { meta, blocks, errors }
+}
+
+/** Length of the opening tag at the start of src (src starts at "<"), or -1 if it is incomplete or invalid. */
+export function openingTagLength(src: string): number {
+  const tag = tryParseTag(src)
+  if (tag === 'incomplete' || tag instanceof Error) return -1
+  return src.length - tag.rest.length
 }
 
 interface ParsedTag {

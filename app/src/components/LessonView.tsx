@@ -703,10 +703,22 @@ function TeachView(props: { blocks: Block[]; title: string; problem: string | nu
   )
 }
 
+/** A short fingerprint of the lesson text (FNV-1a, 32-bit, base 36): a saved board is only put back on the same source. */
+function fnv1a(text: string) {
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(36)
+}
+
 export function LessonView({ source }: { source: string }) {
   const lesson = useMemo(() => parseLesson(source), [source])
   const registry = useMemo(() => buildRegistry(lesson.blocks), [lesson])
   const meta = lesson.meta
+  const lessonId = typeof meta.id === 'string' ? meta.id : 'lesson'
+  const sourceHash = useMemo(() => fnv1a(source), [source])
   const [theme, setTheme] = useState<ThemeName>(meta.theme === 'night' ? 'night' : 'light')
   // A segmented lesson keeps the problem in view: students check the givens while they read each segment.
   const segmented = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment'), [lesson])
@@ -757,6 +769,8 @@ export function LessonView({ source }: { source: string }) {
         )}
         {teach === 'board' && (
           <FlowBoard
+            lessonId={lessonId}
+            sourceHash={sourceHash}
             blocks={lesson.blocks}
             title={typeof meta.title === 'string' ? meta.title : ''}
             problem={problemText}

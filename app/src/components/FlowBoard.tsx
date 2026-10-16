@@ -21,7 +21,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { getStroke } from 'perfect-freehand'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import type { Block } from '../lesson/parse'
 import { useScope, useScopeFor, useStore, namesIn } from '../lesson/store'
 import type { ThemeName } from '../theme'
@@ -366,15 +366,34 @@ function DelButton({ id, onDelete }: { id: string; onDelete?: () => void }) {
   )
 }
 
-function NoteNode({ id }: NodeProps) {
+/** Uncontrolled on purpose: React never resets the text under the caret, the node's data only mirrors it for saving. */
+function NoteNode({ id, data }: NodeProps) {
+  const { updateNodeData } = useReactFlow()
+  const zoom = useZoom()
   const text = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    text.current?.focus({ preventScroll: true })
+    if (!text.current) return
+    text.current.textContent = str(data.text)
+    // Only a note the teacher just added takes the caret; a restored one stays put. React Flow keeps a
+    // new node hidden until it has measured it, and a hidden element cannot take focus, so wait a beat.
+    if (data.fresh === true) {
+      const t = window.setTimeout(() => text.current?.focus({ preventScroll: true }), 80)
+      return () => window.clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only: the text is the teacher's from here on
   }, [])
   return (
     <Zoomed width={320} className="fb-note">
       <DelButton id={id} />
-      <div ref={text} className="fb-note-text nodrag nowheel" contentEditable suppressContentEditableWarning />
+      <div
+        ref={text}
+        className="fb-note-text nodrag nowheel"
+        // From across the room a note reads like the other far text.
+        style={zoom < FAR_ZOOM ? { fontSize: inZoomed(zoom, 26) } : undefined}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={(e) => updateNodeData(id, { text: e.currentTarget.innerText })}
+      />
     </Zoomed>
   )
 }
@@ -584,7 +603,118 @@ function BoardPen({ on, strokes, setStrokes }: { on: boolean; strokes: Stroke[];
   )
 }
 
-type Props = { blocks: Block[]; title: string; problem: string | null; theme: ThemeName; setTheme: (t: ThemeName) => void; onExit: () => void; onPages: () => void }
+type Point = { x: number; y: number }
+type Kind = 'note' | 'slider' | 'variant'
+type SavedAdded = { id: string; type: Kind; position: Point; data: AnyData }
+/**
+ * The teacher's own work on one lesson's board. The lesson's program is not in here: `hash` says which
+ * source the positions and ink were made on, and only that source gets them back.
+ */
+type SavedBoard = { v: 1; hash: string; added: SavedAdded[]; moved: Record<string, Point>; strokes: Stroke[]; savedAt: number }
+
+const LESSON_CHANGED = '课件已更新：老师加的便签和卡片已恢复，旧的摆放位置和笔迹没有恢复。'
+
+/** The teacher's nodes are the only ones with a u<number> id; the layout's ids are t, p, v, s, x, w. */
+const isAdded = (id: string) => /^u\d+$/.test(id)
+const isKind = (t: unknown): t is Kind => t === 'note' || t === 'slider' || t === 'variant'
+const isObject = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x)
+
+function point(p: unknown): Point | null {
+  if (!isObject(p)) return null
+  const { x, y } = p
+  return typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
+}
+
+const isStroke = (s: unknown): s is Stroke =>
+  isObject(s) &&
+  Array.isArray(s.pts) &&
+  s.pts.every((p) => Array.isArray(p) && p.length >= 2 && p.every((v) => typeof v === 'number' && Number.isFinite(v))) &&
+  typeof s.size === 'number' &&
+  Number.isFinite(s.size)
+
+/** A board that is not version 1 is ignored whole; single entries of the wrong shape are dropped. */
+function parseBoard(raw: unknown): SavedBoard | null {
+  if (!isObject(raw) || raw.v !== 1 || typeof raw.hash !== 'string' || !Array.isArray(raw.added) || !isObject(raw.moved) || !Array.isArray(raw.strokes)) return null
+  const seen = new Set<string>()
+  const added = raw.added.flatMap((a): SavedAdded[] => {
+    if (!isObject(a) || typeof a.id !== 'string' || !isAdded(a.id) || seen.has(a.id) || !isKind(a.type)) return []
+    const position = point(a.position)
+    if (!position) return []
+    seen.add(a.id)
+    return [{ id: a.id, type: a.type, position, data: isObject(a.data) ? a.data : {} }]
+  })
+  const moved: Record<string, Point> = {}
+  for (const [id, p] of Object.entries(raw.moved)) {
+    const q = point(p)
+    if (q) moved[id] = q
+  }
+  return {
+    v: 1,
+    hash: raw.hash,
+    added,
+    moved,
+    strokes: raw.strokes.filter(isStroke),
+    savedAt: typeof raw.savedAt === 'number' ? raw.savedAt : 0,
+  }
+}
+
+function readBoard(key: string): SavedBoard | null {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw === null ? null : parseBoard(JSON.parse(raw))
+  } catch {
+    return null
+  }
+}
+
+/** Nothing left to keep means no key at all. */
+function writeBoard(key: string, board: SavedBoard) {
+  try {
+    if (board.added.length + Object.keys(board.moved).length + board.strokes.length === 0) localStorage.removeItem(key)
+    else localStorage.setItem(key, JSON.stringify(board))
+  } catch {
+    // Storage full or blocked: the board still works, it just is not kept.
+  }
+}
+
+/** What is kept of a teacher node: a note's text, a slider's quantity, a card's label (its numbers come from the lesson). */
+function savedData(n: Node<AnyData>): AnyData {
+  if (n.type === 'note') return { text: str(n.data.text) }
+  if (n.type === 'slider') return { name: str(n.data.name) }
+  return { label: str(n.data.label) }
+}
+
+/**
+ * The teacher's nodes as this lesson can show them now. A slider needs its Param still in the lesson,
+ * a card a Variant with the same label; a card takes the lesson's current data, not the saved copy.
+ */
+function reviveAdded(items: SavedAdded[], blocks: Block[], variants: VariantData[]): Node<AnyData>[] {
+  return items.flatMap((a): Node<AnyData>[] => {
+    if (a.type === 'slider') {
+      const name = str(a.data.name)
+      const ok = blocks.some((b) => b.kind === 'component' && b.name === 'Param' && b.props.name === name)
+      return ok ? [{ id: a.id, type: 'slider', position: a.position, data: { name } }] : []
+    }
+    if (a.type === 'variant') {
+      const label = str(a.data.label)
+      const v = variants.find((x) => x.label === label)
+      return v ? [{ id: a.id, type: 'variant', position: a.position, data: v }] : []
+    }
+    return [{ id: a.id, type: 'note', position: a.position, data: { text: str(a.data.text) } }]
+  })
+}
+
+type Props = {
+  blocks: Block[]
+  title: string
+  problem: string | null
+  theme: ThemeName
+  setTheme: (t: ThemeName) => void
+  onExit: () => void
+  onPages: () => void
+  lessonId: string
+  sourceHash: string
+}
 
 export function FlowBoard(props: Props) {
   return (
@@ -598,7 +728,7 @@ export function FlowBoard(props: Props) {
  * Class mode on an open board: the figures, sliders and questions sit on the board itself, joined
  * by arrows along the problem's chain. "Next" frames the next segment; O frames the whole board.
  */
-function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }: Props) {
+function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, lessonId, sourceHash }: Props) {
   const rf = useReactFlow()
   const { intro, segs } = useMemo(() => splitSegments(blocks), [blocks])
   const chainSeg = segs.find((s) => Array.isArray(s.head.props.chain))
@@ -749,6 +879,23 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
   const [notes, setNotes] = useState(false)
   const [pen, setPen] = useState(false)
   const [strokes, setStrokes] = useState<Stroke[]>([])
+  const [boardMenu, setBoardMenu] = useState(false)
+  const boardWrap = useRef<HTMLDivElement>(null)
+  const importInput = useRef<HTMLInputElement>(null)
+  const [toast, setToast] = useState<{ text: string } | null>(null)
+  useEffect(() => {
+    if (!boardMenu) return
+    const away = (e: PointerEvent) => {
+      if (!boardWrap.current?.contains(e.target as HTMLElement)) setBoardMenu(false)
+    }
+    window.addEventListener('pointerdown', away)
+    return () => window.removeEventListener('pointerdown', away)
+  }, [boardMenu])
+  useEffect(() => {
+    if (!toast) return
+    const t = window.setTimeout(() => setToast(null), 5000)
+    return () => window.clearTimeout(t)
+  }, [toast])
 
   // One variant at a time, owned here. The ref is what the callbacks and the unmount cleanup read.
   const store = useStore()
@@ -783,6 +930,109 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
     [store],
   )
 
+  // Where each layout node starts: a restore or a clear puts the layout back here.
+  const home = useMemo(() => new Map(laidOut.map((n) => [n.id, n.position])), [laidOut])
+  const layoutOnly = (ns: Node<AnyData>[], moved: Record<string, Point> = {}) =>
+    ns
+      .filter((n) => !isAdded(n.id))
+      .map((n) => {
+        const p = moved[n.id] ?? home.get(n.id)
+        return p ? { ...n, position: p } : n
+      })
+  const snapshot = useCallback(
+    (ns: Node<AnyData>[], ss: Stroke[]): SavedBoard => {
+      const added = ns.flatMap((n): SavedAdded[] => (isAdded(n.id) && isKind(n.type) ? [{ id: n.id, type: n.type, position: n.position, data: savedData(n) }] : []))
+      const moved: Record<string, Point> = {}
+      for (const n of ns) {
+        const p = home.get(n.id)
+        if (p && (n.position.x !== p.x || n.position.y !== p.y)) moved[n.id] = n.position
+      }
+      return { v: 1, hash: sourceHash, added, moved, strokes: ss, savedAt: Date.now() }
+    },
+    [home, sourceHash],
+  )
+  /** A saved board on this lesson: the same source gets its positions and ink back; a changed one keeps only the teacher's nodes. */
+  const load = (saved: SavedBoard) => {
+    if (activeRef.current) restore()
+    const same = saved.hash === sourceHash
+    const added = reviveAdded(saved.added, blocks, variants)
+    for (const a of saved.added) uid.current = Math.max(uid.current, Number(a.id.slice(1)))
+    setNodes((ns) => [...layoutOnly(ns, same ? saved.moved : {}), ...added])
+    setStrokes(same ? saved.strokes : [])
+    // Only worth saying when something was actually left out.
+    if (!same && (Object.keys(saved.moved).length > 0 || saved.strokes.length > 0)) setToast({ text: LESSON_CHANGED })
+  }
+  // Restored once, right after mount. Nothing is written before that, or the empty board would erase what was saved.
+  const restoredOnce = useRef(false)
+  const [restored, setRestored] = useState(false)
+  useEffect(() => {
+    if (restoredOnce.current) return
+    restoredOnce.current = true
+    const saved = readBoard(`genui-board:${lessonId}`)
+    if (saved) load(saved)
+    setRestored(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, at mount
+  }, [])
+  // Saved a moment after the last change; closing the board inside that moment still keeps it.
+  const flush = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    if (!restored) return
+    const save = () => {
+      flush.current = null
+      writeBoard(`genui-board:${lessonId}`, snapshot(nodes, strokes))
+    }
+    flush.current = save
+    const t = window.setTimeout(save, 400)
+    return () => window.clearTimeout(t)
+  }, [restored, nodes, strokes, lessonId, snapshot])
+  useEffect(() => {
+    const pending = flush
+    return () => pending.current?.()
+  }, [])
+
+  const exportBoard = () => {
+    setBoardMenu(false)
+    try {
+      const blob = new Blob([JSON.stringify(snapshot(nodes, strokes), null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${lessonId}-板书.json`
+      document.body.append(a)
+      a.click()
+      a.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch {
+      setToast({ text: '导出没有成功，板书没有改动。' })
+    }
+  }
+  const importBoard = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    // Cleared so the same file can be picked again.
+    e.target.value = ''
+    if (!file) return
+    let saved: SavedBoard | null = null
+    try {
+      saved = parseBoard(JSON.parse(await file.text()))
+    } catch {
+      saved = null
+    }
+    if (saved) load(saved)
+    else setToast({ text: '这不是板书文件，板书没有改动。' })
+  }
+  const clearBoard = () => {
+    setBoardMenu(false)
+    if (!window.confirm('清空老师加的便签、卡片、笔迹和摆放？')) return
+    if (activeRef.current) restore()
+    setNodes((ns) => layoutOnly(ns))
+    setStrokes([])
+    try {
+      localStorage.removeItem(`genui-board:${lessonId}`)
+    } catch {
+      // Blocked storage: there was nothing kept to remove.
+    }
+  }
+
   const flyTo = (i: number) => {
     const k = Math.max(0, Math.min(navs.length - 1, i))
     setAt(k)
@@ -812,7 +1062,10 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
       const el = e.target as HTMLElement
       if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return
       const k = e.key
-      if (k === 'Escape' && menu) setMenu(null)
+      if (k === 'Escape' && (menu || boardMenu)) {
+        setMenu(null)
+        setBoardMenu(false)
+      }
       else if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') next()
       else if (k === 'ArrowLeft' || k === 'PageUp') flyTo(overview ? at : at - 1)
       else if (k === 'o' || k === 'O') (overview ? flyTo(at) : flyAll())
@@ -872,6 +1125,31 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
             <button className={`pill ${overview ? 'active' : ''}`} onClick={() => (overview ? flyTo(at) : flyAll())} title="O">
               全览
             </button>
+            <div className="fb-board-wrap" ref={boardWrap}>
+              <button className={`pill ${boardMenu ? 'active' : ''}`} aria-haspopup="menu" aria-expanded={boardMenu} onClick={() => setBoardMenu(!boardMenu)}>
+                板书
+              </button>
+              {boardMenu && (
+                <div className="fb-menu fb-board-menu" role="menu">
+                  <button role="menuitem" onClick={exportBoard}>
+                    导出板书
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setBoardMenu(false)
+                      importInput.current?.click()
+                    }}
+                  >
+                    导入板书
+                  </button>
+                  <button role="menuitem" onClick={clearBoard}>
+                    清空板书
+                  </button>
+                </div>
+              )}
+              <input ref={importInput} type="file" accept=".json,application/json" hidden onChange={importBoard} />
+            </div>
             <button className={`pill ${notes ? 'active' : ''}`} aria-pressed={notes} onClick={() => setNotes(!notes)} title="N">
               讲稿
             </button>
@@ -932,9 +1210,14 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages }:
             <BoardPen on={pen} strokes={strokes} setStrokes={setStrokes} />
           </ReactFlow>
           <FarOverview param={farParam} />
+          {toast && (
+            <div className="fb-toast" role="status">
+              {toast.text}
+            </div>
+          )}
           {menu && (
             <div className="fb-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
-              <button role="menuitem" onClick={() => addNode('note', menu.at, {})}>
+              <button role="menuitem" onClick={() => addNode('note', menu.at, { fresh: true })}>
                 便签
               </button>
               {sliders.map((s) => (
