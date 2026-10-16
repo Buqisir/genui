@@ -38,6 +38,17 @@ describe('single-round prompt', () => {
     expect(built.included).toContain('index')
   })
 
+  it('leaves out the index sections the required cards restate, and every doc header', () => {
+    const { text } = buildSinglePrompt(problem, ['plot'])
+    for (const gone of ['## 工作流', '## 文件骨架', '## 硬规则', 'get_doc(id)', 'layer: L0', 'layer: L1']) expect(text).not.toContain(gone)
+    expect(text).toContain('## 选型路由表')
+  })
+
+  it('takes each picked card\'s first related ref before any card\'s second', () => {
+    const built = buildSinglePrompt(problem, ['motion', 'sim'])
+    expect(built.refs.slice(0, 2)).toEqual(['motion-forces', 'sim-api'])
+  })
+
   it('always includes selected refs, ahead of related refs, even past the budget', () => {
     const built = buildSinglePrompt(problem, ['sim'], { refs: ['sim-fields', 'motion-axis'] })
     expect(built.refs.slice(0, 2)).toEqual(['sim-fields', 'motion-axis'])

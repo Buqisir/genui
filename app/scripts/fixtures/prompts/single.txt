@@ -12,69 +12,11 @@
 
 ## 入口
 
----
-id: index
-layer: L0
-title: 课件系统入口
-related: [structure, params, rules, motion, sim]
----
-
 # 课件系统入口
 
 一道高中物理题对应一份课件文件（`.md`）：头信息、Markdown 解答，加上交互组件。组件负责计算和画图，你只描述画什么、算什么。课件先过校验才能入库。
 
-本页每题必读。组件细节在组件卡里（L1），按 id 取；更深的物理模型和长例子在深入参考里（L2）。取文档：命令行 `genui docs <id>`，函数调用 `get_doc(id)`；搜索用 `genui docs --search <词>` 或 `search_docs(query)`。
-
-## 工作流
-
-1. 读题，先把物理过程和答案想清楚。
-2. 查下方路由表，选出要用的组件。
-3. 读这些组件的卡。卡里有最小例子、属性表和常见错误。
-4. 写课件。
-5. 校验（`genui validate` 或 `validate(lesson)`）。每条错误都写明该读哪份文档，照着改，直到通过。
-6. 看排版报告（`genui layout` 或 `check_layout(lesson)`），处理标签压线、出界等问题。
-
-## 文件骨架
-
-```
----
-id: zj-05
-title: 两列波的叠加
-source: 2024 浙江 6 月 第 5 题
-question: 题目原文……
-answers:                    # 校验用，学生看不到
-  - { name: vMax, value: 4, unit: m/s }
-choice: BD                  # 选择题才写
----
-
-题目条件分析……
-
-<Param name="t" label="时间" value={0} min={0} max={2} step={0.01} unit="s" />
-
-<Sim …>
-sim({ at(t, p) { … }, draw(ctx, s, v) { … } })
-</Sim>
-
-完整解答……
-```
-
-细节见 `structure`（文件结构、标签写法）和 `params`（参数、派生量、问题、答案）。
-
-## 硬规则
-
-1. 组件标签单独成块，前后各空一行。字符串属性用双引号，其余用 `{…}` 包 JSON5，不能写 JS 表达式或变量。只有 `<Sim>` 和 `<Figure>` 有内容体（JS 代码），其他组件一律自闭合。
-2. 随参数变化的值写成表达式字符串，只能引用已声明的 `<Param>` / `<Define>` 名字。判断相等写 `abs(a - b) < 1e-6`。
-3. 只用文档里列出的组件、属性和 `v` 工具。没写的就是没有，不要猜。
-4. `answers` 的 `name` 必须是某个 `<Param>` 或 `<Define>`。校验器在初始参数下重算，误差超过 1% 就退回。选择题写 `choice` 和 `answers: []`（有数值时照写）。
-5. `<Param>` 的初始值用题目给的数值。题目只有字母时取代表性数值，正文说明。
-6. 每份课件都要画出物理情景本身，只有 `<Plot>` 不算。
-7. 能用预制组件就不要在 `<Sim>` 里手画：坐标图、受力图、电路、能级、分子、条纹、纸带都有组件。画实物也一样：刻度尺、气缸、容器、玻璃砖、木板、电磁铁、变阻器等都有现成器材，先查 `sim-craft` 的器材对照表，表里没有的生活装置才用 `v.rect`、`v.path` 画简图。
-8. 组件能算的不要手算：电路读数和暂态、变力和多阶段运动、未知力、电磁感应、带电粒子偏转、气体状态，都交给对应组件（见 `rules` 第七节第 5 条）。
-9. 颜色只取物理量名（`velocity force accel charge field`，中性 `ink graphite steel`），同一个量全页同色。
-10. 属性和 `<Sim>` 标签里的文字不支持 LaTeX，下标写 `v_0`、`R_{AB}` 或 Unicode。
-11. 不编造题目没给的条件；尺度失真要注明"不按比例"。
-
-内容结构、选择题写法等完整规则见 `rules`。
+本页每题必读。组件细节在组件卡里（L1），按 id 取；更深的物理模型和长例子在深入参考里（L2）。
 
 ## 选型路由表
 
@@ -112,15 +54,6 @@ sim({ at(t, p) { … }, draw(ctx, s, v) { … } })
 ## 组件卡
 
 ### structure
-
----
-id: structure
-layer: L1
-title: 文件结构与标签写法
-related:
-  - params
-  - rules
----
 
 ## 何时用
 
@@ -240,20 +173,6 @@ answers:                      # 参考答案，校验用，不显示
 <!-- /region -->
 
 ### params
-
----
-id: params
-layer: L1
-title: 参数和表达式
-component: Param
-related:
-  - preset
-  - question
-  - readout
-  - answer
-  - status
-  - motion
----
 
 ## 何时用
 
@@ -393,16 +312,6 @@ figure({
 
 ### rules
 
----
-id: rules
-layer: L1
-title: 路线选择与内容规则
-related:
-  - sim
-  - motion
-  - circuit
----
-
 ## 何时用
 
 - 动笔前对一下：选哪个组件（第六节）、按什么顺序写（第七节）、入库前查什么（第八节）。
@@ -440,7 +349,7 @@ answers: []
 <!-- region:rules -->
 ## 六、路线选择（给模型的规则）
 
-1. **能用预制组件就用预制组件。** 曲线用 `<Plot>`，受力用 `<ForceDiagram>`（三力平衡加 `triangle`），电路图用 `<Circuit>`，实物连线用 `<Wiring>`，仪器读数用 `<Instrument>`，干涉和衍射条纹用 `<Fringes>`，纸带用 `<TickerTape>`，能级跃迁用 `<EnergyLevels>`，气体分子运动和速率分布用 `<GasBox>`，气缸、细管、U 形管里的气柱、液柱和活塞用 `<GasTube>`；不要在 `<Sim>` 里手画坐标系、曲线、电路、能级和分子。
+1. **能用预制组件就用预制组件。** 曲线用 `<Plot>`，受力用 `<ForceDiagram>`（三力平衡加 `triangle`），电路图用 `<Circuit>`，实物连线用 `<Wiring>`，仪器读数用 `<Instrument>`，干涉和衍射条纹用 `<Fringes>`，纸带用 `<TickerTape>`，能级跃迁用 `<EnergyLevels>`，气体分子运动和速率分布用 `<GasBox>`，气缸、细管、U 形管里的气柱、液柱和活塞用 `<GasTube>`；不要在 `<Sim>` 里手画坐标系、曲线、电路、能级和分子。画实物（刻度尺、气缸、容器、玻璃砖、木板、电磁铁、变阻器等）先查 `sim-craft` 的器材对照表，表里没有的生活装置才用 `v.rect`、`v.path` 画简图。
 2. 准静态过程（缓慢注水银、改变电阻、改变角度）：`<Param>` 滑块 + `<Figure>` 画情景 + 预制组件 + `<Readout>`，**不用 `<Sim>`**。
 3. **每份课件都必须画出物理情景本身**：至少一个 `<Sim>`、`<Figure>`、`<ForceDiagram>`、`<Circuit>`、`<Wiring>`、`<Instrument>`、`<TickerTape>`、`<EnergyLevels>`、`<GasBox>`、`<GasTube>` 或 `<Fringes>`。只有 `<Plot>` 曲线不算（学生要先看到装置和过程，再看图像）。
 4. 需要随时间自动播放的过程：`<Sim>`，并用 `time` 把时刻同步给 `<Plot>` 的游标。
@@ -475,19 +384,6 @@ answers: []
 <!-- /region -->
 
 ### circuit
-
----
-id: circuit
-layer: L1
-title: 电路图
-component: Circuit
-related:
-  - circuit-ladder
-  - circuit-solve
-  - circuit-transient
-  - circuit-motion
-  - wiring
----
 
 ## 何时用
 
@@ -579,16 +475,6 @@ answers:
 <!-- /region -->
 
 ### instrument
-
----
-id: instrument
-layer: L1
-title: 读数仪器
-component: Instrument
-related:
-  - instrument-more
-  - fringes
----
 
 ## 何时用
 
@@ -688,15 +574,6 @@ answers:
 
 ### circuit-ladder
 
----
-id: circuit-ladder
-layer: L2
-title: 梯子布局
-related:
-  - circuit
-  - circuit-solve
----
-
 梯子布局的限制，以及电压表怎么并。
 
 <!-- region:circuit-ladder -->
@@ -707,17 +584,22 @@ related:
 
 <!-- /region -->
 
-### circuit-solve
+### instrument-more
 
----
-id: circuit-solve
-layer: L2
-title: 电路求解
-related:
-  - circuit
-  - circuit-transient
-  - wiring-solve
----
+双缝测量头，以及 fringes、pair、read。
+
+<!-- region:instrument-more -->
+| `measurementHead` | 双缝测量头。左为目镜：圆视场里是按 `fringes` 算出的双缝条纹，竖线是分划板；右为手轮，刻度和螺旋测微器相同（`value` 单位 mm，估读到 0.001 mm）。分划板对准的屏上坐标 = `value − offset`。不要手画条纹，也不要另画一把微分筒 |
+
+`fringes`：`{lambda, d, L, offset, n, a}`。`lambda` nm，`d` 与可选缝宽 `a` 为 mm，`L` 为 m，`offset` 为 mm（默认 0，手轮零点相对中央亮纹的偏移），`n` 为介质折射率（默认 1）。目镜里的条纹就是这组参数的真实双缝图样，转动手轮时条纹相对分划板移动。
+
+`pair`：`{x1, n, d, L}`。本仪器的 `value` 是第 `n` 条亮纹的手轮读数，`x1` 是第 1 条的读数（mm）。读数行写出 Δx = (x_n − x_1)/(n − 1) 和 λ = d·Δx/L。`d`、`L` 省略时用 `fringes` 里的。两条读数的 `offset` 相同才会消掉，所以间距只用手轮读数相减。
+
+`read`：`{dx: "名字", lambda: "名字", x: "名字"}`。`dx` 是条纹间距（mm），`lambda` 是算出的波长（nm），`x` 是分划板的屏上坐标（mm）。`dx`、`lambda` 要有 `pair`。
+
+<!-- /region -->
+
+### circuit-solve
 
 电源写了电动势以后，组件按串并联关系解电路。
 
@@ -757,16 +639,6 @@ related:
 
 ### circuit-transient
 
----
-id: circuit-transient
-layer: L2
-title: 暂态电路
-related:
-  - circuit
-  - circuit-solve
-  - motion
----
-
 电容充放电、自感、振荡和交流，按时间积分。
 
 <!-- region:circuit-transient -->
@@ -800,15 +672,6 @@ related:
 
 ### circuit-motion
 
----
-id: circuit-motion
-layer: L2
-title: 画运动里的电路
-related:
-  - circuit
-  - motion-circuit
----
-
 把某一次运动里解出的电路画出来。
 
 <!-- region:circuit-motion -->
@@ -826,30 +689,6 @@ related:
 />
 ```
 
-
-<!-- /region -->
-
-### instrument-more
-
----
-id: instrument-more
-layer: L2
-title: 双缝测量头
-related:
-  - instrument
-  - fringes
----
-
-双缝测量头，以及 fringes、pair、read。
-
-<!-- region:instrument-more -->
-| `measurementHead` | 双缝测量头。左为目镜：圆视场里是按 `fringes` 算出的双缝条纹，竖线是分划板；右为手轮，刻度和螺旋测微器相同（`value` 单位 mm，估读到 0.001 mm）。分划板对准的屏上坐标 = `value − offset`。不要手画条纹，也不要另画一把微分筒 |
-
-`fringes`：`{lambda, d, L, offset, n, a}`。`lambda` nm，`d` 与可选缝宽 `a` 为 mm，`L` 为 m，`offset` 为 mm（默认 0，手轮零点相对中央亮纹的偏移），`n` 为介质折射率（默认 1）。目镜里的条纹就是这组参数的真实双缝图样，转动手轮时条纹相对分划板移动。
-
-`pair`：`{x1, n, d, L}`。本仪器的 `value` 是第 `n` 条亮纹的手轮读数，`x1` 是第 1 条的读数（mm）。读数行写出 Δx = (x_n − x_1)/(n − 1) 和 λ = d·Δx/L。`d`、`L` 省略时用 `fringes` 里的。两条读数的 `offset` 相同才会消掉，所以间距只用手轮读数相减。
-
-`read`：`{dx: "名字", lambda: "名字", x: "名字"}`。`dx` 是条纹间距（mm），`lambda` 是算出的波长（nm），`x` 是分划板的屏上坐标（mm）。`dx`、`lambda` 要有 `pair`。
 
 <!-- /region -->
 

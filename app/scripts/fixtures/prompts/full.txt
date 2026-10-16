@@ -1175,7 +1175,7 @@ figure({
 
 ## 六、路线选择（给模型的规则）
 
-1. **能用预制组件就用预制组件。** 曲线用 `<Plot>`，受力用 `<ForceDiagram>`（三力平衡加 `triangle`），电路图用 `<Circuit>`，实物连线用 `<Wiring>`，仪器读数用 `<Instrument>`，干涉和衍射条纹用 `<Fringes>`，纸带用 `<TickerTape>`，能级跃迁用 `<EnergyLevels>`，气体分子运动和速率分布用 `<GasBox>`，气缸、细管、U 形管里的气柱、液柱和活塞用 `<GasTube>`；不要在 `<Sim>` 里手画坐标系、曲线、电路、能级和分子。
+1. **能用预制组件就用预制组件。** 曲线用 `<Plot>`，受力用 `<ForceDiagram>`（三力平衡加 `triangle`），电路图用 `<Circuit>`，实物连线用 `<Wiring>`，仪器读数用 `<Instrument>`，干涉和衍射条纹用 `<Fringes>`，纸带用 `<TickerTape>`，能级跃迁用 `<EnergyLevels>`，气体分子运动和速率分布用 `<GasBox>`，气缸、细管、U 形管里的气柱、液柱和活塞用 `<GasTube>`；不要在 `<Sim>` 里手画坐标系、曲线、电路、能级和分子。画实物（刻度尺、气缸、容器、玻璃砖、木板、电磁铁、变阻器等）先查 `sim-craft` 的器材对照表，表里没有的生活装置才用 `v.rect`、`v.path` 画简图。
 2. 准静态过程（缓慢注水银、改变电阻、改变角度）：`<Param>` 滑块 + `<Figure>` 画情景 + 预制组件 + `<Readout>`，**不用 `<Sim>`**。
 3. **每份课件都必须画出物理情景本身**：至少一个 `<Sim>`、`<Figure>`、`<ForceDiagram>`、`<Circuit>`、`<Wiring>`、`<Instrument>`、`<TickerTape>`、`<EnergyLevels>`、`<GasBox>`、`<GasTube>` 或 `<Fringes>`。只有 `<Plot>` 曲线不算（学生要先看到装置和过程，再看图像）。
 4. 需要随时间自动播放的过程：`<Sim>`，并用 `time` 把时刻同步给 `<Plot>` 的游标。

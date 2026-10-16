@@ -215,9 +215,28 @@ export interface BuiltPrompt {
   included: string[]
 }
 
+/**
+ * The index as single and compact prompts include it. Those prompts always carry structure, params and rules, and
+ * the model may not call tools, so the index's tool workflow, file skeleton and hard-rule digest (each restated in
+ * those cards or the output requirements) are left out; the routing table stays. The agent mode reads the whole index.
+ */
+export function indexForSingle(text: string): string {
+  const dropped = new Set(['工作流', '文件骨架', '硬规则'])
+  const parts = text.split(/^(?=## )/m)
+  return parts
+    .filter((part) => !dropped.has(part.match(/^## (.+)$/m)?.[1].trim() ?? ''))
+    .join('')
+    .replace(/取文档：命令行 `genui docs <id>`，函数调用 `get_doc\(id\)`；搜索用 `genui docs --search <词>` 或 `search_docs\(query\)`。/, '')
+}
+
+/** A doc's text without its YAML header: id, layer and related are for the doc system, not the model. */
+export function withoutFront(text: string): string {
+  return text.replace(/^---\n[\s\S]*?\n---\n/, '').trim()
+}
+
 function docBody(id: string, text: string | undefined): string {
   if (!text) throw new Error(`没有这份文档：${id}`)
-  return text.trim()
+  return withoutFront(text)
 }
 
 /**
@@ -254,7 +273,7 @@ ${outputRequirements(problem, false)}
 
 ${signatureSection}## 入口
 
-${docBody('index', index.text)}
+${docBody('index', index.text && indexForSingle(index.text))}
 `
   const cardsSection = `## 组件卡\n\n${cards
     .map((id) => `### ${id}\n\n${docBody(id, byId.get(id)?.text)}`)
@@ -268,15 +287,19 @@ ${docBody('index', index.text)}
     const ref = byId.get(rel)
     if (seen.has(rel) || !ref || ref.layer !== 'L2') continue
     seen.add(rel)
-    chosen.push({ id: rel, text: ref.text.trim() })
+    chosen.push({ id: rel, text: withoutFront(ref.text) })
   }
-  for (const id of cards) {
-    for (const rel of byId.get(id)?.related ?? []) {
-      if (seen.has(rel)) continue
+  // Round robin over the picked cards: each card's first related ref (its most important) comes before any card's
+  // second, so one card with many refs cannot use up the budget before another card gets any.
+  const relatedOf = cards.map((id) => byId.get(id)?.related ?? [])
+  for (let i = 0; relatedOf.some((list) => i < list.length); i++) {
+    for (const list of relatedOf) {
+      const rel = list[i]
+      if (rel === undefined || seen.has(rel)) continue
       const ref = byId.get(rel)
       if (!ref || ref.layer !== 'L2') continue
       seen.add(rel)
-      candidates.push({ id: rel, text: ref.text.trim() })
+      candidates.push({ id: rel, text: withoutFront(ref.text) })
     }
   }
 
@@ -318,7 +341,7 @@ export function appendPointedDocs(
     if ('error' in doc) continue
     have.add(id)
     added.push(id)
-    blocks.push(`### ${id}\n\n${doc.text.trim()}`)
+    blocks.push(`### ${id}\n\n${withoutFront(doc.text)}`)
   }
   if (!added.length) return { text: prompt, added, appendix: '' }
   const appendix = `## 需要补读的文档\n\n${blocks.join('\n\n')}\n`
