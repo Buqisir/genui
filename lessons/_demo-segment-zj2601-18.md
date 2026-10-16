@@ -141,8 +141,6 @@ $$
 
 <Define name="Fb" expr="Bb*I0*l" />
 
-<Define name="dRb" expr="alpha*Fb" />
-
 <Define name="abU2" expr="-Fb*sgn" />
 
 <Define name="cdU2" expr="Fb*sgn*sc" />
