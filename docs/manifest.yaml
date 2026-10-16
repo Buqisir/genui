@@ -38,6 +38,10 @@
   file: cards/ledger.md
 - region: dial
   file: cards/dial.md
+- region: segment
+  file: cards/segment.md
+- region: variant
+  file: cards/variant.md
 - region: force-diagram
   file: cards/force-diagram.md
 - region: force-solve
@@ -104,3 +108,5 @@
   file: cards/figure.md
 - region: rules
   file: cards/rules.md
+- region: patch
+  file: cards/patch.md

@@ -1,0 +1,1780 @@
+{
+  "Answer": {
+    "items": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "open": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "Bars": {
+    "caption": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "color": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "cursor": {
+      "kind": [
+        "name"
+      ],
+      "required": false
+    },
+    "digits": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "expr": {
+      "kind": [
+        "expr"
+      ],
+      "required": true
+    },
+    "marks": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "x": {
+      "kind": [
+        "object"
+      ],
+      "required": true
+    },
+    "y": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    }
+  },
+  "Circuit": {
+    "at": {
+      "kind": [
+        "expr"
+      ],
+      "required": false
+    },
+    "box": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "current": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "flow": {
+      "kind": [
+        "boolean",
+        "object"
+      ],
+      "required": false
+    },
+    "hud": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "layout": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "legend": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "load": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "motion": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "source": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "transient": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    }
+  },
+  "Define": {
+    "expr": {
+      "kind": [
+        "expr"
+      ],
+      "required": true
+    },
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "name": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "unit": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "Dial": {
+    "arcs": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "caption": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "color": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "digits": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "expr": {
+      "kind": [
+        "expr"
+      ],
+      "required": true
+    },
+    "footer": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "max": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": true
+    },
+    "min": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": true
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "step": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "symbol": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "unit": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "EnergyLevels": {
+    "absorption": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "allFrom": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "count": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "levels": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "orbits": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "select": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "spectrum": {
+      "kind": [
+        "boolean",
+        "object"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "transitions": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "unit": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "visible": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "workFunction": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    }
+  },
+  "Figure": {
+    "height": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "hud": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "legend": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "params": {
+      "kind": [
+        "names"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "ForceDiagram": {
+    "accel": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "body": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "decompose": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "forces": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "guides": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "mass": {
+      "kind": [
+        "number",
+        "string"
+      ],
+      "required": false
+    },
+    "scale": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "surface": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "triangle": {
+      "kind": [
+        "boolean",
+        "object"
+      ],
+      "required": false
+    },
+    "values": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "Fringes": {
+    "L": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "R": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "U": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "a": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "cursor": {
+      "kind": [
+        "name"
+      ],
+      "required": false
+    },
+    "d": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "h": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "k": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "lambda": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "length": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "marks": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "n": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "read": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "side": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "span": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "theta": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "transmitted": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "type": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "white": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "wire": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    }
+  },
+  "GasBox": {
+    "T": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": true
+    },
+    "autoplay": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "bins": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "collide": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "compare": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "count": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "gas": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "height": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "mass": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "start": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "tag": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "theory": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "vmax": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    }
+  },
+  "GasTube": {
+    "S": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "at": {
+      "kind": [
+        "expr"
+      ],
+      "required": false
+    },
+    "contents": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "drive": {
+      "kind": [
+        "object"
+      ],
+      "required": true
+    },
+    "end": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "g": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "gap": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "hud": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "legend": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "name": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "p0": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "path": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "start": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "stop": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "units": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "Instrument": {
+    "angle": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "color": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "decades": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "divisions": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "fringes": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "major": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "max": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "mid": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "mode": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "multiplier": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "pair": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "range": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "read": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "reading": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "scales": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "symbol": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "terminals": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "type": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "unit": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "value": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": true
+    }
+  },
+  "Ledger": {
+    "caption": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "digits": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "headline": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "parts": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "rows": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "total": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "unit": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "Motion": {
+    "aFrame": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "along": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "axis": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "bodies": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "charge": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "circuit": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "events": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "fields": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "forces": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "frame": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "mass": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "name": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "rates": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "read": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "ropes": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "state": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "steps": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "tip": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "torques": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "track": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "until": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": true
+    }
+  },
+  "Optics": {
+    "length": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "maxHits": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "media": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "mirrors": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "n0": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "name": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "rays": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "reflections": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "screens": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    }
+  },
+  "Param": {
+    "color": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "control": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "digits": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "format": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "hidden": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "max": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "min": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "name": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "options": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "step": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "symbol": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "unit": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "value": {
+      "kind": [
+        "number"
+      ],
+      "required": true
+    }
+  },
+  "Plot": {
+    "areas": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "caption": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "cursor": {
+      "kind": [
+        "name"
+      ],
+      "required": false
+    },
+    "marks": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "series": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "values": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "x": {
+      "kind": [
+        "object"
+      ],
+      "required": true
+    },
+    "y": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    }
+  },
+  "Preset": {
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "set": {
+      "kind": [
+        "object"
+      ],
+      "required": true
+    }
+  },
+  "Question": {
+    "hint": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "set": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "text": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    }
+  },
+  "Readout": {
+    "items": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    }
+  },
+  "Segment": {
+    "ask": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "chain": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "hint": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "link": {
+      "kind": [
+        "names"
+      ],
+      "required": false
+    },
+    "quote": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "reveal": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "revealParam": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "steps": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "watch": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "Sim": {
+    "autoplay": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "duration": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": true
+    },
+    "height": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "hud": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "legend": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "loop": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "marks": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "params": {
+      "kind": [
+        "names"
+      ],
+      "required": false
+    },
+    "playSeconds": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "step": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "stepLabel": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "time": {
+      "kind": [
+        "name"
+      ],
+      "required": false
+    },
+    "timeUnit": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "Status": {
+    "cases": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    }
+  },
+  "TickerTape": {
+    "analysis": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "color": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "count": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "digits": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "expr": {
+      "kind": [
+        "expr"
+      ],
+      "required": false
+    },
+    "interval": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "labels": {
+      "kind": [
+        "array",
+        "string"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "positions": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "start": {
+      "kind": [
+        "expr",
+        "number"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "unit": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "velocityAt": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    }
+  },
+  "Variant": {
+    "ask": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "reveal": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "set": {
+      "kind": [
+        "object"
+      ],
+      "required": true
+    }
+  },
+  "Wiring": {
+    "height": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "note": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "parts": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "size": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "steps": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "wires": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    }
+  }
+}

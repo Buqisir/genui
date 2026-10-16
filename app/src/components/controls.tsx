@@ -331,7 +331,7 @@ export function Answer({ props }: { props: Props }) {
         <>
           <div className="answer-items">
             {shown.map((it, i) => (
-              <div className="answer-item" key={i}>
+              <div className={typeof it.text === 'string' && it.text.length > 6 ? 'answer-item wide' : 'answer-item'} key={i}>
                 <span className="answer-label">
                   <Rich text={it.label} html />
                 </span>

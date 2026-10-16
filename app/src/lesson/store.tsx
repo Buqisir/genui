@@ -29,7 +29,8 @@ export interface Registry {
   defines: DefineDef[]
   /** Defines in dependency order. */
   order: DefineDef[]
-  errors: string[]
+  /** `line` is the 1-based line of the declaration when the problem has one. */
+  errors: { line?: number; message: string }[]
 }
 
 const NAME = /^[A-Za-z][A-Za-z0-9_]*$/
@@ -37,22 +38,25 @@ const NAME = /^[A-Za-z][A-Za-z0-9_]*$/
 export function buildRegistry(blocks: Block[]): Registry {
   const params: ParamDef[] = []
   const defines: DefineDef[] = []
-  const errors: string[] = []
+  const errors: Registry['errors'] = []
   const seen = new Set<string>()
+  /** Declaration line of each name, for errors found after the first pass. */
+  const lineOf = new Map<string, number>()
 
   for (const b of blocks) {
     if (b.kind !== 'component') continue
     if (b.name !== 'Param' && b.name !== 'Define') continue
     const name = b.props.name
     if (typeof name !== 'string' || !NAME.test(name)) {
-      errors.push(`第 ${b.line} 行：${b.name} 的 name 不合法`)
+      errors.push({ line: b.line, message: `${b.name} 的 name 不合法` })
       continue
     }
     if (seen.has(name)) {
-      errors.push(`第 ${b.line} 行：名字 ${name} 重复声明`)
+      errors.push({ line: b.line, message: `名字 ${name} 重复声明` })
       continue
     }
     seen.add(name)
+    lineOf.set(name, b.line)
     if (b.name === 'Param') {
       const value = typeof b.props.value === 'number' ? b.props.value : 0
       const step = typeof b.props.step === 'number' ? b.props.step : undefined
@@ -67,7 +71,7 @@ export function buildRegistry(blocks: Block[]): Registry {
     } else if (typeof b.props.expr === 'string') {
       defines.push({ name, expr: b.props.expr })
     } else {
-      errors.push(`第 ${b.line} 行：Define ${name} 缺少 expr`)
+      errors.push({ line: b.line, message: `Define ${name} 缺少 expr` })
     }
   }
 
@@ -75,25 +79,28 @@ export function buildRegistry(blocks: Block[]): Registry {
     if (b.kind !== 'component') continue
     const solver = solverOf(b)
     if (!solver) continue
+    // solver.where starts with the line; the line is carried on the error instead.
+    const where = solver.where.replace(/^第 \d+ 行 /, '')
     for (const name of solver.outputs) {
       if (!NAME.test(name)) {
-        errors.push(`${solver.where}：read 的名字 ${name} 不合法`)
+        errors.push({ line: b.line, message: `${where}：read 的名字 ${name} 不合法` })
         continue
       }
       if (seen.has(name)) {
-        errors.push(`${solver.where}：read 的名字 ${name} 和已有的 Param/Define 重复`)
+        errors.push({ line: b.line, message: `${where}：read 的名字 ${name} 和已有的 Param/Define 重复` })
         continue
       }
       seen.add(name)
+      lineOf.set(name, b.line)
       defines.push({ name, expr: '', solver })
     }
   }
 
-  const order = topoSort(defines, seen, errors)
+  const order = topoSort(defines, seen, errors, lineOf)
   return { params, defines, order, errors }
 }
 
-function topoSort(defines: DefineDef[], known: Set<string>, errors: string[]): DefineDef[] {
+function topoSort(defines: DefineDef[], known: Set<string>, errors: Registry['errors'], lineOf: Map<string, number>): DefineDef[] {
   const byName = new Map(defines.map((d) => [d.name, d]))
   const out: DefineDef[] = []
   const state = new Map<string, 'visiting' | 'done'>()
@@ -102,7 +109,7 @@ function topoSort(defines: DefineDef[], known: Set<string>, errors: string[]): D
     const s = state.get(d.name)
     if (s === 'done') return
     if (s === 'visiting') {
-      errors.push(`循环引用：${[...chain, d.name].join(' → ')}`)
+      errors.push({ line: lineOf.get(d.name), message: `循环引用：${[...chain, d.name].join(' → ')}` })
       return
     }
     state.set(d.name, 'visiting')
@@ -110,10 +117,10 @@ function topoSort(defines: DefineDef[], known: Set<string>, errors: string[]): D
     try {
       deps = depsOf(d, known)
     } catch (e) {
-      errors.push(`Define ${d.name} 的表达式无法解析：${(e as Error).message}`)
+      errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 的表达式无法解析：${(e as Error).message}` })
     }
     for (const dep of deps) {
-      if (!known.has(dep)) errors.push(`Define ${d.name} 引用了未声明的名字 ${dep}`)
+      if (!known.has(dep)) errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 引用了未声明的名字 ${dep}` })
       const target = byName.get(dep)
       if (target) visit(target, [...chain, d.name])
     }

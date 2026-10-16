@@ -20,10 +20,16 @@ import { runTransient, transientOf, transientReads, transientSpec } from './tran
 import { afterElement, checkSourceChains, extensionChildren, readValueNames, transformerDcWarning, usesLadderBlock, walkSpdt } from './circuitElements'
 import { buildRegistry, ParamStore, type ParamDef } from './store'
 import { COMPONENTS, type PropKind } from './components'
+import { listKeys } from './patch'
+import { signature } from './signature'
 
 export interface Issue {
   line?: number
   message: string
+  /** Block key of the component the line belongs to, e.g. `Define:R1`; set at the end of validateLesson. */
+  block?: string
+  /** Correct one-line signature, for prop errors. */
+  hint?: string
 }
 
 export interface ValidationResult {
@@ -62,6 +68,9 @@ const TONES = new Set(['neutral', 'info', 'success', 'warning', 'danger'])
 const FORMATS = new Set(['sci', 'percent'])
 const SIZES = new Set(['full', 'wide', 'narrow'])
 const LEGEND_KINDS = new Set([...COLOR_NAMES.flatMap((c) => [c, `${c}-dash`]), 'strobe'])
+
+/** Prop-level messages from checkComponent that get a `正确写法` hint: missing, unknown, or wrong kind. */
+const PROP_ERROR = /缺少属性|未知属性|类型不对，应为/
 
 function kindOf(v: unknown): Kind[] {
   if (typeof v === 'string') return ['string', 'expr', 'name']
@@ -103,15 +112,57 @@ export function eventNames(blocks: Block[]): Set<string> {
   return out
 }
 
+/** Message parse.ts gives when the front matter is not YAML. */
+const BAD_YAML = '头信息不是合法的 YAML'
+
+/** Component name of the tag that opens on this line, if any. */
+function tagAt(raw: string[], line: number | undefined): string | undefined {
+  return line === undefined ? undefined : /^\s*<([A-Z]\w*)/.exec(raw[line - 1] ?? '')?.[1]
+}
+
+/** Name a Param/Define tag was meant to declare, read from the raw text of the tag (it did not parse). */
+function declaredNameAt(raw: string[], line: number | undefined): string | undefined {
+  if (line === undefined || !/^\s*<(Param|Define)\b/.test(raw[line - 1] ?? '')) return undefined
+  // The opening tag may span several lines; read until the line that closes it.
+  const text: string[] = []
+  for (let i = line - 1; i < raw.length && i < line + 19; i++) {
+    text.push(raw[i])
+    if (raw[i].includes('>')) break
+  }
+  const m = /\bname=(?:"([A-Za-z_]\w*)"|([A-Za-z_]\w*))/.exec(text.join('\n'))
+  return m ? (m[1] ?? m[2]) : undefined
+}
+
+/** The name in a 「引用了未声明的名字 X」 message. */
+function undeclaredName(message: string): string | undefined {
+  return /引用了未声明的名字 ([^\s：]+)/.exec(message)?.[1]
+}
+
+/**
+ * A registry error and a checkComponent error on the same line that report the same mistake:
+ * the same missing prop, or the same undeclared name. The checkComponent one is kept (it has the signature hint).
+ */
+function samePlace(reg: { line?: number; message: string }, issue: Issue): boolean {
+  if (reg.line === undefined || issue.line !== reg.line) return false
+  const missing = /缺少 (\w+)$/.exec(reg.message)?.[1]
+  if (missing && new RegExp(`属性 ${missing}(?!\\w)`).test(issue.message)) return true
+  const name = undeclaredName(reg.message)
+  return name !== undefined && undeclaredName(issue.message) === name
+}
+
 export function validateLesson(source: string): ValidationResult {
   const errors: Issue[] = []
   const warnings: Issue[] = []
   const lesson = parseLesson(source)
+  // Raw lines, for recovering what a tag that failed to parse was meant to say.
+  const raw = source.split('\n')
   for (const e of lesson.errors) errors.push({ line: e.line, message: e.message })
 
   const meta = lesson.meta
+  // With broken YAML the meta is empty: the missing-field and demo checks would only repeat that error.
+  const metaBroken = lesson.errors.some((e) => e.message.startsWith(BAD_YAML))
   const required = meta.demo === true ? ['title'] : ['id', 'title', 'question', ...(meta.choice === undefined ? ['answers'] : [])]
-  for (const key of required) {
+  for (const key of metaBroken ? [] : required) {
     if (meta[key] === undefined) errors.push({ message: `头信息缺少 ${key}` })
   }
   if (meta.choice !== undefined) {
@@ -128,13 +179,33 @@ export function validateLesson(source: string): ValidationResult {
   }
 
   const reg = buildRegistry(lesson.blocks)
-  for (const e of reg.errors) errors.push({ message: e })
   const declared = new Set([...reg.params.map((p) => p.name), ...reg.defines.map((d) => d.name)])
   const params = new Set(reg.params.map((p) => p.name))
   const userNames = new Set<string>([...reg.params.map((p) => p.name), ...reg.defines.filter((d) => !d.solver).map((d) => d.name)])
 
   const comps = lesson.blocks.filter((b): b is Extract<Block, { kind: 'component' }> => b.kind === 'component')
-  for (const b of comps) checkComponent(b, declared, params, errors, warnings, reg.params, userNames)
+  const compErrors: Issue[] = []
+  for (const b of comps) checkComponent(b, declared, params, compErrors, warnings, reg.params, userNames)
+
+  // One mistake, one report. Names whose declaration is itself broken are reported there, so references to them are cascades.
+  const errorLines = new Set<number>()
+  for (const e of [...lesson.errors, ...reg.errors, ...compErrors]) if (e.line !== undefined) errorLines.add(e.line)
+  const broken = new Set<string>()
+  for (const b of comps) {
+    if ((b.name === 'Param' || b.name === 'Define') && errorLines.has(b.line) && typeof b.props.name === 'string') broken.add(b.props.name)
+  }
+  for (const e of lesson.errors) {
+    const name = declaredNameAt(raw, e.line)
+    if (name) broken.add(name)
+  }
+  const cascade = (message: string) => {
+    const name = undeclaredName(message)
+    return name !== undefined && broken.has(name)
+  }
+  for (const e of reg.errors) {
+    if (!cascade(e.message) && !compErrors.some((c) => samePlace(e, c))) errors.push({ line: e.line, message: e.message })
+  }
+  errors.push(...compErrors.filter((e) => !cascade(e.message)))
 
   const motionCircuits = new Set(
     comps.filter((b) => b.name === 'Motion' && b.props.circuit && typeof b.props.name === 'string').map((b) => String(b.props.name)),
@@ -146,7 +217,9 @@ export function validateLesson(source: string): ValidationResult {
   }
 
   const SCENES = ['Sim', 'Figure', 'ForceDiagram', 'Circuit', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes']
-  if (meta.demo !== true && !comps.some((b) => SCENES.includes(b.name))) {
+  // A scene tag that is unclosed or failed to parse is already reported; the lesson did not lose its scene.
+  const sceneBroken = lesson.errors.some((e) => SCENES.includes(tagAt(raw, e.line) ?? ''))
+  if (!metaBroken && meta.demo !== true && !sceneBroken && !comps.some((b) => SCENES.includes(b.name))) {
     errors.push({ message: '课件没有画出物理情景：至少要有一个 Sim、Figure、ForceDiagram、Circuit、Instrument、TickerTape、EnergyLevels、Wiring、GasBox、GasTube 或 Fringes（只有 Plot 不够）' })
   }
 
@@ -264,6 +337,15 @@ export function validateLesson(source: string): ValidationResult {
         warnings.push({ line: b.line, message: `<Wiring> 初始参数下：${w}` })
       }
     }
+  }
+
+  // Point each located issue at the block that contains its line, so messages can name the statement.
+  const keys = listKeys(source)
+  for (const issue of [...errors, ...warnings]) {
+    if (issue.line === undefined) continue
+    const line = issue.line
+    const block = keys.find((k) => line >= k.line && line <= k.end)
+    if (block) issue.block = block.key
   }
 
   return { errors, warnings, scope }
@@ -403,7 +485,8 @@ function checkComponent(
   const line = b.line
   const spec = COMPONENTS[b.name]
   const err = (message: string): void => {
-    errors.push({ line, message: `<${b.name}> ${message}` })
+    const sig = PROP_ERROR.test(message) ? signature(b.name) : null
+    errors.push(sig ? { line, message: `<${b.name}> ${message}`, hint: `正确写法：${sig}` } : { line, message: `<${b.name}> ${message}` })
   }
   const warn = (message: string): void => {
     warnings.push({ line, message: `<${b.name}> ${message}` })
@@ -482,6 +565,14 @@ function checkComponent(
   })
 
   switch (b.name) {
+    case 'Segment': {
+      if (props.revealParam !== undefined) nameRef(props.revealParam, 'revealParam', true)
+      if (Array.isArray(props.link)) props.link.forEach((n, i) => nameRef(n, `link[${i}]`, true))
+      if (props.chain !== undefined && !(Array.isArray(props.chain) && props.chain.length >= 2 && props.chain.every((n) => Number.isInteger(n) && (n as number) >= 1)))
+        err('chain 写两个以上的段号（从 1 数的整数）')
+      if (props.chain !== undefined && !Array.isArray(props.link)) err('全景段要写 link：哪些参数一起联动')
+      break
+    }
     case 'Param': {
       for (const k of ['min', 'max', 'step'] as const) if (props[k] !== undefined) expr(props[k], k)
       color(props.color, 'color')
@@ -502,6 +593,10 @@ function checkComponent(
     }
     case 'Preset':
       setMap(props.set, 'set')
+      break
+    case 'Variant':
+      if (!props.set || typeof props.set !== 'object' || Array.isArray(props.set)) err('要写 set：应用时写入哪些参数')
+      else setMap(props.set, 'set')
       break
     case 'Question':
       if (props.set !== undefined) setMap(props.set, 'set')

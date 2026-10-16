@@ -319,9 +319,10 @@ export function Plot({ props }: { props: Props }) {
         {areaShapes.map((a, i) =>
           a ? (
             <g key={`a${i}`} className="area">
-              <path d={a.d} fill={a.color} fillOpacity={theme === 'night' ? 0.16 : 0.1} stroke="none" />
+              {/* An area that reaches below the y range (filled down to y = 0) is cut at the frame, like the curves. */}
+              <path d={a.d} fill={a.color} fillOpacity={theme === 'night' ? 0.16 : 0.1} stroke="none" clipPath={`url(#${clipId})`} />
               {a.label && (
-                <text x={a.cx} y={a.cy + 4} textAnchor="middle" className="area-label" fill={a.color}>
+                <text x={a.cx} y={Math.min(Math.max(a.cy, M.top + 14), M.top + ph - 10) + 4} textAnchor="middle" className="area-label" fill={a.color}>
                   <Rich text={a.label} />
                 </text>
               )}

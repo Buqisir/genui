@@ -1,5 +1,6 @@
 // Single-round prompt assembly: a cheap card pick, then L0 + those cards + L2 refs that fit.
 import { loadDocs } from '../docs/index'
+import { signatureTable } from '../lesson/signature'
 import { getDoc, listDocs, pointerFor } from './core'
 
 export interface LessonProblem {
@@ -48,7 +49,7 @@ export function outputRequirements(problem: LessonProblem, tools: boolean): stri
   const lines = ['- 只输出课件文件本身，第一行就是 `---`。不要任何解释，不要用代码围栏包住整个文件。']
   if (!tools) lines.push('- 不要读写文件、不要运行命令，所有需要的资料都在本提示里。')
   lines.push(
-    `- 头信息：\`id: ${problem.id}\`，\`source: ${problem.source}\`，\`question\` 原样抄题目。`,
+    `- 头信息：\`id: ${problem.id}\`，\`title\`（必填，题目的简短标题，如「${problem.title}」），\`source: ${problem.source}\`，\`question\` 原样抄题目。`,
     '- `answers`：每个能写成数值的答案一条 `{ name, value, unit }`。`name` 必须是课件里某个 `<Param>` 或 `<Define>` 的名字，`value` 是你单独算出的数值。校验器会在初始参数下用课件里的公式重新计算并核对，误差超过 1% 就退回。题目只有字母没有数值时，给参数取代表性数值，并在正文说明。',
     '- 选择题：头信息写 `choice`（选出的选项字母，多选按字母顺序连写，如 `BD`），按第七节第 13 条逐项判断；没有数值答案时写 `answers: []`。',
     '- 只用规范里列出的组件和属性；表达式只能引用已声明的名字；`<Sim>` 只能用规范里列出的 `v` 工具。',
@@ -223,13 +224,13 @@ function docBody(id: string, text: string | undefined): string {
  * Output requirements + L0 + the chosen L1 cards + L2 refs.
  * Required cards and the refs the selection named (at most MAX_SELECTED_REFS) are always included;
  * the cards' `related` refs are then added in order only while the total stays under `budget` bytes.
+ * `signatures` adds one line per component (every component, not only the picked cards) right after the output rules.
  */
 export function buildSinglePrompt(
   problem: LessonProblem,
   cardIds: string[],
-  opts?: { budget?: number; refs?: string[] },
+  opts?: { budget?: number; refs?: string[]; signatures?: boolean },
 ): BuiltPrompt {
-  const budget = opts?.budget ?? SINGLE_PROMPT_BUDGET
   const known = l1Ids()
   const cards: string[] = []
   for (const id of REQUIRED_CARDS) if (known.has(id)) cards.push(id)
@@ -237,15 +238,21 @@ export function buildSinglePrompt(
     if (!known.has(id) || cards.includes(id)) continue
     cards.push(id)
   }
-  const byId = new Map(loadDocs().map((d) => [d.id, d]))
+  const docs = loadDocs()
+  const byId = new Map(docs.map((d) => [d.id, d]))
   const index = getDoc('index')
   if ('error' in index) throw new Error(index.error)
 
+  const signatureSection = opts?.signatures
+    ? `## 全部组件一览（一行一个；* 为必填；用法细节见下面的卡片）\n\n${signatureTable(docs)}\n\n`
+    : ''
+  // The table rides on top of the budget, so compact differs from single by the table alone.
+  const budget = (opts?.budget ?? SINGLE_PROMPT_BUDGET) + Buffer.byteLength(signatureSection)
   const head = `你是高中物理课件作者。请按下面给出的文档为这道题写一份课件文件：完整解答，并做交互演示。
 
 ${outputRequirements(problem, false)}
 
-## 入口
+${signatureSection}## 入口
 
 ${docBody('index', index.text)}
 `

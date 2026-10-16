@@ -70,6 +70,8 @@ sim({ at(t, p) { … }, draw(ctx, s, v) { … } })
 | 自变量取整数（第 n 次、几个元件） | `<Bars>` | `bars` |
 | 能量转化、各种能的增减 | `<Ledger>` | `ledger` |
 | 只盯一个量（额定、临界） | `<Dial>` | `dial` |
+| 按难点分段讲解（样板） | `<Segment>` | `segment` |
+| 「如果……」变式，上课画布上一键改条件 | `<Variant>` | `variant` |
 | 受力分析、平衡、牛顿第二定律求未知力 | `<ForceDiagram>`（`solve`，三力平衡加 `triangle`） | `force-diagram` |
 | 电路图、电表读数、电容充放电、自感、LC、交流电 | `<Circuit>`（暂态写 `transient`） | `circuit` |
 | 实物连线、电表接法、电桥 | `<Wiring>` | `wiring` |
@@ -89,5 +91,6 @@ sim({ at(t, p) { … }, draw(ctx, s, v) { … } })
 | 其他需要随时间播放的过程 | `<Sim>`，`time` 同步给 `<Plot>` 游标 | `sim` |
 | 准静态过程、随参数变化的静态示意图 | `<Param>` 滑块 + `<Figure>`，不用 `<Sim>` | `figure` |
 | 小问、答案、实时读数、状态标签、快捷按钮 | `<Question>` `<Answer>` `<Readout>` `<Status>` `<Preset>` | `question` `answer` `readout` `status` `preset` |
+| 只改几个块：补丁 | `<!-- patch -->` | `patch` |
 
 组合原则：一个情景组件画装置和过程，图表组件配合看关系，侧栏放滑块、读数和答案。多阶段过程用一个 `<Sim>` 加关键时刻 `marks`；各小问条件不同时，用选项型 `<Param>` 切换情形。
