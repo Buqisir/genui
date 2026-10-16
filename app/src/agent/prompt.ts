@@ -51,7 +51,7 @@ export function outputRequirements(problem: LessonProblem, tools: boolean): stri
   lines.push(
     `- 头信息：\`id: ${problem.id}\`，\`title\`（必填，题目的简短标题，如「${problem.title}」），\`source: ${problem.source}\`，\`question\` 原样抄题目。`,
     '- `answers`：每个能写成数值的答案一条 `{ name, value, unit }`。`name` 必须是课件里某个 `<Param>` 或 `<Define>` 的名字，`value` 是你单独算出的数值。校验器会在初始参数下用课件里的公式重新计算并核对，误差超过 1% 就退回。题目只有字母没有数值时，给参数取代表性数值，并在正文说明。',
-    '- 选择题：头信息写 `choice`（选出的选项字母，多选按字母顺序连写，如 `BD`），按第七节第 13 条逐项判断；没有数值答案时写 `answers: []`。',
+    '- 选择题：头信息写 `choice`（选出的选项字母，多选按字母顺序连写，如 `BD`；一题有几道选择小问时按小问顺序写成列表，如 `choice: [AD, C]`），按第七节第 13 条逐项判断；没有数值答案时写 `answers: []`。',
     '- 只用规范里列出的组件和属性；表达式只能引用已声明的名字；`<Sim>` 只能用规范里列出的 `v` 工具。',
     '- 写之前先把物理过程想清楚，确认答案正确，再决定交互方式（遵守第六、七节）。',
   )
@@ -215,9 +215,28 @@ export interface BuiltPrompt {
   included: string[]
 }
 
+/**
+ * The index as single and compact prompts include it. Those prompts always carry structure, params and rules, and
+ * the model may not call tools, so the index's tool workflow, file skeleton and hard-rule digest (each restated in
+ * those cards or the output requirements) are left out; the routing table stays. The agent mode reads the whole index.
+ */
+export function indexForSingle(text: string): string {
+  const dropped = new Set(['工作流', '文件骨架', '硬规则'])
+  const parts = text.split(/^(?=## )/m)
+  return parts
+    .filter((part) => !dropped.has(part.match(/^## (.+)$/m)?.[1].trim() ?? ''))
+    .join('')
+    .replace(/取文档：命令行 `genui docs <id>`，函数调用 `get_doc\(id\)`；搜索用 `genui docs --search <词>` 或 `search_docs\(query\)`。/, '')
+}
+
+/** A doc's text without its YAML header: id, layer and related are for the doc system, not the model. */
+export function withoutFront(text: string): string {
+  return text.replace(/^---\n[\s\S]*?\n---\n/, '').trim()
+}
+
 function docBody(id: string, text: string | undefined): string {
   if (!text) throw new Error(`没有这份文档：${id}`)
-  return text.trim()
+  return withoutFront(text)
 }
 
 /**
@@ -254,7 +273,7 @@ ${outputRequirements(problem, false)}
 
 ${signatureSection}## 入口
 
-${docBody('index', index.text)}
+${docBody('index', index.text && indexForSingle(index.text))}
 `
   const cardsSection = `## 组件卡\n\n${cards
     .map((id) => `### ${id}\n\n${docBody(id, byId.get(id)?.text)}`)
@@ -268,15 +287,19 @@ ${docBody('index', index.text)}
     const ref = byId.get(rel)
     if (seen.has(rel) || !ref || ref.layer !== 'L2') continue
     seen.add(rel)
-    chosen.push({ id: rel, text: ref.text.trim() })
+    chosen.push({ id: rel, text: withoutFront(ref.text) })
   }
-  for (const id of cards) {
-    for (const rel of byId.get(id)?.related ?? []) {
-      if (seen.has(rel)) continue
+  // Round robin over the picked cards: each card's first related ref (its most important) comes before any card's
+  // second, so one card with many refs cannot use up the budget before another card gets any.
+  const relatedOf = cards.map((id) => byId.get(id)?.related ?? [])
+  for (let i = 0; relatedOf.some((list) => i < list.length); i++) {
+    for (const list of relatedOf) {
+      const rel = list[i]
+      if (rel === undefined || seen.has(rel)) continue
       const ref = byId.get(rel)
       if (!ref || ref.layer !== 'L2') continue
       seen.add(rel)
-      candidates.push({ id: rel, text: ref.text.trim() })
+      candidates.push({ id: rel, text: withoutFront(ref.text) })
     }
   }
 
@@ -318,7 +341,7 @@ export function appendPointedDocs(
     if ('error' in doc) continue
     have.add(id)
     added.push(id)
-    blocks.push(`### ${id}\n\n${doc.text.trim()}`)
+    blocks.push(`### ${id}\n\n${withoutFront(doc.text)}`)
   }
   if (!added.length) return { text: prompt, added, appendix: '' }
   const appendix = `## 需要补读的文档\n\n${blocks.join('\n\n')}\n`

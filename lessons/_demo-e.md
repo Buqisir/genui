@@ -16,7 +16,6 @@ answers:
 
 <Param name="v0" label="带速 v₀" symbol="v_0" min={0.5} max={4} step={0.1} value={2} unit="m/s" color="velocity" />
 <Param name="mu" label="动摩擦因数 μ" symbol="μ" min={0.05} max={0.6} step={0.05} value={0.2} />
-<Param name="tk" label="读取时刻" min={0} max={3} step={0.1} value={2} unit="s" hidden />
 
 <Define name="sFormula" expr="v0*v0/(2*mu*g)" />
 <Define name="qFormula" expr="0.5*m*v0*v0" />

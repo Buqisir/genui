@@ -1,3 +1,4 @@
 errors
 未知属性 lable（可用：
 line: 11
+code: unknown-prop

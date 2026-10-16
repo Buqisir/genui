@@ -1,2 +1,3 @@
 errors
 没有画出物理情景
+code: no-scene

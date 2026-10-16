@@ -1,2 +1,3 @@
 ok
 warn: 初始值 12 不在 [1, 10] 内
+code: out-of-range

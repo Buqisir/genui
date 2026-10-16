@@ -78,6 +78,7 @@ export const COMPONENTS: Record<string, Record<string, PropSpec>> = {
     set: { kind: 'object', required: true, doc: '应用变式时写入的参数，如 {same: 1}；键必须是 Param' },
     ask: { kind: 'string', doc: '变式提出的问题' },
     reveal: { kind: 'string', doc: '揭晓的答案，一两句' },
+    expect: { kind: 'object', doc: '应用变式后应得的数值，如 {Uef: 0}；校验器按课件公式核对，误差同 answers' },
   },
   Readout: { items: { kind: 'array', required: true, doc: '读数条目 {label, expr, …}' } },
   Status: { cases: { kind: 'array', required: true, doc: '按顺序匹配的条件列表' } },

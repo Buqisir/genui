@@ -89,8 +89,8 @@ figure({
       if (len > 0.01) {
         const dA = -p.sgn, dD = p.sgn * p.sc
         const fa = P(-1.0, dA < 0 ? 0.0 : 0.1, 0.05), fd = P(1.0, dD < 0 ? 0.0 : 0.1, 0.05)
-        v.vec(m, fa[0], fa[1], 0, dA * len, { kind: 'force', label: 'F' })
-        v.vec(m, fd[0], fd[1], 0, dD * len, { kind: 'force', label: 'F' })
+        v.vec(m, fa[0], fa[1], 0, dA * len, { kind: 'force', label: 'F', of: '-Fa*sgn' })
+        v.vec(m, fd[0], fd[1], 0, dD * len, { kind: 'force', label: 'F', of: 'Fa*sgn*sc' })
       }
       const lo = P(0, 0.2, -0.08)
       v.label(m, lo[0], lo[1], 'O')
@@ -104,8 +104,8 @@ figure({
       v.wire(m, 1.01, 0, { dir: p.sc < 0 ? 'in' : 'out', rings: [], label: 'cd' })
       if (len > 0.01) {
         const dA = -p.sgn, dD = p.sgn * p.sc
-        v.vec(m, -1.01, dA < 0 ? -0.07 : 0.07, 0, dA * len, { kind: 'force', label: 'F' })
-        v.vec(m, 1.01, dD < 0 ? -0.07 : 0.07, 0, dD * len, { kind: 'force', label: 'F' })
+        v.vec(m, -1.01, dA < 0 ? -0.07 : 0.07, 0, dA * len, { kind: 'force', label: 'F', of: '-Fa*sgn' })
+        v.vec(m, 1.01, dD < 0 ? -0.07 : 0.07, 0, dD * len, { kind: 'force', label: 'F', of: 'Fa*sgn*sc' })
       }
       if (p.sgn < 0) v.arrow(m, 0.5, 0.56, -0.5, 0.56, { color: v.color.field, width: 2 })
       else v.arrow(m, -0.5, 0.56, 0.5, 0.56, { color: v.color.field, width: 2 })
@@ -140,8 +140,6 @@ $$
 <Param name="R0" label="应变片原阻值" symbol="R_0" value={100} hidden />
 
 <Define name="Fb" expr="Bb*I0*l" />
-
-<Define name="dRb" expr="alpha*Fb" />
 
 <Define name="abU2" expr="-Fb*sgn" />
 
@@ -195,8 +193,8 @@ figure({
     v.wire(m, xd, yd, { dir: 'out', rings: [], label: 'cd' })
     if (on) {
       const len = 0.12 + 0.5 * k
-      v.vec(m, xa, ya + (sL < 0 ? -0.07 : 0.07), 0, sL * len * 0.5, { kind: 'force', label: 'F' })
-      v.vec(m, xd, yd + (sR > 0 ? 0.07 : -0.07), 0, sR * len * 0.5, { kind: 'force', label: 'F' })
+      v.vec(m, xa, ya + (sL < 0 ? -0.07 : 0.07), 0, sL * len * 0.5, { kind: 'force', label: 'F', of: '-Fb*sgn' })
+      v.vec(m, xd, yd + (sR > 0 ? 0.07 : -0.07), 0, sR * len * 0.5, { kind: 'force', label: 'F', of: 'Fb*sgn*sc' })
     }
   },
 })
@@ -287,9 +285,9 @@ $$
   {label: "e、f 电势差", symbol: "U_ef", expr: "Uef*1000", unit: "mV", digits: 2, color: "charge"}
 ]} />
 
-<Variant label="两杆电流同向" set={{same: 1, flip: 0}} ask="cd 中的电流改成和 ab 同向，U_ef 会怎样？" reveal="U_ef = 0。两根杆受力同向，两条梁都往下弯：上支路 R_1、R_2 同时变大，下支路 R_3、R_4 同时变小，e、f 两点电势都是 E/2。所以题目让两杆电流反向，输出才和 B 成正比。" />
+<Variant label="两杆电流同向" set={{same: 1, flip: 0}} expect={{Uef: 0}} ask="cd 中的电流改成和 ab 同向，U_ef 会怎样？" reveal="U_ef = 0。两根杆受力同向，两条梁都往下弯：上支路 R_1、R_2 同时变大，下支路 R_3、R_4 同时变小，e、f 两点电势都是 E/2。所以题目让两杆电流反向，输出才和 B 成正比。" />
 
-<Variant label="磁场反向" set={{flip: 1, same: 0}} ask="磁场反过来，U_ef 会怎样？" reveal="U_ef 变成负的，大小不变：所有力反向，变大的电阻变小、变小的变大。U_ef 的正负就能告诉你磁场朝哪边。" />
+<Variant label="磁场反向" set={{flip: 1, same: 0}} expect={{Uef: -0.006, Bcalc: -0.2}} ask="磁场反过来，U_ef 会怎样？" reveal="U_ef 变成负的，大小不变：所有力反向，变大的电阻变小、变小的变大。U_ef 的正负就能告诉你磁场朝哪边。" />
 
 <Segment title="完整解答" />
 

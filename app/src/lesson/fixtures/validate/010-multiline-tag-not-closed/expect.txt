@@ -1,3 +1,4 @@
 errors
 组件标签没有闭合
 line: 21
+code: parse

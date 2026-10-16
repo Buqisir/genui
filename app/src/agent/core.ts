@@ -529,8 +529,37 @@ export function pointerFor(message: string): Pointer {
   return { doc: FALLBACK_DOC, via: 'fallback' }
 }
 
+/**
+ * Doc for each issue code that is not a component message (those keep the component card).
+ * Every entry matches what the bare keyword rules above already give for that code's messages.
+ * `duplicate-name` is left out on purpose: the keyword rules send the registry's
+ * "read 的名字 X 和已有的 Param/Define 重复" to the index, and that result is kept.
+ */
+const CODE_DOCS: Record<string, string> = {
+  'unknown-component': 'index',
+  'no-scene': 'rules',
+  'answer-mismatch': 'answer',
+  'answer-unknown-name': 'answer',
+  'front-matter': 'structure',
+  'answers-empty': 'structure',
+  'answer-entry': 'structure',
+  parse: 'structure',
+  'bad-name': 'params',
+  'undeclared-name': 'params',
+  cycle: 'params',
+  'bad-expr': 'params',
+  'eval-failed': 'params',
+  'not-finite': 'params',
+}
+
+/** The doc for an issue: by its code when the code has one here, else by the message's keywords. */
+function docOf(issue: Issue): string {
+  const byCode = issue.code !== undefined && Object.hasOwn(CODE_DOCS, issue.code) && !COMPONENT_PREFIX.test(issue.message) ? CODE_DOCS[issue.code] : undefined
+  return byCode ?? pointerFor(issue.message).doc
+}
+
 function point(issue: Issue): PointedIssue {
-  const pointed: PointedIssue = { message: issue.message, doc: pointerFor(issue.message).doc }
+  const pointed: PointedIssue = { message: issue.message, doc: docOf(issue) }
   if (issue.line !== undefined) pointed.line = issue.line
   if (issue.block !== undefined) pointed.block = issue.block
   if (issue.hint !== undefined) pointed.hint = issue.hint

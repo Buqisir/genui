@@ -1,3 +1,4 @@
 errors
 必须是 Param（Define 不能被设置）：v
 line: 14
+code: component-invalid

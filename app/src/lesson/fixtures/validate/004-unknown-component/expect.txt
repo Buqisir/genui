@@ -1,3 +1,4 @@
 errors
 不是白名单组件
 line: 14
+code: unknown-component

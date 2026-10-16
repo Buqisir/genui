@@ -37,4 +37,5 @@
 - 全套检查：`cd app && npm run verify`（构建、测试、文档检查、课件校验）。
 - 单个课件校验：`cd app && npx tsx scripts/genui.ts validate ../lessons/<文件>.md`。
 - 文档改动后重新生成：`cd app && npx tsx scripts/docs.ts build`。
+- 改了文档或提示词代码后：`cd app && npm run prompts:update` 更新提示词快照，并在 diff 里看一眼 `app/scripts/fixtures/prompts/` 的变化是否符合预期。
 - 临时脚本放会话的 scratchpad，或放 `app/scripts/` 用完删掉，不要提交。

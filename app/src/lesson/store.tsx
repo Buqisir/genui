@@ -3,6 +3,7 @@ import { ease } from '../theme'
 import { evaluate, num, settleSum, symbolsOf, type Scope } from './expr'
 import type { Block } from './parse'
 import { solverOf, type SolverDef } from './solvers'
+import { closestName } from './suggest'
 
 export interface ParamDef {
   name: string
@@ -29,8 +30,8 @@ export interface Registry {
   defines: DefineDef[]
   /** Defines in dependency order. */
   order: DefineDef[]
-  /** `line` is the 1-based line of the declaration when the problem has one. */
-  errors: { line?: number; message: string }[]
+  /** `line` is the 1-based line of the declaration when the problem has one. `code` is the stable kind, as in validate.ts. */
+  errors: { line?: number; message: string; code?: string }[]
 }
 
 const NAME = /^[A-Za-z][A-Za-z0-9_]*$/
@@ -48,11 +49,11 @@ export function buildRegistry(blocks: Block[]): Registry {
     if (b.name !== 'Param' && b.name !== 'Define') continue
     const name = b.props.name
     if (typeof name !== 'string' || !NAME.test(name)) {
-      errors.push({ line: b.line, message: `${b.name} 的 name 不合法` })
+      errors.push({ line: b.line, message: `${b.name} 的 name 不合法`, code: 'bad-name' })
       continue
     }
     if (seen.has(name)) {
-      errors.push({ line: b.line, message: `名字 ${name} 重复声明` })
+      errors.push({ line: b.line, message: `名字 ${name} 重复声明`, code: 'duplicate-name' })
       continue
     }
     seen.add(name)
@@ -71,7 +72,7 @@ export function buildRegistry(blocks: Block[]): Registry {
     } else if (typeof b.props.expr === 'string') {
       defines.push({ name, expr: b.props.expr })
     } else {
-      errors.push({ line: b.line, message: `Define ${name} 缺少 expr` })
+      errors.push({ line: b.line, message: `Define ${name} 缺少 expr`, code: 'missing-required' })
     }
   }
 
@@ -83,11 +84,11 @@ export function buildRegistry(blocks: Block[]): Registry {
     const where = solver.where.replace(/^第 \d+ 行 /, '')
     for (const name of solver.outputs) {
       if (!NAME.test(name)) {
-        errors.push({ line: b.line, message: `${where}：read 的名字 ${name} 不合法` })
+        errors.push({ line: b.line, message: `${where}：read 的名字 ${name} 不合法`, code: 'bad-name' })
         continue
       }
       if (seen.has(name)) {
-        errors.push({ line: b.line, message: `${where}：read 的名字 ${name} 和已有的 Param/Define 重复` })
+        errors.push({ line: b.line, message: `${where}：read 的名字 ${name} 和已有的 Param/Define 重复`, code: 'duplicate-name' })
         continue
       }
       seen.add(name)
@@ -109,7 +110,7 @@ function topoSort(defines: DefineDef[], known: Set<string>, errors: Registry['er
     const s = state.get(d.name)
     if (s === 'done') return
     if (s === 'visiting') {
-      errors.push({ line: lineOf.get(d.name), message: `循环引用：${[...chain, d.name].join(' → ')}` })
+      errors.push({ line: lineOf.get(d.name), message: `循环引用：${[...chain, d.name].join(' → ')}`, code: 'cycle' })
       return
     }
     state.set(d.name, 'visiting')
@@ -117,10 +118,13 @@ function topoSort(defines: DefineDef[], known: Set<string>, errors: Registry['er
     try {
       deps = depsOf(d, known)
     } catch (e) {
-      errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 的表达式无法解析：${(e as Error).message}` })
+      errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 的表达式无法解析：${(e as Error).message}`, code: 'bad-expr' })
     }
     for (const dep of deps) {
-      if (!known.has(dep)) errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 引用了未声明的名字 ${dep}` })
+      if (!known.has(dep)) {
+        const hint = closestName(dep, known)
+        errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 引用了未声明的名字 ${dep}${hint ? `（是不是 ${hint}？）` : ''}`, code: 'undeclared-name' })
+      }
       const target = byName.get(dep)
       if (target) visit(target, [...chain, d.name])
     }

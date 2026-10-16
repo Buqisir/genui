@@ -8,9 +8,11 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "prompts:update": "UPDATE_PROMPTS=1 vitest run scripts/prompts.snapshot.test.ts",
     "typecheck": "tsc -b",
     "docs:check": "tsx scripts/docs.ts check",
     "lock:components": "tsx scripts/lock-components.ts",
+    "eval:standard": "tsx scripts/eval-standard.ts",
     "validate:lessons": "tsx scripts/validate.ts ../lessons/*.md ../generated-grok/bank2/*.md ../generated-grok/sd25/*.md",
     "verify": "npm run build && npm test && npm run docs:check && npm run validate:lessons"
   },

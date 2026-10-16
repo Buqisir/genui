@@ -2,13 +2,25 @@
 // write files plays the model. Problem headers and problems/expected*.yaml never reach the prompts (see genprompt.ts).
 //
 //   select  <id> --dir D                 → D/select-prompt.md (the card-selection prompt, single and compact arms)
-//   prompt  <id> --arm full|single|compact --dir D
+//   solve   <id> --dir D                 → D/solve-prompt-1.md (the solve-first prompt, no spec). Write the model's reply
+//                                          to D/solve-reply-1.md, then run the next command.
+//   solve   <id> --dir D --round N       → reads D/solve-reply-N.md, parses it and checks the answer key as generate.ts
+//                                          does (--solve-first, not blind). A reply that fails writes
+//                                          D/solve-prompt-(N+1).md (the solve prompt, the reply and what was wrong),
+//                                          while N < 2. The same two-call budget as generate.ts --solve-rounds 2.
+//   prompt  <id> --arm full|single|compact --dir D [--solve]
 //                                        → D/prompt-1.md, D/base.md, D/meta.json. single/compact read D/select-reply.md.
+//                                          --solve puts the last solve reply that parses (D/solve-reply-N.md) into the
+//                                          prompt, in front of the problem section, as generate.ts does.
 //   check   <id> --dir D --round N       → reads D/reply-N.md, then as generate.ts does: a patch is merged into
 //                                          D/current.md, a full lesson replaces it, and the result is validated.
 //                                          Writes D/report-N.md, one line in D/log.jsonl, and D/prompt-(N+1).md when
 //                                          the lesson did not pass and N < 3.
 //   summary <rootDir>                    → Markdown tables from every <rootDir>/*/log.jsonl
+//
+// Solve-first comparison, by hand: `solve` once, reply to solve-reply-1.md, `solve --round 1`, then (if asked)
+// reply to solve-reply-2.md and run `solve --round 2`. Then `prompt --arm single --dir D --solve` builds the
+// lesson prompt with the solution in it; `check` runs as usual from there.
 //
 // Usage errors exit 2. A reply that fails is a failed round, not an error, so check exits 0.
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
@@ -16,11 +28,29 @@ import { join } from 'node:path'
 import { appendPointedDocs, buildSinglePrompt, selectCards, selectionUserPrompt, type LessonProblem } from '../src/agent/prompt'
 import { applyPatch, isPatch } from '../src/lesson/patch'
 import { checkAnswerKey } from './answerkey'
-import { FIRST_FULL, cleanOutput, firstPrompt, readProblem, reportOf, retryPrompt } from './genprompt'
+import {
+  FIRST_FULL,
+  cleanOutput,
+  firstPrompt,
+  insertBeforeProblem,
+  issuesOf,
+  judgeSolve,
+  readProblem,
+  reportOf,
+  retryPrompt,
+  solutionSection,
+  solvePrompt,
+  solveRetryPrompt,
+  withProgress,
+  type Solution,
+} from './genprompt'
+import { formatProgress, progressOf, type ProgressIssue } from './progress'
 import { validateFile } from './validate'
 
 /** Same default as generate.ts --rounds. */
 const MAX_ROUNDS = 3
+/** Same default as generate.ts --solve-rounds. */
+const SOLVE_ROUNDS = 2
 const ARMS = ['full', 'single', 'compact'] as const
 type Arm = (typeof ARMS)[number]
 
@@ -33,6 +63,10 @@ interface Meta {
   refs?: string[]
   omittedRefs?: string[]
   unknown?: string[]
+  /** Validator errors of each validated round, keyed by round number. A check compares with the latest earlier round. */
+  issues?: Record<string, ProgressIssue[]>
+  /** The solve reply (solve-reply-N.md) whose solution is in base.md, when prompt ran with --solve. */
+  solve?: number
 }
 
 interface Row {
@@ -56,7 +90,7 @@ interface Row {
 function usage(message: string): never {
   console.error(message)
   console.error(
-    'usage: eval-step.ts select <id> --dir D | prompt <id> --arm full|single|compact --dir D | check <id> --dir D --round N | summary <rootDir>',
+    'usage: eval-step.ts select <id> --dir D | solve <id> --dir D [--round N] | prompt <id> --arm full|single|compact --dir D [--solve] | check <id> --dir D --round N | summary <rootDir>',
   )
   process.exit(2)
 }
@@ -111,6 +145,49 @@ function cmdSelect() {
   console.log(`select-prompt.md：${Buffer.byteLength(text)} 字节。把模型的回答（JSON）写进 ${join(dir, 'select-reply.md')}，再运行 prompt --arm single 或 compact。`)
 }
 
+function cmdSolve() {
+  const id = needId()
+  const dir = needDir()
+  const problem = loadProblem(id)
+  mkdirSync(dir, { recursive: true })
+  const roundFlag = flag('--round')
+  if (roundFlag === undefined) {
+    const text = solvePrompt(problem)
+    writeFileSync(join(dir, 'solve-prompt-1.md'), text)
+    console.log(`solve-prompt-1.md：${Buffer.byteLength(text)} 字节。把模型的解答写进 ${join(dir, 'solve-reply-1.md')}，再运行 solve --round 1。`)
+    return
+  }
+  const n = Number(roundFlag)
+  if (!Number.isInteger(n) || n < 1 || n > SOLVE_ROUNDS) usage(`--round 只能是 1 到 ${SOLVE_ROUNDS}`)
+  const reply = needFile(join(dir, `solve-reply-${n}.md`), `把第 ${n} 次解题的回答写进 solve-reply-${n}.md`).trim()
+  const judged = judgeSolve(id, reply)
+  if (judged.parsed.ok && judged.missing.length === 0) {
+    console.log(`solve round ${n}: accepted (解析成功，答案键 ${judged.checked ? '正确' : '没有可核对的答案'})`)
+    return
+  }
+  const why = judged.parsed.ok ? `答案键 ${judged.missing.length} 处不符：${judged.missing.join('；')}` : `解析失败：${judged.parsed.error}`
+  if (n < SOLVE_ROUNDS) {
+    writeFileSync(join(dir, `solve-prompt-${n + 1}.md`), solveRetryPrompt(problem, reply, judged.feedback))
+    console.log(`solve round ${n}: ${why}；next: solve-prompt-${n + 1}.md`)
+  } else {
+    console.log(`solve round ${n}: ${why}；解题次数用完（${SOLVE_ROUNDS} 次）`)
+  }
+}
+
+/** The last reply under D (solve-reply-N.md, highest N first) that parses, with its answer-key misses. */
+function lastSolution(dir: string, id: string): { n: number; sol: Solution; missing: string[] } | undefined {
+  const rounds = readdirSync(dir)
+    .map((f) => f.match(/^solve-reply-(\d+)\.md$/))
+    .filter((m): m is RegExpMatchArray => m !== null)
+    .map((m) => Number(m[1]))
+    .sort((a, b) => b - a)
+  for (const n of rounds) {
+    const judged = judgeSolve(id, readFileSync(join(dir, `solve-reply-${n}.md`), 'utf8').trim())
+    if (judged.parsed.ok) return { n, sol: judged.parsed, missing: judged.missing }
+  }
+  return undefined
+}
+
 async function cmdPrompt() {
   const id = needId()
   const armFlag = flag('--arm')
@@ -148,10 +225,19 @@ async function cmdPrompt() {
       included: built.included,
     }
   }
+  let solveDetail = ''
+  if (rest.includes('--solve')) {
+    const found = lastSolution(dir, id)
+    if (!found) usage(`--solve 需要 ${dir} 里至少有一份能解析的 solve-reply-N.md（先运行 solve）`)
+    base = insertBeforeProblem(base, solutionSection(found.sol))
+    meta.solve = found.n
+    solveDetail = `，解答取自 solve-reply-${found.n}.md`
+    if (found.missing.length) console.log(`注意：solve-reply-${found.n}.md 答案键 ${found.missing.length} 处不符：${found.missing.join('；')}（仍然使用这份解答）`)
+  }
   writeFileSync(join(dir, 'base.md'), base)
   writeFileSync(join(dir, 'prompt-1.md'), base)
   writeMeta(dir, meta)
-  const detail = meta.cards ? `，卡片 ${meta.cards.join(',')}，参考 ${meta.refs?.join(',') || '无'}${meta.unknown?.length ? `，丢掉 ${meta.unknown.join(',')}` : ''}` : ''
+  const detail = (meta.cards ? `，卡片 ${meta.cards.join(',')}，参考 ${meta.refs?.join(',') || '无'}${meta.unknown?.length ? `，丢掉 ${meta.unknown.join(',')}` : ''}` : '') + solveDetail
   console.log(`prompt-1.md：${Buffer.byteLength(base)} 字节（${arm}${detail}）`)
 }
 
@@ -175,6 +261,7 @@ function cmdCheck() {
   let mergeOk: boolean | null = null
   let applied: string[] = []
   let report = ''
+  let progress = ''
   let note = ''
   if (patchReply && current === undefined) {
     // Same as generate.ts: the first round must be a full lesson.
@@ -204,6 +291,12 @@ function cmdCheck() {
     const keyOk = key.missing.length === 0
     judged = { errors: r.errors.length, warnings: r.warnings.length, keyOk, passed: r.errors.length === 0 && keyOk }
     report = reportOf(r, key.missing)
+    // Saved before the retry prompt is built, so the next check can compare with this round.
+    const issues = issuesOf(r, key.missing)
+    const prevRound = Object.keys(meta.issues ?? {}).map(Number).filter((k) => k < n).sort((a, b) => b - a)[0]
+    progress = formatProgress(progressOf(prevRound === undefined ? [] : meta.issues![String(prevRound)], issues))
+    meta.issues = { ...meta.issues, [n]: issues }
+    writeMeta(dir, meta)
     note = `${judged.errors} errors, key ${keyOk ? 'ok' : 'wrong'}`
     if (!judged.passed && meta.arm !== 'full') {
       const grown = appendPointedDocs(base, meta.included, [...r.errors, ...r.warnings].map((e) => e.message))
@@ -244,7 +337,7 @@ function cmdCheck() {
 
   let next = ''
   if (!passed && n < MAX_ROUNDS) {
-    writeFileSync(join(dir, `prompt-${n + 1}.md`), retryPrompt(base, finalCurrent, report))
+    writeFileSync(join(dir, `prompt-${n + 1}.md`), retryPrompt(base, finalCurrent, withProgress(progress, report)))
     next = `; next: prompt-${n + 1}.md`
   }
   console.log(`round ${n}: ${passed ? 'passed' : 'failed'} (${note})${next}`)
@@ -327,6 +420,8 @@ async function main() {
   switch (cmd) {
     case 'select':
       return cmdSelect()
+    case 'solve':
+      return cmdSolve()
     case 'prompt':
       return cmdPrompt()
     case 'check':

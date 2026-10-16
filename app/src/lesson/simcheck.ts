@@ -3,9 +3,18 @@
 import vm from 'node:vm'
 import { palette } from '../theme'
 
+/** One arrow drawn with `of`: the quantity's name and the arrow's world-space vector. */
+export interface ArrowRecord {
+  of: string
+  dx: number
+  dy: number
+}
+
 export interface SimCheckResult {
   errors: string[]
   warnings: string[]
+  /** One entry per run, in order: the arrows that run drew, in call order. */
+  arrows: { label: string; list: ArrowRecord[] }[]
 }
 
 const DRIVER = `
@@ -154,19 +163,21 @@ export function checkSim(
 
   run(runtimeSource, '运行时加载失败')
   run('const __origSim = window.sim; window.sim = (d) => { window.__def = d; __origSim(d) }', '包装 sim')
-  if (errors.length) return { errors, warnings }
+  if (errors.length) return { errors, warnings, arrows: [] }
   run(body, '课件代码执行出错')
   run(DRIVER, '驱动')
   run('__simReady()', '初始化')
   // Real browsers may resize the frame before the host sends params.
   run('for (const fn of __listeners.resize || []) fn({})', '尺寸变化')
   for (const p of posts) if (p.type === 'error') errors.push(`初始化：${p.message}`)
-  if (errors.length) return { errors, warnings }
+  if (errors.length) return { errors, warnings, arrows: [] }
 
   const missingSeen = new Set<string>()
+  const arrows: SimCheckResult['arrows'] = []
   for (const r of runs) {
     context.__params = r.params
     context.__times = r.times
+    context.__arrowLog = []
     const before = posts.length
     const res = run('__check(__params, __times)', `${r.label} 运行超时或出错`) as
       | { nonFinite: string[]; badState: boolean; missing: string[] }
@@ -178,6 +189,7 @@ export function checkSim(
     if (missing.length) errors.push(`代码读取了 p.${missing.join('、p.')}，但没有写进 params 列表，读到的是 undefined`)
     if (res?.badState) errors.push(`${r.label}：at/step 返回了空状态`)
     if (res?.nonFinite.length) warnings.push(`${r.label}：状态里出现非有限数 ${res.nonFinite.slice(0, 3).join('；')}`)
+    arrows.push({ label: r.label, list: [...((context as Record<string, unknown>).__arrowLog as ArrowRecord[])] })
   }
-  return { errors, warnings }
+  return { errors, warnings, arrows }
 }
