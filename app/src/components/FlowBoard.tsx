@@ -145,8 +145,10 @@ function quantityFor(seg: Seg, n: number, chain: number[], pano: ReadoutItem[]):
 
 /** The problem's first sentence, through its 。 (or the whole text when it has none). */
 const firstSentence = (text: string) => {
-  const i = text.indexOf('。')
-  return i >= 0 ? text.slice(0, i + 1) : text
+  // A choice question's stem ends in 「（　　）」 with the options on the lines after it: neither belongs here.
+  const line = text.split('\n')[0]
+  const i = line.search(/[。？]/)
+  return (i >= 0 ? line.slice(0, i + 1) : line).replace(/[（(][\s\u3000]*[）)]\s*$/, '')
 }
 
 /**
