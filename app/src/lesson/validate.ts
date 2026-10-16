@@ -22,6 +22,7 @@ import { buildRegistry, ParamStore, type ParamDef } from './store'
 import { COMPONENTS, type PropKind } from './components'
 import { listKeys } from './patch'
 import { signature } from './signature'
+import { unusedNames } from './unused'
 
 export interface Issue {
   line?: number
@@ -30,6 +31,8 @@ export interface Issue {
   block?: string
   /** Correct one-line signature, for prop errors. */
   hint?: string
+  /** Stable kind of the problem, e.g. `unknown-prop`; tests and doc pointers compare this, never the message. */
+  code?: string
 }
 
 export interface ValidationResult {
@@ -38,6 +41,17 @@ export interface ValidationResult {
   /** Scope at initial parameter values, when the lesson got that far. */
   scope?: Record<string, number>
 }
+
+/**
+ * Every `code` a validator issue carries. Tests and the doc pointer compare codes, never message text.
+ * A new code goes here first.
+ */
+export const ISSUE_CODES = [
+  'parse', 'front-matter', 'answers-empty', 'answer-entry', 'answer-unknown-name', 'answer-mismatch',
+  'variant-unknown-name', 'variant-mismatch', 'unknown-component', 'unknown-prop', 'missing-required',
+  'bad-name', 'duplicate-name', 'undeclared-name', 'cycle', 'bad-expr', 'eval-failed', 'no-scene',
+  'component-invalid', 'not-finite', 'out-of-range', 'component-warning', 'unused-name',
+] as const
 
 type Kind = PropKind
 
@@ -156,28 +170,28 @@ export function validateLesson(source: string): ValidationResult {
   const lesson = parseLesson(source)
   // Raw lines, for recovering what a tag that failed to parse was meant to say.
   const raw = source.split('\n')
-  for (const e of lesson.errors) errors.push({ line: e.line, message: e.message })
+  for (const e of lesson.errors) errors.push({ line: e.line, message: e.message, code: e.message.startsWith(BAD_YAML) ? 'front-matter' : 'parse' })
 
   const meta = lesson.meta
   // With broken YAML the meta is empty: the missing-field and demo checks would only repeat that error.
   const metaBroken = lesson.errors.some((e) => e.message.startsWith(BAD_YAML))
   const required = meta.demo === true ? ['title'] : ['id', 'title', 'question', ...(meta.choice === undefined ? ['answers'] : [])]
   for (const key of metaBroken ? [] : required) {
-    if (meta[key] === undefined) errors.push({ message: `头信息缺少 ${key}` })
+    if (meta[key] === undefined) errors.push({ message: `头信息缺少 ${key}`, code: 'front-matter' })
   }
   if (meta.choice !== undefined) {
     // One string, or a non-empty list with one string per choice sub-question in sub-question order.
     const oneChoice = (v: unknown) => typeof v === 'string' && /^[A-H]+$/.test(v) && [...v].sort().join('') === v && new Set(v).size === v.length
     const ok = Array.isArray(meta.choice) ? meta.choice.length > 0 && meta.choice.every(oneChoice) : oneChoice(meta.choice)
     if (!ok) {
-      errors.push({ message: `头信息 choice 写选出的选项字母，多选按字母顺序连写（如 C、BD）；有几道选择小问时按小问顺序写成列表（如 [AD, C]）：${JSON.stringify(meta.choice)}` })
+      errors.push({ message: `头信息 choice 写选出的选项字母，多选按字母顺序连写（如 C、BD）；有几道选择小问时按小问顺序写成列表（如 [AD, C]）：${JSON.stringify(meta.choice)}`, code: 'front-matter' })
     }
   }
   if (meta.theme !== undefined && meta.theme !== 'light' && meta.theme !== 'night') {
-    errors.push({ message: `头信息 theme 只能是 light 或 night：${String(meta.theme)}` })
+    errors.push({ message: `头信息 theme 只能是 light 或 night：${String(meta.theme)}`, code: 'front-matter' })
   }
   if (meta.breadcrumb !== undefined && !(Array.isArray(meta.breadcrumb) && meta.breadcrumb.every((x) => typeof x === 'string'))) {
-    errors.push({ message: '头信息 breadcrumb 应为字符串数组' })
+    errors.push({ message: '头信息 breadcrumb 应为字符串数组', code: 'front-matter' })
   }
 
   const reg = buildRegistry(lesson.blocks)
@@ -205,7 +219,7 @@ export function validateLesson(source: string): ValidationResult {
     return name !== undefined && broken.has(name)
   }
   for (const e of reg.errors) {
-    if (!cascade(e.message) && !compErrors.some((c) => samePlace(e, c))) errors.push({ line: e.line, message: e.message })
+    if (!cascade(e.message) && !compErrors.some((c) => samePlace(e, c))) errors.push({ line: e.line, message: e.message, code: e.code })
   }
   errors.push(...compErrors.filter((e) => !cascade(e.message)))
 
@@ -214,7 +228,7 @@ export function validateLesson(source: string): ValidationResult {
   )
   for (const b of comps) {
     if (b.name === 'Circuit' && typeof b.props.motion === 'string' && !motionCircuits.has(b.props.motion)) {
-      errors.push({ line: b.line, message: `<Circuit> motion="${b.props.motion}" 必须指向本课件里带 circuit 的 <Motion>` })
+      errors.push({ line: b.line, message: `<Circuit> motion="${b.props.motion}" 必须指向本课件里带 circuit 的 <Motion>`, code: 'undeclared-name' })
     }
   }
 
@@ -222,7 +236,7 @@ export function validateLesson(source: string): ValidationResult {
   // A scene tag that is unclosed or failed to parse is already reported; the lesson did not lose its scene.
   const sceneBroken = lesson.errors.some((e) => SCENES.includes(tagAt(raw, e.line) ?? ''))
   if (!metaBroken && meta.demo !== true && !sceneBroken && !comps.some((b) => SCENES.includes(b.name))) {
-    errors.push({ message: '课件没有画出物理情景：至少要有一个 Sim、Figure、ForceDiagram、Circuit、Instrument、TickerTape、EnergyLevels、Wiring、GasBox、GasTube 或 Fringes（只有 Plot 不够）' })
+    errors.push({ message: '课件没有画出物理情景：至少要有一个 Sim、Figure、ForceDiagram、Circuit、Instrument、TickerTape、EnergyLevels、Wiring、GasBox、GasTube 或 Fringes（只有 Plot 不够）', code: 'no-scene' })
   }
 
   let scope: Record<string, number> | undefined
@@ -230,30 +244,30 @@ export function validateLesson(source: string): ValidationResult {
     try {
       scope = new ParamStore(reg).getScope()
     } catch (e) {
-      errors.push({ message: `初始参数下求值失败：${(e as Error).message}` })
+      errors.push({ message: `初始参数下求值失败：${(e as Error).message}`, code: 'eval-failed' })
     }
   }
 
   if (scope) {
     const events = eventNames(lesson.blocks)
     for (const [name, value] of Object.entries(scope)) {
-      if (typeof value === 'number' && !Number.isFinite(value) && !events.has(name)) warnings.push({ message: `初始参数下 ${name} = ${value}（不是有限数）` })
+      if (typeof value === 'number' && !Number.isFinite(value) && !events.has(name)) warnings.push({ message: `初始参数下 ${name} = ${value}（不是有限数）`, code: 'not-finite' })
     }
     const answers = Array.isArray(meta.answers) ? (meta.answers as { name?: string; value?: number }[]) : []
-    if (answers.length === 0 && meta.demo !== true && meta.choice === undefined) errors.push({ message: 'answers 为空' })
+    if (answers.length === 0 && meta.demo !== true && meta.choice === undefined) errors.push({ message: 'answers 为空', code: 'answers-empty' })
     for (const a of answers) {
       if (typeof a.name !== 'string' || typeof a.value !== 'number') {
-        errors.push({ message: `answers 条目需要 name 和数值 value：${JSON.stringify(a)}` })
+        errors.push({ message: `answers 条目需要 name 和数值 value：${JSON.stringify(a)}`, code: 'answer-entry' })
         continue
       }
       if (!(a.name in scope)) {
-        errors.push({ message: `answers 里的 ${a.name} 没有对应的 Param/Define，无法核对` })
+        errors.push({ message: `answers 里的 ${a.name} 没有对应的 Param/Define，无法核对`, code: 'answer-unknown-name' })
         continue
       }
       const got: number = scope[a.name]
       const tol = Math.max(1e-6, Math.abs(a.value) * 0.01)
       if (!(Math.abs(got - a.value) <= tol)) {
-        errors.push({ message: `答案不一致：${a.name} 按课件公式算出 ${got}，answers 写的是 ${a.value}` })
+        errors.push({ message: `答案不一致：${a.name} 按课件公式算出 ${got}，answers 写的是 ${a.value}`, code: 'answer-mismatch' })
       }
     }
     // A Variant's expect: the initial scope with its numeric set values applied (as on the board), checked like answers.
@@ -266,19 +280,19 @@ export function validateLesson(source: string): ValidationResult {
       try {
         after = new ParamStore(reg).scopeWith(patch)
       } catch (e) {
-        errors.push({ line: b.line, message: `变式「${label}」应用后求值失败：${(e as Error).message}` })
+        errors.push({ line: b.line, message: `变式「${label}」应用后求值失败：${(e as Error).message}`, code: 'eval-failed' })
         continue
       }
       for (const [name, want] of Object.entries(b.props.expect as Record<string, unknown>)) {
         if (typeof want !== 'number' || !Number.isFinite(want)) continue // checkComponent reports non-numeric values
         if (!(name in after)) {
-          errors.push({ line: b.line, message: `变式「${label}」的 expect 里的 ${name} 没有对应的 Param/Define` })
+          errors.push({ line: b.line, message: `变式「${label}」的 expect 里的 ${name} 没有对应的 Param/Define`, code: 'variant-unknown-name' })
           continue
         }
         const got = after[name]
         const tol = Math.max(1e-6, Math.abs(want) * 0.01)
         if (!(Math.abs(got - want) <= tol)) {
-          errors.push({ line: b.line, message: `变式「${label}」应用后 ${name} 按课件公式算出 ${got}，expect 写的是 ${want}` })
+          errors.push({ line: b.line, message: `变式「${label}」应用后 ${name} 按课件公式算出 ${got}，expect 写的是 ${want}`, code: 'variant-mismatch' })
         }
       }
     }
@@ -291,24 +305,24 @@ export function validateLesson(source: string): ValidationResult {
         if (!spec) continue
         try {
           const run = runMotion(spec, scope)
-          for (const w of run.warnings) warnings.push({ line: b.line, message: `<Motion> 初始参数下：${w}` })
+          for (const w of run.warnings) warnings.push({ line: b.line, message: `<Motion> 初始参数下：${w}`, code: 'component-warning' })
           const reads = Object.values(spec.read ?? {}).join(' ')
           for (const ev of spec.events ?? []) {
             if (!ev.name || run.events[ev.name]?.length || !new RegExp(`(^|[^\\w])${ev.name}($|[^\\w])`).test(reads)) continue
             const noGravity = b.props.charge !== undefined && b.props.forces === undefined
               ? '；带电粒子只受 charge、fields 的力，要受重力就再写 forces: [{label: "G", angle: -90, magnitude: "m*g"}]'
               : ''
-            warnings.push({ line: b.line, message: `<Motion> 初始参数下：事件 ${ev.name} 在 until 内没有发生，read 里用到它的读数是 NaN${noGravity}` })
+            warnings.push({ line: b.line, message: `<Motion> 初始参数下：事件 ${ev.name} 在 until 内没有发生，read 里用到它的读数是 NaN${noGravity}`, code: 'not-finite' })
           }
         } catch (e) {
-          errors.push({ line: b.line, message: `<Motion> 初始参数下无法积分：${(e as Error).message}` })
+          errors.push({ line: b.line, message: `<Motion> 初始参数下无法积分：${(e as Error).message}`, code: 'eval-failed' })
         }
         continue
       }
       if (b.name === 'ForceDiagram') {
         const spec = forceSpecOf(b.props)
         if (!forceUnknowns(spec).length) continue
-        for (const w of solveForces(spec, scope).warnings) warnings.push({ line: b.line, message: `<ForceDiagram> 初始参数下：${w}` })
+        for (const w of solveForces(spec, scope).warnings) warnings.push({ line: b.line, message: `<ForceDiagram> 初始参数下：${w}`, code: 'component-warning' })
         continue
       }
       if (b.name === 'Circuit') {
@@ -318,42 +332,42 @@ export function validateLesson(source: string): ValidationResult {
         const tr = transientOf(b.props)
         if (tr) {
           try {
-            for (const w of runTransient(transientSpec(source, load, tr), scope).warnings) warnings.push({ line: b.line, message: `<Circuit> 暂态（初始参数下）：${w}` })
+            for (const w of runTransient(transientSpec(source, load, tr), scope).warnings) warnings.push({ line: b.line, message: `<Circuit> 暂态（初始参数下）：${w}`, code: 'component-warning' })
           } catch (e) {
-            errors.push({ line: b.line, message: `<Circuit> 暂态在初始参数下无法计算：${(e as Error).message}` })
+            errors.push({ line: b.line, message: `<Circuit> 暂态在初始参数下无法计算：${(e as Error).message}`, code: 'eval-failed' })
           }
           continue
         }
         const net = schematicNetlist(source, load, scope)
-        for (const w of solveWiring(net.parts, net.wires, scope).warnings) warnings.push({ line: b.line, message: `<Circuit> 初始参数下：${w.replace(/「e\d+」/g, '')}` })
+        for (const w of solveWiring(net.parts, net.wires, scope).warnings) warnings.push({ line: b.line, message: `<Circuit> 初始参数下：${w.replace(/「e\d+」/g, '')}`, code: 'component-warning' })
         continue
       }
       if (b.name === 'Optics') {
         try {
-          for (const w of runOptics(b.props, scope).warnings) warnings.push({ line: b.line, message: `<Optics> 初始参数下：${w}` })
+          for (const w of runOptics(b.props, scope).warnings) warnings.push({ line: b.line, message: `<Optics> 初始参数下：${w}`, code: 'component-warning' })
         } catch (e) {
-          errors.push({ line: b.line, message: `<Optics> 初始参数下无法计算：${(e as Error).message}` })
+          errors.push({ line: b.line, message: `<Optics> 初始参数下无法计算：${(e as Error).message}`, code: 'eval-failed' })
         }
         continue
       }
       if (b.name === 'Fringes') {
-        for (const w of solveFringeProps(b.props, scope).warnings) warnings.push({ line: b.line, message: `<Fringes> 初始参数下：${w}` })
+        for (const w of solveFringeProps(b.props, scope).warnings) warnings.push({ line: b.line, message: `<Fringes> 初始参数下：${w}`, code: 'component-warning' })
         continue
       }
       if (b.name === 'Instrument' && b.props.type === 'measurementHead') {
-        for (const w of measurementOf(b.props, scope).warnings) warnings.push({ line: b.line, message: `<Instrument> 初始参数下：${w}` })
+        for (const w of measurementOf(b.props, scope).warnings) warnings.push({ line: b.line, message: `<Instrument> 初始参数下：${w}`, code: 'component-warning' })
         continue
       }
       if (b.name === 'Instrument' && (b.props.type === 'multimeter' || b.props.type === 'springScale')) {
-        for (const message of instrumentScopeIssues(b.props, scope)) errors.push({ line: b.line, message })
+        for (const message of instrumentScopeIssues(b.props, scope)) errors.push({ line: b.line, message, code: 'component-invalid' })
       }
       if (b.name === 'GasTube' && specOf(b.props)) {
         try {
           const run = runGasTube(b.props, scope)
-          for (const e of run.errors) errors.push({ line: b.line, message: `<GasTube> ${e}` })
-          for (const w of run.warnings) warnings.push({ line: b.line, message: `<GasTube> ${w}` })
+          for (const e of run.errors) errors.push({ line: b.line, message: `<GasTube> ${e}`, code: 'component-invalid' })
+          for (const w of run.warnings) warnings.push({ line: b.line, message: `<GasTube> ${w}`, code: 'component-warning' })
         } catch (e) {
-          errors.push({ line: b.line, message: `<GasTube> 初始参数下无法计算：${(e as Error).message}` })
+          errors.push({ line: b.line, message: `<GasTube> 初始参数下无法计算：${(e as Error).message}`, code: 'eval-failed' })
         }
         continue
       }
@@ -362,10 +376,16 @@ export function validateLesson(source: string): ValidationResult {
       if (!solves(parts)) continue
       const steps = typeof b.props.steps === 'string' ? b.props.steps : null
       for (const w of solveWiring(parts, connectedWires(b.props.wires as WiringWire[], steps, scope), scope).warnings) {
-        warnings.push({ line: b.line, message: `<Wiring> 初始参数下：${w}` })
+        warnings.push({ line: b.line, message: `<Wiring> 初始参数下：${w}`, code: 'component-warning' })
       }
     }
   }
+
+  if (lesson.errors.length === 0) warnings.push(...unusedNames(source, lesson.blocks))
+
+  // Safety net: an issue pushed without a code gets its severity's default. Every push above sets one.
+  for (const e of errors) if (!e.code) e.code = 'component-invalid'
+  for (const w of warnings) if (!w.code) w.code = 'component-warning'
 
   // Point each located issue at the block that contains its line, so messages can name the statement.
   const keys = listKeys(source)
@@ -512,26 +532,26 @@ function checkComponent(
 ) {
   const line = b.line
   const spec = COMPONENTS[b.name]
-  const err = (message: string): void => {
+  const err = (message: string, code = 'component-invalid'): void => {
     const sig = PROP_ERROR.test(message) ? signature(b.name) : null
-    errors.push(sig ? { line, message: `<${b.name}> ${message}`, hint: `正确写法：${sig}` } : { line, message: `<${b.name}> ${message}` })
+    errors.push(sig ? { line, message: `<${b.name}> ${message}`, hint: `正确写法：${sig}`, code } : { line, message: `<${b.name}> ${message}`, code })
   }
-  const warn = (message: string): void => {
-    warnings.push({ line, message: `<${b.name}> ${message}` })
+  const warn = (message: string, code = 'component-warning'): void => {
+    warnings.push({ line, message: `<${b.name}> ${message}`, code })
   }
   if (!spec) {
-    err(`不是白名单组件（可用：${COMPONENT_NAMES.join('、')}）`)
+    err(`不是白名单组件（可用：${COMPONENT_NAMES.join('、')}）`, 'unknown-component')
     return
   }
 
   const props = b.props as Props
   for (const [key, ps] of Object.entries(spec)) {
-    if (ps.required && props[key] === undefined) err(`缺少属性 ${key}`)
+    if (ps.required && props[key] === undefined) err(`缺少属性 ${key}`, 'missing-required')
   }
   for (const [key, value] of Object.entries(props)) {
     const ps = spec[key]
     if (!ps) {
-      err(`未知属性 ${key}（可用：${Object.keys(spec).join('、')}）`)
+      err(`未知属性 ${key}（可用：${Object.keys(spec).join('、')}）`, 'unknown-prop')
       continue
     }
     const want = Array.isArray(ps.kind) ? ps.kind : [ps.kind]
@@ -546,14 +566,14 @@ function checkComponent(
     }
     try {
       for (const s of symbolsOf(value)) {
-        if (!declared.has(s) && !extra.includes(s)) err(`${where} 引用了未声明的名字 ${s}：${value}`)
+        if (!declared.has(s) && !extra.includes(s)) err(`${where} 引用了未声明的名字 ${s}：${value}`, 'undeclared-name')
       }
     } catch (e) {
-      err(`${where} 表达式无法解析：${value}（${(e as Error).message}）`)
+      err(`${where} 表达式无法解析：${value}（${(e as Error).message}）`, 'bad-expr')
     }
   }
   const nameRef = (value: unknown, where: string, mustBeParam = false) => {
-    if (typeof value !== 'string' || !declared.has(value)) err(`${where} 引用了未声明的名字 ${String(value)}`)
+    if (typeof value !== 'string' || !declared.has(value)) err(`${where} 引用了未声明的名字 ${String(value)}`, 'undeclared-name')
     else if (mustBeParam && !params.has(value)) err(`${where} 必须是 Param（Define 不能被设置）：${value}`)
   }
   const sandboxApis = () => {
@@ -563,7 +583,7 @@ function checkComponent(
   }
   const list = (key: string) => (Array.isArray(props[key]) ? (props[key] as Record<string, unknown>[]) : [])
   const keysOnly = (obj: Record<string, unknown>, allowed: string[], where: string) => {
-    for (const k of Object.keys(obj)) if (!allowed.includes(k)) err(`${where} 有未知字段 ${k}（可用：${allowed.join('、')}）`)
+    for (const k of Object.keys(obj)) if (!allowed.includes(k)) err(`${where} 有未知字段 ${k}（可用：${allowed.join('、')}）`, 'unknown-prop')
   }
   const color = (v: unknown, where: string) => {
     if (v !== undefined && !COLORS.has(String(v))) err(`${where} 颜色只能是物理量名 ${[...COLORS].join('、')}`)
@@ -588,7 +608,7 @@ function checkComponent(
   })
   list('legend').forEach((l, i) => {
     keysOnly(l, ['kind', 'label', 'symbol'], `legend[${i}]`)
-    if (typeof l.label !== 'string') err(`legend[${i}] 缺少 label`)
+    if (typeof l.label !== 'string') err(`legend[${i}] 缺少 label`, 'missing-required')
     if (!LEGEND_KINDS.has(String(l.kind))) err(`legend[${i}].kind 不合法：${String(l.kind)}（物理量名，可加 -dash，或 strobe）`)
   })
 
@@ -615,7 +635,7 @@ function checkComponent(
         err('滑块需要 min 和 max（或写 hidden / options）')
       }
       if (typeof props.min === 'number' && typeof props.max === 'number' && typeof props.value === 'number') {
-        if (props.value < props.min || props.value > props.max) warn(`初始值 ${props.value} 不在 [${props.min}, ${props.max}] 内`)
+        if (props.value < props.min || props.value > props.max) warn(`初始值 ${props.value} 不在 [${props.min}, ${props.max}] 内`, 'out-of-range')
       }
       break
     }
@@ -637,7 +657,7 @@ function checkComponent(
     case 'Readout':
       for (const it of list('items')) {
         keysOnly(it, ['label', 'expr', 'unit', 'digits', 'symbol', 'color', 'format'], 'items 条目')
-        if (typeof it.label !== 'string') err('items 条目缺少 label')
+        if (typeof it.label !== 'string') err('items 条目缺少 label', 'missing-required')
         expr(it.expr, `items「${String(it.label)}」.expr`)
         color(it.color, `items「${String(it.label)}」`)
         format(it.format, `items「${String(it.label)}」`)
@@ -646,7 +666,7 @@ function checkComponent(
     case 'Answer':
       for (const it of list('items')) {
         keysOnly(it, ['label', 'symbol', 'expr', 'value', 'text', 'unit', 'digits', 'format'], 'items 条目')
-        if (typeof it.label !== 'string') err('items 条目缺少 label')
+        if (typeof it.label !== 'string') err('items 条目缺少 label', 'missing-required')
         if (it.text !== undefined && typeof it.text !== 'string') err(`items「${String(it.label)}」.text 应为字符串`)
         if (it.expr === undefined && typeof it.value !== 'number' && typeof it.text !== 'string') err(`items「${String(it.label)}」需要 expr、数字 value 或文字 text`)
         if (it.expr !== undefined) expr(it.expr, `items「${String(it.label)}」.expr`)
@@ -658,7 +678,7 @@ function checkComponent(
       const cases = list('cases')
       cases.forEach((c, i) => {
         keysOnly(c, ['when', 'label', 'tone'], 'cases 条目')
-        if (typeof c.label !== 'string') err('cases 条目缺少 label')
+        if (typeof c.label !== 'string') err('cases 条目缺少 label', 'missing-required')
         if (c.when !== undefined) expr(c.when, `cases[${i}].when`)
         if (c.tone !== undefined && !TONES.has(String(c.tone))) err(`tone 只能是 ${[...TONES].join('、')}`)
       })
@@ -754,13 +774,13 @@ function checkComponent(
       if (parts.length === 0) err('parts 为空')
       parts.forEach((p, i) => {
         keysOnly(p, ['label', 'symbol', 'expr', 'color'], `parts[${i}]`)
-        if (typeof p.label !== 'string') err(`parts[${i}] 缺少 label`)
+        if (typeof p.label !== 'string') err(`parts[${i}] 缺少 label`, 'missing-required')
         expr(p.expr, `parts[${i}].expr`)
         color(p.color, `parts[${i}]`)
       })
       list('rows').forEach((r, i) => {
         keysOnly(r, ['label', 'note', 'at'], `rows[${i}]`)
-        if (typeof r.label !== 'string') err(`rows[${i}] 缺少 label`)
+        if (typeof r.label !== 'string') err(`rows[${i}] 缺少 label`, 'missing-required')
         if (r.at !== undefined) setMap(r.at, `rows[${i}].at`)
       })
       for (const k of ['total', 'headline'] as const) {
@@ -785,7 +805,7 @@ function checkComponent(
       })
       list('footer').forEach((f, i) => {
         keysOnly(f, ['label', 'from', 'to', 'color'], `footer[${i}]`)
-        if (typeof f.label !== 'string') err(`footer[${i}] 缺少 label`)
+        if (typeof f.label !== 'string') err(`footer[${i}] 缺少 label`, 'missing-required')
         expr(f.from, `footer[${i}].from`)
         if (f.to !== undefined) expr(f.to, `footer[${i}].to`)
         color(f.color, `footer[${i}]`)
@@ -862,7 +882,7 @@ function checkComponent(
         keysOnly(p, ['id', 'type', 'x', 'y', 'label', 'ranges', 'value', 'slider', 'closed', 'lit', 'decades', 'emf', 'r', 'R', 'full', 'power', 'read', 'positive', 'terminals'], `parts[${i}]`)
         const id = p.id
         if (typeof id !== 'string' || !id || id.includes('.')) return err(`parts[${i}].id 应为不含「.」的字符串`)
-        if (types.has(id)) err(`parts 里 id 重复：${id}`)
+        if (types.has(id)) err(`parts 里 id 重复：${id}`, 'duplicate-name')
         if (!(WIRING_TYPES as readonly string[]).includes(String(p.type))) err(`parts[${i}].type 不合法：${String(p.type)}（可用：${WIRING_TYPES.join('、')}）`)
         if ((p.x === undefined) !== (p.y === undefined)) err(`parts[${i}] 的 x、y 要么都写，要么都不写（自动排布）`)
         for (const k of ['value', 'slider', 'lit'] as const) if (p[k] !== undefined) expr(p[k], `parts「${id}」.${k}`)
@@ -905,7 +925,7 @@ function checkComponent(
           const id = String(p.id)
           if (['ammeter', 'voltmeter', 'galvanometer'].includes(String(p.type)) && p.value !== undefined) err(`parts「${id}」：电源写了 emf 后电表读数由电路求出，去掉 value（要用读数就写 read）`)
           if (p.type === 'lamp' && p.lit !== undefined) err(`parts「${id}」：电源写了 emf 后灯的亮度由电路求出，去掉 lit（可写 power 额定功率）`)
-          if ((p.type === 'resistor' || p.type === 'lamp') && p.R === undefined) warnings.push({ line: b.line, message: `<Wiring> parts「${id}」没写 R，按 10 Ω 计算` })
+          if ((p.type === 'resistor' || p.type === 'lamp') && p.R === undefined) warnings.push({ line: b.line, message: `<Wiring> parts「${id}」没写 R，按 10 Ω 计算`, code: 'component-warning' })
           if (p.type === 'resistanceBox' && p.value === undefined) err(`parts「${id}」：电阻箱要写 value（阻值）`)
         }
       }
@@ -943,8 +963,8 @@ function checkComponent(
       if (props.track !== undefined && (props.bodies !== undefined || props.along !== undefined || props.ropes !== undefined))
         err('track 不能和 bodies、along、ropes 一起写')
       if (!dyn) {
-        if (props.state === undefined) err('缺少属性 state')
-        if (props.rates === undefined) err('缺少属性 rates（或者写 mass + forces，让组件按 ΣF = ma 推出运动方程；带电粒子写 mass + charge + fields）')
+        if (props.state === undefined) err('缺少属性 state', 'missing-required')
+        if (props.rates === undefined) err('缺少属性 rates（或者写 mass + forces，让组件按 ΣF = ma 推出运动方程；带电粒子写 mass + charge + fields）', 'missing-required')
       }
       // Names the dynamics makes: body x/v, accelerations, solved forces and tensions.
       const bodyNames = dyn ? Object.keys(dyn.state).filter((k) => !k.startsWith('__')) : []
@@ -952,9 +972,9 @@ function checkComponent(
       const vars = [...bodyNames, ...Object.keys(state)]
       if (!vars.length) err('state 至少要有一个状态量，如 {x: 0, v: "v0"}')
       for (const v of Object.keys(state)) {
-        if (!IDENT.test(v)) err(`state 的名字不合法：${v}`)
+        if (!IDENT.test(v)) err(`state 的名字不合法：${v}`, 'bad-name')
         if (MOTION_RESERVED.has(v)) err(`state 不能叫 ${v}（t 是时间，tEnd 是结束时刻）`)
-        if (bodyNames.includes(v)) err(`state.${v} 与 bodies 自动生成的状态量重名（物体 A 的位置、速度叫 xA、vA）`)
+        if (bodyNames.includes(v)) err(`state.${v} 与 bodies 自动生成的状态量重名（物体 A 的位置、速度叫 xA、vA）`, 'duplicate-name')
         expr(state[v], `state.${v}`)
       }
       // The circuit is solved before the forces, so its expressions see t and the state only.
@@ -970,9 +990,9 @@ function checkComponent(
             const dup = circuitReads.filter((r, i) => circuitReads.indexOf(r) !== i)
             if (dup.length) err(`电路 read 的名字重复：${[...new Set(dup)].join('、')}`)
             for (const r of circuitReads) {
-              if (vars.includes(r)) err(`电路 read 的名字 ${r} 与状态量重名`)
-              if (derivedNames.includes(r)) err(`电路 read 的名字 ${r} 与受力解出的量重名`)
-              if (declared.has(r)) err(`电路 read 的名字 ${r} 与课件里已声明的名字重名`)
+              if (vars.includes(r)) err(`电路 read 的名字 ${r} 与状态量重名`, 'duplicate-name')
+              if (derivedNames.includes(r)) err(`电路 read 的名字 ${r} 与受力解出的量重名`, 'duplicate-name')
+              if (declared.has(r)) err(`电路 read 的名字 ${r} 与课件里已声明的名字重名`, 'duplicate-name')
             }
             const valueNames = ['t', ...vars]
             const displayNames = ['t', ...vars, ...derivedNames, ...circuitReads]
@@ -997,10 +1017,10 @@ function checkComponent(
           for (const k of ['s', 'v']) if (!(k in state)) err(`沿轨道运动时 state 要有 s（弧长）和 v（缺 ${k}）`)
         }
         for (const d of derivedNames) {
-          if (declared.has(d)) err(`${d} 是组件算出的随时间变化的量，与课件里已声明的名字重名`)
-          if (vars.includes(d)) err(`${d} 与状态量重名`)
+          if (declared.has(d)) err(`${d} 是组件算出的随时间变化的量，与课件里已声明的名字重名`, 'duplicate-name')
+          if (vars.includes(d)) err(`${d} 与状态量重名`, 'duplicate-name')
         }
-        if (new Set(derivedNames).size !== derivedNames.length) err(`solve 的名字有重复：${derivedNames.join('、')}`)
+        if (new Set(derivedNames).size !== derivedNames.length) err(`solve 的名字有重复：${derivedNames.join('、')}`, 'duplicate-name')
         if (dyn.mode === 'track') {
           const frozen = (value: unknown, where: string) => {
             if (typeof value === 'number') return
@@ -1012,21 +1032,21 @@ function checkComponent(
             try {
               for (const s of symbolsOf(value)) {
                 if (banned.has(s)) err(`${where} 用了 ${s}：轨道在一次运动里不变，只能用参数`)
-                else if (!declared.has(s)) err(`${where} 引用了未声明的名字 ${s}：${value}`)
+                else if (!declared.has(s)) err(`${where} 引用了未声明的名字 ${s}：${value}`, 'undeclared-name')
               }
             } catch (e) {
-              err(`${where} 表达式无法解析：${value}（${(e as Error).message}）`)
+              err(`${where} 表达式无法解析：${value}（${(e as Error).message}）`, 'bad-expr')
             }
           }
           const trackEvent = (name: unknown, where: string) => {
             if (name === undefined) return
             if (typeof name !== 'string' || !IDENT.test(name)) {
-              err(`${where} 应为事件名字`)
+              err(`${where} 应为事件名字`, 'bad-name')
               return
             }
             if (MOTION_RESERVED.has(name)) err(`${where} 不能叫 ${name}（t 是时间，tEnd 是结束时刻）`)
-            else if (vars.includes(name) || derivedNames.includes(name)) err(`${where} 的名字 ${name} 与状态量或组件算出的量重名`)
-            else if (frictionEvents.includes(name)) err(`${where} 的名字 ${name} 与其他事件重名`)
+            else if (vars.includes(name) || derivedNames.includes(name)) err(`${where} 的名字 ${name} 与状态量或组件算出的量重名`, 'duplicate-name')
+            else if (frictionEvents.includes(name)) err(`${where} 的名字 ${name} 与其他事件重名`, 'duplicate-name')
             else frictionEvents.push(name)
           }
           const checkEnd = (v: unknown, where: string) => {
@@ -1106,17 +1126,17 @@ function checkComponent(
         if (dyn.mode === 'bodies') {
           if (!bodyList.length) err('bodies 至少要有一个物体')
           names.forEach((nm, i) => {
-            if (typeof nm !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(nm)) err(`bodies[${i}].name 应为字母开头的短名字（如 A、B）`)
-            else if (names.indexOf(nm) !== i) err(`bodies 里物体名字重复：${nm}`)
+            if (typeof nm !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(nm)) err(`bodies[${i}].name 应为字母开头的短名字（如 A、B）`, 'bad-name')
+            else if (names.indexOf(nm) !== i) err(`bodies 里物体名字重复：${nm}`, 'duplicate-name')
           })
         }
         bodyList.forEach((b, i) => {
           const where = dyn.mode === 'bodies' ? `bodies[${i}]` : ''
           const at = (k: string) => (where ? `${where}.${k}` : k)
           if (dyn.mode === 'bodies') keysOnly(b, ['name', 'mass', 'along', 'x', 'v', 'forces', 'label', 'tip', 'aFrame', 'frame'], where)
-          if (b.mass === undefined) err(`${at('mass')} 缺少：按 ΣF = ma 算加速度需要质量`)
+          if (b.mass === undefined) err(`${at('mass')} 缺少：按 ΣF = ma 算加速度需要质量`, 'missing-required')
           else expr(b.mass, at('mass'), local)
-          if (dyn.mode === 'bodies' && b.along === undefined) err(`${at('along')} 缺少：每个物体沿哪个方向运动（度，从水平向右逆时针量）`)
+          if (dyn.mode === 'bodies' && b.along === undefined) err(`${at('along')} 缺少：每个物体沿哪个方向运动（度，从水平向右逆时针量）`, 'missing-required')
           if (b.along !== undefined) expr(b.along, at('along'), local)
           for (const k of ['x', 'v']) if (b[k] !== undefined && dyn.mode === 'bodies') expr(b[k], at(k))
           const forces = Array.isArray(b.forces) ? (b.forces as Record<string, unknown>[]) : []
@@ -1137,10 +1157,10 @@ function checkComponent(
                 else frictionEvents.push(fr[k] as string)
               }
               if (f.angle !== undefined || f.magnitude !== undefined) err(`${fw} 是摩擦力：方向和大小由组件按相对运动判断，不要写 angle、magnitude`)
-              if (fr.mu === undefined) err(`${fw}.friction.mu 缺少（动摩擦因数）`)
+              if (fr.mu === undefined) err(`${fw}.friction.mu 缺少（动摩擦因数）`, 'missing-required')
               else expr(fr.mu, `${fw}.friction.mu`, local)
               if (fr.static !== undefined) expr(fr.static, `${fw}.friction.static`, local)
-              if (fr.normal === undefined) err(`${fw}.friction.normal 缺少（正压力，通常写支持力 solve 出的名字）`)
+              if (fr.normal === undefined) err(`${fw}.friction.normal 缺少（正压力，通常写支持力 solve 出的名字）`, 'missing-required')
               else expr(fr.normal, `${fw}.friction.normal`, local)
               if (fr.with !== undefined && fr.with !== 'ground' && !names.includes(fr.with)) err(`${fw}.friction.with 应为另一个物体的名字或 ground`)
               if (fr.with === b.name && fr.with !== undefined) err(`${fw}.friction.with 不能是自己`)
@@ -1201,11 +1221,11 @@ function checkComponent(
                 err(`${where} 应为名字`)
                 return
               }
-              if (vars.includes(name)) err(`${where} 的名字 ${name} 与状态量重名`)
-              else if (derivedNames.includes(name) || circuitReads.includes(name)) err(`${where} 的名字 ${name} 与组件算出的量重名`)
+              if (vars.includes(name)) err(`${where} 的名字 ${name} 与状态量重名`, 'duplicate-name')
+              else if (derivedNames.includes(name) || circuitReads.includes(name)) err(`${where} 的名字 ${name} 与组件算出的量重名`, 'duplicate-name')
               else if (MOTION_RESERVED.has(name)) err(`${where} 不能叫 ${name}（t 是时间，tEnd 是结束时刻）`)
-              else if (params.has(name) || readKeys.includes(name) || (declared.has(name) && !own.has(name))) err(`${where} 的名字 ${name} 与课件里已声明的名字重名`)
-              else if (fieldNames.includes(name) || frictionEvents.includes(name)) err(`${where} 的名字 ${name} 与其他事件重名`)
+              else if (params.has(name) || readKeys.includes(name) || (declared.has(name) && !own.has(name))) err(`${where} 的名字 ${name} 与课件里已声明的名字重名`, 'duplicate-name')
+              else if (fieldNames.includes(name) || frictionEvents.includes(name)) err(`${where} 的名字 ${name} 与其他事件重名`, 'duplicate-name')
               else fieldNames.push(name)
             },
           })
@@ -1226,7 +1246,7 @@ function checkComponent(
         if (e.dir !== undefined && !['up', 'down', 'any'].includes(String(e.dir))) err(`events[${i}].dir 只能是 up（由负变正）、down（由正变负）或 any`)
         if (e.name !== undefined) {
           if (typeof e.name !== 'string' || !IDENT.test(e.name)) err(`events[${i}].name 不合法`)
-          else if (fieldNames.includes(e.name) || frictionEvents.includes(e.name)) err(`events[${i}].name 与场区的 enter/exit 或其他事件重名：${e.name}`)
+          else if (fieldNames.includes(e.name) || frictionEvents.includes(e.name)) err(`events[${i}].name 与场区的 enter/exit 或其他事件重名：${e.name}`, 'duplicate-name')
           else eventNames.push(e.name)
         }
         if (e.set !== undefined) {
@@ -1329,7 +1349,7 @@ function checkComponent(
       let unknownCount = 0
       forces.forEach((f, i) => {
         keysOnly(f, ['label', 'angle', 'magnitude', 'solve', 'at', 'color', 'unit', 'digits', 'showValue', 'role'], `forces[${i}]`)
-        if (typeof f.label !== 'string') err(`forces[${i}] 缺少 label`)
+        if (typeof f.label !== 'string') err(`forces[${i}] 缺少 label`, 'missing-required')
         if (f.role !== 'direction') unknownCount += solvable(f, `forces[${i}]`)
         color(f.color, `forces[${i}]`)
       })
@@ -1368,8 +1388,8 @@ function checkComponent(
       const hasMotion = props.motion !== undefined
       if (hasMotion && (props.source !== undefined || props.load !== undefined)) err('motion 和 source、load 二选一：画运动里的电路就不要再写 source、load')
       if (hasMotion && props.transient !== undefined) err('motion 不能和 transient 同时写')
-      if (!hasMotion && props.source === undefined) err('缺少属性 source')
-      if (!hasMotion && props.load === undefined) err('缺少属性 load')
+      if (!hasMotion && props.source === undefined) err('缺少属性 source', 'missing-required')
+      if (!hasMotion && props.load === undefined) err('缺少属性 load', 'missing-required')
       if (props.at !== undefined) {
         if (!hasMotion) err('at 只和 motion 一起用（暂态电路的时刻写在 transient.at）')
         else expr(props.at, 'at')
@@ -1393,7 +1413,7 @@ function checkComponent(
       if (readSeen && !schematicSolves(props.source as SchematicNode, props.load as SchematicNode)) err('read 需要电路能求解：给电源写上 emf（以及内阻 r），或用电流源 currentSource')
       if (tr) {
         keysOnly(tr, ['name', 'until', 'steps', 'at', 'events', 'read'], 'transient')
-        if (typeof tr.name !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*$/.test(tr.name)) err('transient.name 应为名字（如 "rc"），结果以 rc.UC(t) 的形式发布')
+        if (typeof tr.name !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*$/.test(tr.name)) err('transient.name 应为名字（如 "rc"），结果以 rc.UC(t) 的形式发布', 'bad-name')
         if (!schematicSolves(props.source as SchematicNode, props.load as SchematicNode)) err('transient 需要电路能求解：给电源写上 emf')
         if (!storage && !dependsOnT(props.source) && !dependsOnT(props.load))
           err('transient 需要电路随时间变化：电路里要有电容（capacitor）或线圈（inductor），或者电动势、开关、单刀双掷的 position、电流源的 I 写成 t 的表达式（如交流电源 emf: "Um*sin(w*t)"）')

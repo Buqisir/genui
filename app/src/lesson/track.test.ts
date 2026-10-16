@@ -371,7 +371,8 @@ describe('track validator and drawing', () => {
 
   it('rejects friction written as a force, a missing s, and track combined with along', () => {
     expect(msgs(ok)).toBe('')
-    expect(validateLesson(lesson(ok)).warnings).toEqual([])
+    // The shared head declares mu for other cases; only Motion's own warnings matter here.
+    expect(validateLesson(lesson(ok)).warnings.filter((w) => w.code !== 'unused-name')).toEqual([])
     expect(msgs(ok.replace('magnitude: 0}]}', 'friction: {mu: 0.2, normal: "N"}}]}'))).toContain('不要在 forces 里写 solve')
     expect(msgs(ok.replace('state={{s: 0, v: 1}}', 'state={{v: 1}}'))).toContain('缺 s')
     expect(msgs(ok.replace('until={1}', 'along={0} until={1}'))).toContain('不能和')

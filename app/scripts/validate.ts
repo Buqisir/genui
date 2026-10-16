@@ -45,7 +45,7 @@ export function validateSource(source: string, file = '<memory>') {
         times: [0],
       }))
       const r = checkSim(fig.body ?? '', runtime, runs)
-      for (const m of r.errors) errors.push({ line: fig.line, message: `<Figure> ${m}` })
+      for (const m of r.errors) errors.push({ line: fig.line, code: 'eval-failed', message: `<Figure> ${m}` })
     }
     for (const sim of comps.filter((b) => b.name === 'Sim')) {
       const names = (sim.props.params ?? []) as string[]
@@ -55,17 +55,17 @@ export function validateSource(source: string, file = '<memory>') {
         const times = [...Array.from({ length: 25 }, (_, i) => (duration * i) / 24), ...marks].filter(
           (t) => Number.isFinite(t) && t >= 0 && t <= duration + 1e-9,
         )
-        if (!Number.isFinite(duration)) errors.push({ line: sim.line, message: `<Sim> ${label}：duration 不是有限数` })
+        if (!Number.isFinite(duration)) errors.push({ line: sim.line, code: 'eval-failed', message: `<Sim> ${label}：duration 不是有限数` })
         return { label, params: Object.fromEntries(names.map((n) => [n, opticsPayload(motionPayload(scope[n]))])), times }
       })
       const r = checkSim(sim.body ?? '', runtime, runs)
-      for (const m of r.errors) errors.push({ line: sim.line, message: `<Sim> ${m}` })
-      for (const m of r.warnings) warnings.push({ line: sim.line, message: `<Sim> ${m}` })
+      for (const m of r.errors) errors.push({ line: sim.line, code: 'eval-failed', message: `<Sim> ${m}` })
+      for (const m of r.warnings) warnings.push({ line: sim.line, code: 'component-warning', message: `<Sim> ${m}` })
     }
     const events = eventNames(lesson.blocks)
     for (const s of states.slice(1)) {
       for (const [k, v] of Object.entries(s.scope)) {
-        if (typeof v === 'number' && !Number.isFinite(v) && !events.has(k)) warnings.push({ message: `${s.label}下 ${k} = ${v}` })
+        if (typeof v === 'number' && !Number.isFinite(v) && !events.has(k)) warnings.push({ code: 'not-finite', message: `${s.label}下 ${k} = ${v}` })
       }
     }
   }

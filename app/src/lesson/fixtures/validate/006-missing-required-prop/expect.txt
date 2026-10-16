@@ -3,3 +3,4 @@ errors
 line: 12
 count: 1
 not: Define v 缺少 expr
+code: missing-required

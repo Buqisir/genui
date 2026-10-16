@@ -1,2 +1,3 @@
 errors
 答案不一致：v 按课件公式算出
+code: answer-mismatch
