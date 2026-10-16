@@ -15,6 +15,7 @@ import YAML from 'yaml'
 import { docTitle, pointerFor } from '../src/agent/core'
 import { assertFitsContext, deepseekComplete, formatUsageNote, runDeepseekAgent } from '../src/agent/deepseek'
 import { appendPointedDocs, buildSinglePrompt, outputRequirements, selectCards, type LessonProblem } from '../src/agent/prompt'
+import { applyPatch, formatKeys, isPatch } from '../src/lesson/patch'
 import { checkAnswerKey } from './answerkey'
 import { validateFile } from './validate'
 
@@ -107,7 +108,35 @@ ${p.text}
 `
 }
 
-function retryPrompt(base: string, previous: string, problems: string) {
+const FIRST_FULL = '第一次要输出完整课件，不能只给补丁。'
+
+/** Patch instructions shared by both retry paths. */
+const PATCH_HOW = `只改出错的块时，只输出补丁：第一行写 \`<!-- patch -->\`，下面只写要换掉的组件块（整块重写，按名字对上原来的块）。新增的块写 \`after="…"\` 指明放在哪个块后面，删除写 \`<Remove target="…" />\`，头信息只写要改的字段。要改正文段落，或要改的块超过一半时，才输出修正后的完整课件。
+
+补丁示例（只示意格式）：
+
+\`\`\`patch
+<!-- patch -->
+<Define name="R1" expr="10" />
+
+<Variant label="电源反接" set={{flip: 1}} ask="电源反接后，结果会怎样？" reveal="符号相反，大小不变。" after="Variant:磁场反向" />
+
+<Remove target="Readout#2" />
+\`\`\``
+
+/** `current` is the last full lesson stored, with earlier patches already merged in. */
+function retryPrompt(base: string, current: string | undefined, problems: string) {
+  if (current === undefined) {
+    return `${base}
+
+## 上一版课件没有通过校验
+
+校验器报告：
+
+${problems}
+
+请输出完整的课件文件（同样只输出文件本身）。不要调用任何工具，也不要读文件：规范、示例和题目都在本提示里，直接输出。`
+  }
   return `${base}
 
 ## 上一版课件没有通过校验
@@ -116,22 +145,46 @@ function retryPrompt(base: string, previous: string, problems: string) {
 
 ${problems}
 
-上一版课件：
+当前课件（上一版的完整内容，补丁已合并在里面）：
 
-${previous}
+${current}
 
-请修正这些问题，输出修正后的**完整**课件文件（同样只输出文件本身）。不要调用任何工具，也不要读文件：规范、示例和上一版课件都在本提示里，直接输出。`
+${PATCH_HOW}
+
+当前课件的块名：
+
+${formatKeys(current)}
+
+不要调用任何工具，也不要读文件：规范、示例和当前课件都在本提示里，直接输出。`
 }
 
-/** Grok retries continue the first session, which already holds the spec, the problem and the previous lesson. */
-function retryNote(problems: string) {
-  return `## 上一版课件没有通过校验
+/**
+ * Grok retries continue the first session, which already holds the spec, the problem and the earlier replies.
+ * `showLesson` adds the current lesson when the last reply was a patch: the session then lacks the merged text.
+ */
+function retryNote(problems: string, current: string | undefined, showLesson: boolean) {
+  const head = `## 上一版课件没有通过校验
 
 校验器报告：
 
 ${problems}
 
-请修正这些问题，输出修正后的**完整**课件文件（同样只输出文件本身，第一行就是 \`---\`）。不要调用任何工具，也不要读文件：规范、示例、题目和你上一版的课件都在前面的对话里，直接输出。`
+`
+  if (current === undefined) {
+    return `${head}请输出完整的课件文件（同样只输出文件本身，第一行就是 \`---\`）。不要调用任何工具，也不要读文件：规范、示例、题目都在前面的对话里，直接输出。`
+  }
+  const lesson = showLesson ? `当前课件（上一版的完整内容，补丁已合并在里面）：
+
+${current}
+
+` : ''
+  return `${head}${lesson}${PATCH_HOW}
+
+当前课件的块名：
+
+${formatKeys(current)}
+
+不要调用任何工具，也不要读文件：规范、示例、题目都在前面的对话里${showLesson ? '，当前课件在本提示里' : ''}，直接输出。`
 }
 
 // Grok runs with --max-turns 1, so a model that reaches for a tool is stopped before it answers.
@@ -154,6 +207,7 @@ function cleanOutput(text: string) {
   let t = text.trim()
   const fence = t.match(/^```[a-z]*\n([\s\S]*?)\n```$/)
   if (fence) t = fence[1].trim()
+  if (isPatch(t)) return t
   const start = t.indexOf('---')
   return start > 0 ? t.slice(start) : t
 }
@@ -346,7 +400,11 @@ ${genui} validate lesson.md
 
 ${genui} layout lesson.md
 
-按报告改掉压线和出界。不要联网，不要启动子代理。
+按报告改掉压线和出界。
+
+小改动可以只写一份补丁 fix.md（格式见 \`genui docs patch\`），用 \`${genui} patch lesson.md fix.md\` 按块名合并进 lesson.md，合并后会自动校验；\`${genui} patch lesson.md --keys\` 列出能在补丁里引用的块名。
+
+不要联网，不要启动子代理。
 
 ## 题目（${p.title}，${p.source}）
 
@@ -539,21 +597,52 @@ async function runRounds(id: string, dir: string): Promise<Outcome> {
       return failed(id, 0)
     }
   }
+  // The last full lesson stored. A patch is merged into it; a patch that fails to merge leaves it unchanged.
+  let current: string | undefined
+  // Next call after a reply that did not pass. Grok resumes its session; the others get the full prompt again.
+  const followUp = (problems: string, session: string | undefined, lastWasPatch: boolean, appendix = ''): Call => {
+    if (engine === 'grok' && session) {
+      // Resending spec + problem + previous lesson in one grok prompt exceeds its inline limit (see runGrok).
+      const note = retryNote(problems, current, lastWasPatch)
+      return { prompt: appendix ? `${note}\n\n${appendix}` : note, dir, resume: session }
+    }
+    return { prompt: retryPrompt(base, current, problems), dir }
+  }
   for (let n = 1; n <= rounds; n++) {
     const started = Date.now()
-    let text: string
+    let raw: string
     let note: string
     let session: string | undefined
     try {
       const reply = await runWithoutTools(id, call)
-      text = cleanOutput(reply.text)
+      raw = cleanOutput(reply.text)
       note = n === 1 ? withSelectionCost(reply.note, selectionCost) : reply.note
       session = reply.session
     } catch (e) {
       log(`${id} 第 ${n} 次 ${engine} 失败：${(e as Error).message}`)
       continue
     }
+    let text = raw
+    const isPatchReply = isPatch(raw)
+    if (isPatchReply) {
+      if (current === undefined) {
+        writeFileSync(join(attemptsDir, `${id}-${n}.md`), raw + '\n')
+        log(`${id} 第 ${n} 次是补丁，但第一次要输出完整课件`)
+        call = followUp(FIRST_FULL, session, true)
+        continue
+      }
+      writeFileSync(join(attemptsDir, `${id}-${n}.patch.md`), raw + '\n')
+      const merged = applyPatch(current, raw)
+      if (!merged.ok) {
+        log(`${id} 第 ${n} 次是补丁，没有用上：${merged.errors.join('；')}`)
+        call = followUp(`补丁没有用上（课件没有改动）：\n${merged.errors.map((e) => `- ${e}`).join('\n')}`, session, true)
+        continue
+      }
+      log(`${id} 第 ${n} 次是补丁：${merged.applied.join('，')}`)
+      text = merged.text
+    }
     const stored = storeAttempt(id, n, text, started, note)
+    current = text
     if (stored.done) return stored.outcome
     let appendix = ''
     if (mode === 'single') {
@@ -565,9 +654,7 @@ async function runRounds(id: string, dir: string): Promise<Outcome> {
         log(`${id} 第 ${n} 次补读 ${grown.added.join(',')}`)
       }
     }
-    // Resending spec + problem + previous lesson in one grok prompt exceeds its inline limit (see runGrok).
-    const grokRetry = appendix ? `${retryNote(stored.report)}\n\n${appendix}` : retryNote(stored.report)
-    call = engine === 'grok' && session ? { prompt: grokRetry, dir, resume: session } : { prompt: retryPrompt(base, text, stored.report), dir }
+    call = followUp(stored.report, session, isPatchReply, appendix)
   }
   return failed(id, rounds)
 }

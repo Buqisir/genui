@@ -108,3 +108,5 @@
   file: cards/figure.md
 - region: rules
   file: cards/rules.md
+- region: patch
+  file: cards/patch.md

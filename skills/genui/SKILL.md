@@ -20,3 +20,5 @@ description: 编写或修改高中物理交互课件（genui 的 lesson .md）�
 7. 能看图时再 `genui shot <课件.md> --out <目录>`。
 
 退出码：0 通过，1 有错误，2 用法不对。`genui docs --list` 列出全部 id。
+
+改一份已经校验过的课件，只动几个块时，不必整份重写：写一份补丁，开头 `<!-- patch -->`，只含要替换或新增的组件块（格式见 `genui docs patch`）。`genui patch <课件.md> <补丁.md>` 按块名合并，`genui patch <课件.md> --keys` 列出块名。合并后照常校验。

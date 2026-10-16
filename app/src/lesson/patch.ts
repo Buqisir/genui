@@ -203,7 +203,8 @@ export function applyPatch(base: string, patch: string): PatchResult {
   const patchFront = patchFmMatch ? splitFront(patchFmMatch[1].split('\n')) : []
   const frontKeys = patchFront.filter((s) => s.key !== undefined)
   const patchComps = parsed.blocks.filter(isComponent)
-  if (!patchComps.length && !frontKeys.length) return fail(['补丁是空的'])
+  // Prose-only patches report the prose: that is what the model needs to fix.
+  if (!patchComps.length && !frontKeys.length) return fail(errors.length ? errors : ['补丁是空的'])
 
   const seenFront = new Set<string>()
   for (const s of frontKeys) {

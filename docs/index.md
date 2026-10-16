@@ -91,5 +91,6 @@ sim({ at(t, p) { … }, draw(ctx, s, v) { … } })
 | 其他需要随时间播放的过程 | `<Sim>`，`time` 同步给 `<Plot>` 游标 | `sim` |
 | 准静态过程、随参数变化的静态示意图 | `<Param>` 滑块 + `<Figure>`，不用 `<Sim>` | `figure` |
 | 小问、答案、实时读数、状态标签、快捷按钮 | `<Question>` `<Answer>` `<Readout>` `<Status>` `<Preset>` | `question` `answer` `readout` `status` `preset` |
+| 只改几个块：补丁 | `<!-- patch -->` | `patch` |
 
 组合原则：一个情景组件画装置和过程，图表组件配合看关系，侧栏放滑块、读数和答案。多阶段过程用一个 `<Sim>` 加关键时刻 `marks`；各小问条件不同时，用选项型 `<Param>` 切换情形。
