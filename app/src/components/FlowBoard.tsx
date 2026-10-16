@@ -21,7 +21,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { getStroke } from 'perfect-freehand'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode } from 'react'
 import type { Block } from '../lesson/parse'
 import { useScope, useScopeFor, useStore, namesIn } from '../lesson/store'
 import type { ThemeName } from '../theme'
@@ -37,6 +37,34 @@ const Z = 1.5
 
 /** Below this zoom the board is read from across the room: nodes switch to their far rendering. */
 const FAR_ZOOM = 0.4
+
+/**
+ * Growing: a station's new pieces stay marked for this long after it grows. The longest stagger is a
+ * side node's last item (about 900ms + 250ms a step); the marks must outlast it or the rest would jump.
+ */
+const GROW_MS = 3200
+
+/** The camera's flight between stations, and the easing it uses. */
+const FLY_MS = 1100
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+const reduceMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+const flyOpts = () => ({ duration: reduceMotion() ? 0 : FLY_MS, padding: 0.04, interpolate: 'smooth' as const, ease: easeInOutCubic })
+
+/**
+ * A piece that comes in during growth, one step after the one before it (`i`, in 250ms steps). Only a
+ * growing station's pieces get the step; a piece that appears later, on a reveal, comes in at once.
+ */
+const rise = (on: boolean, i: number, cls = '') => ({
+  className: [cls, on ? 'fb-rise fb-seq' : ''].filter(Boolean).join(' ') || undefined,
+  style: on ? ({ '--fb-i': i } as CSSProperties) : undefined,
+})
+
+/**
+ * A solution's reading units: each top-level block is one, except that a list gives one unit per item
+ * (a nested list goes with its parent item).
+ */
+const unitsOf = (el: HTMLElement) =>
+  Array.from(el.children).flatMap((c) => (c.tagName === 'UL' || c.tagName === 'OL' ? Array.from(c.children) : [c])) as HTMLElement[]
 
 /** A Readout's item, as controls.tsx formats it. */
 type ReadoutItem = { label: string; expr: string; unit?: string; digits?: number; symbol?: string; color?: string; format?: string }
@@ -57,6 +85,13 @@ type Board = {
   compare: ReadoutItem[]
   /** Far mode: the one quantity each segment station shows as its big number (keyed by segment number). */
   quantity: Record<number, ReadoutItem | null>
+  /** The sentences of the current segment's quote, to highlight in the problem (none on the problem or the 如果 station). */
+  marks: string[]
+  /** Growing: on, and how many reading units of each station's solution are shown (station -> count). */
+  grow: boolean
+  parts: Record<number, number>
+  /** A solution node reports how many reading units its text has (station, count). */
+  reportParts: (k: number, n: number) => void
 }
 const BoardContext = createContext<Board | null>(null)
 const useBoard = () => useContext(BoardContext)!
@@ -95,6 +130,61 @@ function quantityFor(seg: Seg, n: number, chain: number[], pano: ReadoutItem[]):
 const firstSentence = (text: string) => {
   const i = text.indexOf('。')
   return i >= 0 ? text.slice(0, i + 1) : text
+}
+
+/**
+ * The sentences a segment's quote takes from the problem: the 加粗 marks go, the 「……」 breaks split,
+ * and a piece under 4 characters is too short to find again, so it is dropped.
+ */
+const quotePieces = (quote: string): string[] =>
+  quote
+    .replace(/\*/g, '')
+    .split(/……|…/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 4)
+
+/** Letters and digits only: the quote and the rendered problem differ in spacing, punctuation and the subscript underscore (I_0 is I₀). */
+const keyOf = (s: string) => s.replace(/[^\p{L}\p{N}]/gu, '')
+
+type Highlights = { set(name: string, h: unknown): void; delete(name: string): void }
+/** The CSS Custom Highlight API, where the browser has it; nothing is drawn where it does not. */
+const highlights = (): Highlights | null => (typeof CSS !== 'undefined' && 'highlights' in CSS ? (CSS as unknown as { highlights: Highlights }).highlights : null)
+const HighlightCtor = (globalThis as unknown as { Highlight?: new (...r: Range[]) => unknown }).Highlight
+
+/**
+ * The ranges in `root`'s text (KaTeX left out) that spell each piece. The text is joined without spacing
+ * and punctuation, and each kept character remembers its text node, so a piece may cross nodes. A piece
+ * that is not there is skipped.
+ */
+function quoteRanges(root: HTMLElement, pieces: string[]): Range[] {
+  const chars: string[] = []
+  const where: [Text, number][] = []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => (n.parentElement?.closest('.katex') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  })
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const t = n as Text
+    for (let i = 0; i < t.data.length; i++) {
+      if (/[\p{L}\p{N}]/u.test(t.data[i])) {
+        chars.push(t.data[i])
+        where.push([t, i])
+      }
+    }
+  }
+  const all = chars.join('')
+  const ranges: Range[] = []
+  for (const piece of pieces) {
+    const key = keyOf(piece)
+    const at = key ? all.indexOf(key) : -1
+    if (at < 0) continue
+    const [sn, so] = where[at]
+    const [en, eo] = where[at + key.length - 1]
+    const r = document.createRange()
+    r.setStart(sn, so)
+    r.setEnd(en, eo + 1)
+    ranges.push(r)
+  }
+  return ranges
 }
 
 const handles = (
@@ -138,21 +228,41 @@ function TitleNode({ data }: NodeProps<Node<Data>>) {
   )
 }
 
-/** Far: the first sentence only, at 30 screen px. */
+/** Far: at 30 screen px, the sentences the current segment quotes, else the first sentence. */
 function ProblemNode() {
-  const { problem } = useBoard()
+  const { problem, grow, marks } = useBoard()
   const zoom = useZoom()
   const far = zoom < FAR_ZOOM
+  const body = useRef<HTMLDivElement>(null)
+  // The sentences the current segment took from the problem are highlighted in it, after the text is drawn.
+  useLayoutEffect(() => {
+    const reg = highlights()
+    const el = body.current
+    if (!reg || !el || !HighlightCtor || marks.length === 0) return
+    const ranges = quoteRanges(el, marks)
+    if (ranges.length > 0) reg.set('fb-quote', new HighlightCtor(...ranges))
+    return () => reg.delete('fb-quote')
+  }, [marks, far, problem])
   return (
     <Zoomed width={900} className="fb-problem">
       {handles}
       {problem &&
         (far ? (
           <div className="fb-far-problem" style={{ fontSize: inZoomed(zoom, 30) }}>
-            <Rich html text={firstSentence(problem)} />
+            {/* From across the room the problem shows what the current segment quotes from it, else its first sentence. */}
+            {marks.length > 0 ? (
+              <span className="fb-far-quote">
+                <Rich html text={marks.join('……')} />
+              </span>
+            ) : (
+              <Rich html text={firstSentence(problem)} />
+            )}
           </div>
         ) : (
-          <Rich html text={problem} />
+          // The question rises once, as the canvas opens.
+          <div ref={body} className={grow ? 'fb-rise' : undefined}>
+            <Rich html text={problem} />
+          </div>
         ))}
     </Zoomed>
   )
@@ -257,7 +367,7 @@ function FarStation({ item, active }: { item: ReadoutItem | null; active: Active
 
 /** Quote, the question to the class, and what comes with the answer. While a variant is applied, the readouts and charts show its numbers and the original words are put away. Far: one big number. */
 function SideNode({ data }: NodeProps<Node<Data>>) {
-  const { segs, shown, reveal, active, quantity } = useBoard()
+  const { segs, shown, reveal, active, quantity, grow } = useBoard()
   const store = useStore()
   const far = useFar()
   const seg = segs[data.n - 1]
@@ -283,13 +393,18 @@ function SideNode({ data }: NodeProps<Node<Data>>) {
         <FarStation item={quantity[data.n] ?? null} active={active} />
       </Zoomed>
     )
+  // Growing: the quote, the question, the reveal button, then the readouts and charts come in one by one (the step numbers below).
   return (
     <Zoomed width={560} className="fb-side">
       {handles}
       {varied && <VariantBanner line="这一站已按变式重新计算。原题的提问和讲解先收起。" />}
-      {!varied && quote && !(isShown && (outputs.length > 0 || visuals.length > 1)) && <Quote text={quote} />}
+      {!varied && quote && !(isShown && (outputs.length > 0 || visuals.length > 1)) && (
+        <div {...rise(grow, 0)}>
+          <Quote text={quote} />
+        </div>
+      )}
       {!varied && ask && (
-        <div className="teach-ask">
+        <div {...rise(grow, 1, 'teach-ask')}>
           <span className="teach-tag">问</span>
           <Rich html text={ask} />
         </div>
@@ -297,26 +412,56 @@ function SideNode({ data }: NodeProps<Node<Data>>) {
       {!varied &&
         answer &&
         (isShown ? (
-          <div className="teach-reveal">
+          <div className={grow ? 'teach-reveal fb-rise' : 'teach-reveal'}>
             <Rich html text={answer} />
           </div>
         ) : (
-          <button className="teach-reveal-btn nodrag" onClick={() => reveal(data.k)}>
+          <button {...rise(grow, 2, 'teach-reveal-btn nodrag')} onClick={() => reveal(data.k)}>
             揭晓 <kbd>空格</kbd>
           </button>
         ))}
-      {(open || varied) && outputs.length > 0 && <div className="fb-outputs nodrag">{outputs.map((b, i) => boxed(b, `o${i}`))}</div>}
-      {(open || varied) && visuals.slice(1).map((b, i) => <div key={i} className="nodrag nowheel">{boxed(b, `v${i}`)}</div>)}
+      {(open || varied) && outputs.length > 0 && (
+        <div className="fb-outputs nodrag">
+          {outputs.map((b, i) => (
+            <div key={i} {...rise(grow, 3 + i)}>
+              {boxed(b, `o${i}`)}
+            </div>
+          ))}
+        </div>
+      )}
+      {(open || varied) &&
+        visuals.slice(1).map((b, i) => (
+          <div key={i} {...rise(grow, 3 + outputs.length + i, 'nodrag nowheel')}>
+            {boxed(b, `v${i}`)}
+          </div>
+        ))}
     </Zoomed>
   )
 }
 
 /** Far: no text at all; the handles stay so the chain's arrows still land on the station. */
 function SolutionNode({ data }: NodeProps<Node<Data>>) {
-  const { segs, active } = useBoard()
+  const { segs, active, grow, parts, reportParts } = useBoard()
   const far = useFar()
   const seg = segs[data.n - 1]
   const texts = seg.blocks.filter((b) => b.kind === 'markdown') as Extract<Block, { kind: 'markdown' }>[]
+  const wrap = useRef<HTMLDivElement>(null)
+  // Growing: the first `want` units show, the rest keep their height hidden. A variant or grow off shows all.
+  const want = grow && !active ? (parts[data.k] ?? 1) : Infinity
+  const was = useRef<number | null>(null)
+  // The units are the Markdown's own elements, so they are marked here rather than in the render.
+  useLayoutEffect(() => {
+    const el = wrap.current
+    if (!el) return
+    const units = unitsOf(el)
+    reportParts(data.k, units.length)
+    const before = was.current
+    was.current = want
+    units.forEach((u, i) => {
+      u.classList.toggle('fb-part-hidden', i >= want)
+      u.classList.toggle('fb-part-new', before !== null && want > before && i === want - 1)
+    })
+  })
   if (far)
     return (
       <Zoomed width={980} className="fb-solution solution">
@@ -327,7 +472,7 @@ function SolutionNode({ data }: NodeProps<Node<Data>>) {
     <Zoomed width={980} className="fb-solution solution">
       {handles}
       {active && <VariantBanner line="完整解答是原题的。" />}
-      <div className={active ? 'fb-muted' : undefined}>
+      <div ref={wrap} className={active ? 'fb-muted' : undefined}>
         {texts.map((b, i) => (
           <Markdown key={i} text={b.text} />
         ))}
@@ -509,17 +654,33 @@ function VariantNode({ id, data }: NodeProps<Node<VariantData>>) {
   )
 }
 
+/** A chain's data: its label, and while growing, whether it is still to come (`unborn`) or being drawn (`born`, with its generation). */
+type EdgeData = { label?: string; grow?: 'unborn' | 'born'; gen?: number }
+
 /** An arrow along the chain, labelled with the relation that carries one step into the next. */
-function ChainEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, data }: EdgeProps<Edge<{ label?: string }>>) {
+function ChainEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, data }: EdgeProps<Edge<EdgeData>>) {
   const [path, lx, ly] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, curvature: 0.35 })
   // Board px, outside any Zoomed node: 26 screen px when zoomed out, never below the full-size 52.
   const zoom = useZoom()
+  const grow = data?.grow
+  const gen = data?.gen ?? 0
+  // The arrowhead is an SVG marker, so it cannot fade in; it is left off until the line has been drawn.
+  const [armed, setArmed] = useState(0)
+  useEffect(() => {
+    if (grow !== 'born' || reduceMotion()) return
+    const t = window.setTimeout(() => setArmed(gen), 700)
+    return () => window.clearTimeout(t)
+  }, [grow, gen])
+  const arrow = grow !== 'born' || armed === gen || reduceMotion()
   return (
     <>
-      <BaseEdge id={id} path={path} markerEnd={markerEnd} className="fb-edge" />
-      {data?.label && (
+      <BaseEdge id={id} path={path} pathLength={1} markerEnd={arrow ? markerEnd : undefined} className="fb-edge" />
+      {data?.label && grow !== 'unborn' && (
         <EdgeLabelRenderer>
-          <div className="fb-edge-label" style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`, fontSize: Math.max(52, (26 * screenScale()) / zoom) }}>
+          <div
+            className={grow === 'born' ? 'fb-edge-label fb-late' : 'fb-edge-label'}
+            style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`, fontSize: Math.max(52, (26 * screenScale()) / zoom) }}
+          >
             <Rich html text={data.label} />
           </div>
         </EdgeLabelRenderer>
@@ -819,7 +980,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
       })
       ids.push(own)
     }
-    const edges: Edge<{ label?: string }>[] = stations.slice(0, -1).map((a, k) => {
+    const edges: Edge<EdgeData>[] = stations.slice(0, -1).map((a, k) => {
       const pa = place(k)
       const pb = place(k + 1)
       const ia = chain.indexOf(a)
@@ -864,6 +1025,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
     const id = `u${++uid.current}`
     setNodes((ns) => [...ns, { id, type, position: at, data }])
     setMenu(null)
+    return id
   }
   useEffect(() => {
     if (!menu) return
@@ -875,6 +1037,44 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
   }, [menu])
   const [at, setAt] = useState(0)
   const [overview, setOverview] = useState(true)
+  // Growing: the lesson shows only the stations reached so far. `reached` is the largest station number
+  // flown to (kept in a ref too, for the callbacks); `born` marks the stations that grew in the last
+  // GROW_MS, with the flight that grew them, so their pieces animate.
+  const [grow, setGrow] = useState(true)
+  const [reached, setReached] = useState(0)
+  const reachedRef = useRef(0)
+  const [born, setBorn] = useState<Record<number, number>>({})
+  const flights = useRef(0)
+  // Solutions reveal a unit at a time: parts[k] is how many of station k's units show (default 1), partCount[k] how many it has.
+  const [parts, setParts] = useState<Record<number, number>>({})
+  const [partCount, setPartCount] = useState<Record<number, number>>({})
+  const reportParts = useCallback((k: number, n: number) => setPartCount((p) => (p[k] === n ? p : { ...p, [k]: n })), [])
+  const stationOf = useMemo(() => {
+    const m = new Map<string, number>()
+    ids.forEach((own, k) => own.forEach((id) => m.set(id, k)))
+    return m
+  }, [ids])
+  // What the canvas draws: while growing, the stations not reached yet are hidden and the new ones carry
+  // their animation classes. Only these copies get the classes; the stored nodes and edges stay as laid out.
+  const grown = useMemo(() => {
+    if (!grow) return { nodes, edges }
+    const ns = nodes.map((n): Node<AnyData> => {
+      const k = isAdded(n.id) ? undefined : stationOf.get(n.id)
+      if (k === undefined) return n
+      if (k > reached) return { ...n, className: 'fb-unborn' }
+      if (born[k] === undefined) return n
+      if (n.type === 'variant') return { ...n, className: 'fb-born fb-born-card', style: { '--fb-stagger': Number(n.id.slice(1)) } as CSSProperties }
+      const kind = n.type === 'title' ? 'fb-born-title' : n.type === 'problem' || n.type === 'visual' ? 'fb-born-main' : 'fb-born-side'
+      return { ...n, className: `fb-born ${kind}` }
+    })
+    const es = edges.map((e): Edge<EdgeData> => {
+      const target = Number(e.id.slice(1)) + 1
+      if (target > reached) return { ...e, className: 'fb-edge-unborn', data: { ...e.data, grow: 'unborn' } }
+      if (born[target] === undefined) return e
+      return { ...e, className: 'fb-edge-born', data: { ...e.data, grow: 'born', gen: born[target] } }
+    })
+    return { nodes: ns, edges: es }
+  }, [grow, nodes, edges, stationOf, reached, born])
   const [shown, setShown] = useState<Record<number, boolean>>({})
   const [notes, setNotes] = useState(false)
   const [pen, setPen] = useState(false)
@@ -1037,19 +1237,75 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
     const k = Math.max(0, Math.min(navs.length - 1, i))
     setAt(k)
     setOverview(false)
-    void rf.fitBounds(rf.getNodesBounds(ids[k]), { duration: 800, padding: 0.04 })
+    // Going forward past stations that have not grown yet grows them all, in this flight.
+    const from = reachedRef.current
+    if (k > from) {
+      reachedRef.current = k
+      setReached(k)
+      if (grow) {
+        const gen = ++flights.current
+        const fresh = Array.from({ length: k - from }, (_, j) => from + 1 + j)
+        setBorn((b) => ({ ...b, ...Object.fromEntries(fresh.map((s) => [s, gen])) }))
+        window.setTimeout(() => setBorn((b) => Object.fromEntries(Object.entries(b).filter(([, g]) => g !== gen))), GROW_MS)
+      }
+    }
+    void rf.fitBounds(rf.getNodesBounds(ids[k]), flyOpts())
   }
   const flyAll = () => {
     setOverview(true)
-    void rf.fitBounds(rf.getNodesBounds(rf.getNodes()), { duration: 800, padding: 0.04 })
+    // Growing: the whole board is framed only as far as it has grown (the teacher's own pieces always count).
+    const all = rf.getNodes()
+    const seen = grow ? all.filter((n) => (stationOf.get(n.id) ?? -1) <= reachedRef.current) : all
+    void rf.fitBounds(rf.getNodesBounds(seen), flyOpts())
+  }
+  /** Back to the problem with nothing grown (the board menu's item). Growing turns on if it was off. The teacher's pieces stay. */
+  const growFromStart = () => {
+    setBoardMenu(false)
+    setGrow(true)
+    setParts({})
+    reachedRef.current = 0
+    setReached(0)
+    setBorn({})
+    flyTo(0)
   }
   // The 如果…… station has no segment: no question, no reveal.
   const curN = at < navs.length ? navs[at] : -1
   const cur = curN > 0 ? segs[curN - 1] : null
   const hasReveal = !!cur && str(cur.head.props.reveal) !== '' && !overview
+  const marks = useMemo(() => (cur ? quotePieces(str(cur.head.props.quote)) : []), [cur])
+  /**
+   * A note for a question the class asked, under the current station (Q). Each one after the first goes
+   * under the last, 40 below it. The camera then frames the station and the note together.
+   */
+  const addUnder = () => {
+    const station = rf.getNodesBounds(ids[at])
+    const under = rf.getNodes().filter((n) => n.data?.under === at)
+    let y = station.y + station.height + 80
+    if (under.length > 0) {
+      const low = under.reduce((a, b) => (b.position.y > a.position.y ? b : a))
+      const h = rf.getNodesBounds([low.id]).height
+      y = low.position.y + (h > 0 ? h : 300) + 40
+    }
+    const pos = { x: station.x, y }
+    const id = addNode('note', pos, { fresh: true, under: at })
+    setOverview(false)
+    // The note is measured once it is drawn; a moment later the camera frames it with the station.
+    window.setTimeout(() => {
+      const note = rf.getNodesBounds([id])
+      const w = note.width > 0 ? note.width : 480
+      const h = note.height > 0 ? note.height : 300
+      const x0 = Math.min(station.x, pos.x)
+      const y0 = station.y
+      const x1 = Math.max(station.x + station.width, pos.x + w)
+      const y1 = Math.max(station.y + station.height, pos.y + h)
+      void rf.fitBounds({ x: x0, y: y0, width: x1 - x0, height: y1 - y0 }, flyOpts())
+    }, 120)
+  }
   const next = () => {
     if (overview) return flyTo(at)
     if (hasReveal && !shown[at]) return setShown({ ...shown, [at]: true })
+    // The solution's next unit comes in; the variant's whole text and grow off show everything already.
+    if (grow && !active && partCount[at] !== undefined && (parts[at] ?? 1) < partCount[at]) return setParts({ ...parts, [at]: (parts[at] ?? 1) + 1 })
     if (at < navs.length - 1) flyTo(at + 1)
   }
   const fullscreen = () => {
@@ -1069,6 +1325,8 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
       else if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') next()
       else if (k === 'ArrowLeft' || k === 'PageUp') flyTo(overview ? at : at - 1)
       else if (k === 'o' || k === 'O') (overview ? flyTo(at) : flyAll())
+      else if (k === 'g' || k === 'G') setGrow((v) => !v)
+      else if (k === 'q' || k === 'Q') addUnder()
       else if (k === 'n' || k === 'N') setNotes((v) => !v)
       else if (k === 'f' || k === 'F') fullscreen()
       else if (k === 'p' || k === 'P') setPen((v) => !v)
@@ -1094,8 +1352,12 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
       restore,
       compare,
       quantity,
+      grow,
+      parts,
+      reportParts,
+      marks,
     }),
-    [segs, shown, problem, blocks, active, apply, restore, compare, quantity],
+    [segs, shown, problem, blocks, active, apply, restore, compare, quantity, grow, parts, reportParts, marks],
   )
 
   return (
@@ -1122,6 +1384,9 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
           </ol>
           <span className="fb-hint">双击空白处：便签 · 滑块 · 如果……</span>
           <div className="teach-actions">
+            <button className={`pill ${grow ? 'active' : ''}`} aria-pressed={grow} onClick={() => setGrow(!grow)} title="G">
+              生长
+            </button>
             <button className={`pill ${overview ? 'active' : ''}`} onClick={() => (overview ? flyTo(at) : flyAll())} title="O">
               全览
             </button>
@@ -1131,6 +1396,9 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
               </button>
               {boardMenu && (
                 <div className="fb-menu fb-board-menu" role="menu">
+                  <button role="menuitem" onClick={growFromStart}>
+                    从头生长
+                  </button>
                   <button role="menuitem" onClick={exportBoard}>
                     导出板书
                   </button>
@@ -1150,6 +1418,9 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
               )}
               <input ref={importInput} type="file" accept=".json,application/json" hidden onChange={importBoard} />
             </div>
+            <button className="pill" onClick={addUnder} title="Q">
+              补一条
+            </button>
             <button className={`pill ${notes ? 'active' : ''}`} aria-pressed={notes} onClick={() => setNotes(!notes)} title="N">
               讲稿
             </button>
@@ -1187,14 +1458,15 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
           }}
         >
           <ReactFlow
-            nodes={nodes}
+            nodes={grown.nodes}
             onNodesChange={onNodesChange}
-            edges={edges}
+            edges={grown.edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             colorMode={theme === 'night' ? 'dark' : 'light'}
             fitView
-            fitViewOptions={{ padding: 0.04 }}
+            // A growing board opens framed on the problem alone.
+            fitViewOptions={{ padding: 0.04, nodes: grow ? ids[0].map((id) => ({ id })) : undefined }}
             minZoom={0.05}
             maxZoom={3}
             nodesConnectable={false}
@@ -1206,7 +1478,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
             onMoveStart={(e) => e && setOverview(false)}
           >
             <Background variant={BackgroundVariant.Dots} gap={28} size={1.6} />
-            <MiniMap pannable zoomable className="fb-minimap" style={{ width: 160, height: 100 }} />
+            <MiniMap pannable zoomable className="fb-minimap" nodeClassName={(n) => (n.className?.includes('fb-unborn') ? 'fb-unborn' : '')} style={{ width: 160, height: 100 }} />
             <BoardPen on={pen} strokes={strokes} setStrokes={setStrokes} />
           </ReactFlow>
           <FarOverview param={farParam} />

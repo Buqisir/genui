@@ -3432,6 +3432,132 @@ figure.card {
   overflow: hidden;
 }
 
+/* ---------- Growing board: the lesson's stations come in as it reaches them ---------- */
+
+.react-flow__node.fb-unborn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.react-flow__node.fb-born > * {
+  animation: fb-grow 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: 800ms;
+}
+.react-flow__node.fb-born.fb-born-title > * {
+  animation-delay: 500ms;
+}
+.react-flow__node.fb-born.fb-born-main > * {
+  animation-delay: 650ms;
+}
+.react-flow__node.fb-born.fb-born-side > * {
+  animation-delay: 800ms;
+}
+.react-flow__node.fb-born.fb-born-card > * {
+  animation-delay: calc(800ms + var(--fb-stagger, 0) * 150ms);
+}
+
+/* A piece that rises in: the question, the readouts, a solution's line. Not before its station grows. */
+.fb-rise {
+  animation: fb-rise 450ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.react-flow__node.fb-unborn .fb-rise {
+  animation: none;
+}
+.react-flow__node.fb-born .fb-seq {
+  animation-delay: calc(900ms + var(--fb-i, 0) * 250ms);
+}
+
+/* A solution's unit that is not shown yet keeps its height. */
+.fb-solution .fb-part-hidden {
+  visibility: hidden;
+}
+.fb-solution .fb-part-new {
+  animation: fb-rise 450ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Arrows: a chain not reached yet is hidden; one being reached is drawn along its path, then its label fades in. */
+.react-flow__edge.fb-edge-unborn {
+  opacity: 0;
+  pointer-events: none;
+}
+.react-flow__edge.fb-edge-born .fb-edge {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: fb-draw 900ms linear both;
+}
+.fb-edge-label.fb-late {
+  animation: fb-fade 300ms 700ms both;
+}
+
+.fb-minimap .fb-unborn {
+  opacity: 0;
+}
+
+/* The sentences the current segment's quote came from, in the problem. Same colour as the quote's own marks. */
+::highlight(fb-quote) {
+  background-color: color-mix(in srgb, var(--c-charge) 26%, transparent);
+}
+
+/* Far problem node: the quoted sentences, marked the way ::highlight(fb-quote) marks them up close. */
+.fb-far-quote {
+  background-color: color-mix(in srgb, var(--c-charge) 26%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+@keyframes fb-grow {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fb-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fb-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node.fb-born > *,
+  .fb-rise,
+  .fb-solution .fb-part-new,
+  .react-flow__edge.fb-edge-born .fb-edge,
+  .fb-edge-label.fb-late {
+    animation: none;
+  }
+  .react-flow__edge.fb-edge-born .fb-edge {
+    stroke-dasharray: none;
+  }
+}
+
 /* ---------- Teacher additions on the board: notes, sliders, if-then cards ---------- */
 
 .fb-hint {
