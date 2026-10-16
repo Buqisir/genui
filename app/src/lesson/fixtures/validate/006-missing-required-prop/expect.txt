@@ -1,0 +1,4 @@
+errors
+Define v 缺少 expr
+<Define> 缺少属性 expr
+line: 12

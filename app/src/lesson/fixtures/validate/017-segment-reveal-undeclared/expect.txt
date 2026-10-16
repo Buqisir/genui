@@ -1,0 +1,3 @@
+errors
+revealParam 引用了未声明的名字 ans
+line: 14
