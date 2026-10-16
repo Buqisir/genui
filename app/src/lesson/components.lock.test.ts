@@ -1,5 +1,5 @@
 // 组件库兼容性检查：对照 components.lock.json，老课件用到的组件和属性不能被删、改名或收窄。
-// 规则见 /home/user/genui/CLAUDE.md「组件库兼容规则」。
+// 规则见 仓库根目录 CLAUDE.md「组件库兼容规则」。
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'

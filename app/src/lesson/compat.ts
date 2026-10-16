@@ -1,5 +1,5 @@
 // 组件库快照与兼容性比较。供 scripts/lock-components.ts 和 components.lock.test.ts 共用。
-// 规则见 /home/user/genui/CLAUDE.md「组件库兼容规则」。
+// 规则见 仓库根目录 CLAUDE.md「组件库兼容规则」。
 
 import type { PropKind, PropSpec } from './components'
 
