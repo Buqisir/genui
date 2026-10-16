@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { firstPrompt, readProblem } from './genprompt'
+import { firstPrompt, readProblem, solvePrompt } from './genprompt'
 import { buildSinglePrompt, type LessonProblem } from '../src/agent/prompt'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -34,6 +34,11 @@ const cases: { name: string; file: string; generate: () => string }[] = [
     name: '精简模式',
     file: 'compact.txt',
     generate: () => buildSinglePrompt(problem(), cardIds, { signatures: true }).text,
+  },
+  {
+    name: '解题模式（--solve-first 第 0 步）',
+    file: 'solve.txt',
+    generate: () => solvePrompt(readProblem(problemId)),
   },
 ]
 

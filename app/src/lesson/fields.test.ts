@@ -466,7 +466,7 @@ describe('non-uniform electric fields', () => {
     const body =
       'sim({ at(t, p) { return { x: 0, y: 0 } }, draw(ctx, s, v) { const m = v.view({ xmin: -3, xmax: 3, ymin: -3, ymax: 3, equal: true }); v.regions(m, v.p.pt, { lines: true }); if (!v.p.pt.fields[1].charge || v.p.pt.fields[2].radial.sign !== -1 || v.p.pt.fields[0].region.inner !== 0.5) throw new Error("payload"); } })'
     const checked = checkSim(body, runtime, [{ label: '场', params: { pt: payload }, times: [0, 0.2] }])
-    expect(checked).toEqual({ errors: [], warnings: [] })
+    expect(checked).toMatchObject({ errors: [], warnings: [] })
   })
 
   it('keeps Coulomb energy for a charge constrained to a straight pipe', () => {
@@ -530,7 +530,7 @@ describe('fields validator', () => {
     const runtime = buildRuntime()
     const body = 'sim({ at(t, p) { return p.pt.state(t) }, draw(ctx, s, v) { const m = v.view({ xmin: -2, xmax: 2, ymin: -2, ymax: 2, equal: true }); if (!v.p.pt.fields || v.p.pt.fields[0].angle !== -90) throw new Error("angle"); v.regions(m, v.p.pt); v.ball(m, s.x, s.y, 0.05) } })'
     const checked = checkSim(body, runtime, [{ label: '初始', params: { pt: motionPayload(scope.pt) }, times: [0, 0.5, 1] }])
-    expect(checked).toEqual({ errors: [], warnings: [] })
+    expect(checked).toMatchObject({ errors: [], warnings: [] })
   })
 
   it('rejects a field that is not a free-motion charge', () => {

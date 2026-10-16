@@ -1,0 +1,13 @@
+# 标准评测题单。换生成模型时用 app/scripts/eval-standard.ts 跑这套题。改题单会让新旧结果不可比，改之前先想清楚。
+version: 1
+problems:
+  - { id: gd24-13, why: 气体，3 个数值（2026-10-16 Haiku 评测用过） }
+  - { id: sd25-14, why: 输电与变压器，4 个数值（同上） }
+  - { id: zj-23, why: 电表与变压器实验，数值 + 两个选择小问（同上） }
+  - { id: gd23-08, why: 多选（同上） }
+  - { id: gd23-06, why: 单选（同上） }
+  - { id: r5-01-belt-loop, why: 传送带 + 圆轨道，力学多过程 }
+  - { id: r6-07-orbit-transfer, why: 卫星变轨 }
+  - { id: r5-05-prism, why: 棱镜，光学 }
+  - { id: zj-27, why: 电容充放电实验，数值 + 选择 }
+  - { id: r6-08-wave-vibration, why: 波形图 + 振动图像 }

@@ -89,8 +89,8 @@ figure({
       if (len > 0.01) {
         const dA = -p.sgn, dD = p.sgn * p.sc
         const fa = P(-1.0, dA < 0 ? 0.0 : 0.1, 0.05), fd = P(1.0, dD < 0 ? 0.0 : 0.1, 0.05)
-        v.vec(m, fa[0], fa[1], 0, dA * len, { kind: 'force', label: 'F' })
-        v.vec(m, fd[0], fd[1], 0, dD * len, { kind: 'force', label: 'F' })
+        v.vec(m, fa[0], fa[1], 0, dA * len, { kind: 'force', label: 'F', of: '-Fa*sgn' })
+        v.vec(m, fd[0], fd[1], 0, dD * len, { kind: 'force', label: 'F', of: 'Fa*sgn*sc' })
       }
       const lo = P(0, 0.2, -0.08)
       v.label(m, lo[0], lo[1], 'O')
@@ -104,8 +104,8 @@ figure({
       v.wire(m, 1.01, 0, { dir: p.sc < 0 ? 'in' : 'out', rings: [], label: 'cd' })
       if (len > 0.01) {
         const dA = -p.sgn, dD = p.sgn * p.sc
-        v.vec(m, -1.01, dA < 0 ? -0.07 : 0.07, 0, dA * len, { kind: 'force', label: 'F' })
-        v.vec(m, 1.01, dD < 0 ? -0.07 : 0.07, 0, dD * len, { kind: 'force', label: 'F' })
+        v.vec(m, -1.01, dA < 0 ? -0.07 : 0.07, 0, dA * len, { kind: 'force', label: 'F', of: '-Fa*sgn' })
+        v.vec(m, 1.01, dD < 0 ? -0.07 : 0.07, 0, dD * len, { kind: 'force', label: 'F', of: 'Fa*sgn*sc' })
       }
       if (p.sgn < 0) v.arrow(m, 0.5, 0.56, -0.5, 0.56, { color: v.color.field, width: 2 })
       else v.arrow(m, -0.5, 0.56, 0.5, 0.56, { color: v.color.field, width: 2 })
@@ -193,8 +193,8 @@ figure({
     v.wire(m, xd, yd, { dir: 'out', rings: [], label: 'cd' })
     if (on) {
       const len = 0.12 + 0.5 * k
-      v.vec(m, xa, ya + (sL < 0 ? -0.07 : 0.07), 0, sL * len * 0.5, { kind: 'force', label: 'F' })
-      v.vec(m, xd, yd + (sR > 0 ? 0.07 : -0.07), 0, sR * len * 0.5, { kind: 'force', label: 'F' })
+      v.vec(m, xa, ya + (sL < 0 ? -0.07 : 0.07), 0, sL * len * 0.5, { kind: 'force', label: 'F', of: '-Fb*sgn' })
+      v.vec(m, xd, yd + (sR > 0 ? 0.07 : -0.07), 0, sR * len * 0.5, { kind: 'force', label: 'F', of: 'Fb*sgn*sc' })
     }
   },
 })

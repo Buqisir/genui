@@ -407,6 +407,6 @@ describe('track validator and drawing', () => {
       '  v.track(m, {track: [{line: [0, 0, 1, 0], pipe: true, flip: true}]}, {pipeWidth: 22})',
       '} })',
     ].join('\n')
-    expect(checkSim(body, runtime, [{ label: '初始', params: {}, times: [0] }])).toEqual({ errors: [], warnings: [] })
+    expect(checkSim(body, runtime, [{ label: '初始', params: {}, times: [0] }])).toMatchObject({ errors: [], warnings: [] })
   })
 })

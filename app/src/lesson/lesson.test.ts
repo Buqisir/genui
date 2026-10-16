@@ -403,7 +403,7 @@ describe('checkSim', () => {
 
   it('passes a valid sim', () => {
     const body = 'sim({ at(t, p) { return { x: p.a * t } }, draw(ctx, s, v) { const m = v.view({xmin: 0, xmax: 1, ymin: 0, ymax: 1}); v.field(m, 0, 0, 1, 1, {dir: "out"}); v.ball(m, s.x, 0.5, 0.05, {label: "v_0"}); v.text(m, 0.5, 0.2, "R_{AB}") } })'
-    expect(checkSim(body, runtime, runs)).toEqual({ errors: [], warnings: [] })
+    expect(checkSim(body, runtime, runs)).toMatchObject({ errors: [], warnings: [] })
   })
 
   it('reports draw errors, missing helpers and runaway loops', () => {
@@ -418,7 +418,7 @@ describe('checkSim', () => {
   it('accepts dash: true like Plot does, and reports what a real canvas would throw on', () => {
     const view = 'const m = v.view({xmin: 0, xmax: 1, ymin: 0, ymax: 1});'
     const dashed = `sim({ at(t) { return { x: t } }, draw(ctx, s, v) { ${view} v.vec(m, 0, 0, 0.5, 0, {dash: true}); v.line(m, 0, 0, 1, 1, {dash: 4}); v.circle(m, 0.5, 0.5, 0.2, {dash: [3, 2]}) } })`
-    expect(checkSim(dashed, runtime, runs)).toEqual({ errors: [], warnings: [] })
+    expect(checkSim(dashed, runtime, runs)).toMatchObject({ errors: [], warnings: [] })
     const rawDash = `sim({ at(t) { return { x: t } }, draw(ctx, s, v) { ctx.setLineDash(true) } })`
     expect(checkSim(rawDash, runtime, runs).errors.join()).toMatch(/setLineDash/)
     const negative = `sim({ at(t) { return { x: t } }, draw(ctx, s, v) { ${view} v.circle(m, 0.5, 0.5, 0.3 - s.x) } })`
@@ -471,7 +471,7 @@ describe('checkSim', () => {
       '  if (cy.upTo(2.5).length < 60) throw new Error("path")',
       '} })',
     ].join('\n')
-    expect(checkSim(body, runtime, runs)).toEqual({ errors: [], warnings: [] })
+    expect(checkSim(body, runtime, runs)).toMatchObject({ errors: [], warnings: [] })
   })
 
   it('reports params the code reads but the block does not pass', () => {
@@ -497,12 +497,12 @@ describe('checkSim', () => {
       '  v.efield(m, [{x: 0, y: 0, q: 1}], {lines: false, through: [[1, 1]]})',
       '} })',
     ].join('\n')
-    expect(checkSim(body, runtime, runs)).toEqual({ errors: [], warnings: [] })
+    expect(checkSim(body, runtime, runs)).toMatchObject({ errors: [], warnings: [] })
   })
 
   it('lets draw read p directly, the same object as v.p', () => {
     const body = 'sim({ at(t, p) { return { x: p.a * t } }, draw(ctx, s, v) { const m = v.view({xmin: 0, xmax: 1, ymin: 0, ymax: 1}); v.ball(m, s.x * p.a, 0.5, 0.05) } })'
-    expect(checkSim(body, runtime, runs)).toEqual({ errors: [], warnings: [] })
+    expect(checkSim(body, runtime, runs)).toMatchObject({ errors: [], warnings: [] })
     const missing = 'sim({ at(t, p) { return { x: p.a * t } }, draw(ctx, s, v) { v.event(v.view({xmin: 0, xmax: 1, ymin: 0, ymax: 1}), 0, 0, "x", { at: p.tEnd }) } })'
     expect(checkSim(missing, runtime, runs).errors.join()).toMatch(/p\.tEnd/)
   })

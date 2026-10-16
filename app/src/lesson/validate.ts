@@ -52,6 +52,7 @@ export const ISSUE_CODES = [
   'variant-unknown-name', 'variant-mismatch', 'unknown-component', 'unknown-prop', 'missing-required',
   'bad-name', 'duplicate-name', 'undeclared-name', 'cycle', 'bad-expr', 'eval-failed', 'no-scene',
   'component-invalid', 'not-finite', 'out-of-range', 'component-warning', 'unused-name',
+  'arrow-direction', 'arrow-zero', 'arrow-scale',
 ] as const
 
 type Kind = PropKind

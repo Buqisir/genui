@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { ISSUE_CODES, validateLesson } from './validate'
+import { validateSource } from '../../scripts/validate'
+import { ISSUE_CODES } from './validate'
 
 // Plain-text conformance cases for the lesson parser and validator. Each directory holds
 // lesson.md and expect.txt. First line: `ok` (no errors; warnings allowed) or `errors`.
@@ -12,6 +13,8 @@ import { ISSUE_CODES, validateLesson } from './validate'
 // means at least one error or warning has that code (see ISSUE_CODES); any other
 // non-blank line is a substring that must appear in some error message.
 // Every error and warning in every case must carry a code from ISSUE_CODES.
+// Cases run through validateSource, the same checks as validate:lessons, so the sandbox smoke runs
+// of Sim and Figure (and the arrow checks on Figure) apply too.
 const FIXTURES = fileURLToPath(new URL('./fixtures/validate', import.meta.url))
 const read = (path: string) => readFileSync(path, 'utf8')
 
@@ -48,7 +51,7 @@ describe('validate fixtures', () => {
     it(name, () => {
       const dir = join(FIXTURES, name)
       const want = parseExpect(read(join(dir, 'expect.txt')))
-      const r = validateLesson(read(join(dir, 'lesson.md')))
+      const r = validateSource(read(join(dir, 'lesson.md')), name)
 
       if (want.ok) {
         expect(r.errors, JSON.stringify(r.errors)).toEqual([])

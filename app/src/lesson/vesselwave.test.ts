@@ -237,6 +237,6 @@ describe('plot points validator', () => {
         if (Math.abs(w.yi(0, 0.5) - 1) > 1e-6) throw new Error('part ' + w.yi(0, 0.5))
       },
     })`
-    expect(checkSim(body, runtime, [{ label: '初始', params: {}, times: [0] }])).toEqual({ errors: [], warnings: [] })
+    expect(checkSim(body, runtime, [{ label: '初始', params: {}, times: [0] }])).toMatchObject({ errors: [], warnings: [] })
   })
 })

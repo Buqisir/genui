@@ -177,9 +177,17 @@
     addShape(X - size / 2, Y - size / 2, size, size, weight)
   }
 
+  // `of` says which quantity the arrow draws (signed, an expression over the lesson's names).
+  // Browsers ignore it. The validator's sandbox sets window.__arrowLog, and each arrow with
+  // `of` appends its world-space vector there, so simcheck can compare directions across states.
+  function noteArrow(dx, dy, o) {
+    if (typeof o.of === 'string' && window.__arrowLog) window.__arrowLog.push({ of: o.of, dx, dy })
+  }
+
   // Head size is in pixels and independent of line width, so short or thick
   // vectors keep a readable shaft.
   function arrow(m, x1, y1, x2, y2, o = {}) {
+    noteArrow(x2 - x1, y2 - y1, o)
     arrowPx(m.x(x1), m.y(y1), m.x(x2), m.y(y2), o)
   }
 
@@ -188,6 +196,7 @@
    * charge). Label sits beyond the head, e.g. 'v 0.80'.
    */
   function vec(m, x, y, dx, dy, o = {}) {
+    noteArrow(dx, dy, o)
     const c = kindColor(o.kind || 'velocity')
     const X1 = m.x(x)
     const Y1 = m.y(y)

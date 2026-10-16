@@ -29,7 +29,7 @@ sim() 的入口、颜色、坐标和基本图形。
 - `v.view({xmin, xmax, ymin, ymax, pad})`：建立物理坐标到画布坐标的映射，返回 `m`，有 `m.x(x)`、`m.y(y)`、`m.s(len)`（长度换算）。**y 轴向上为正。**
 - `v.line(m, x1, y1, x2, y2, opts)`、`v.circle(m, x, y, r, opts)`、`v.rect(m, x, y, w, h, opts)`、`v.path(m, points, opts)`。
   - `opts`：`color`（线条颜色）、`width`、`dash`（`true` 是默认虚线，也可写线型数组如 `[6, 4]`；`v.vec`、`v.ellipse`、`v.orbit` 等的 `dash` 同样）、`fill`（填充色，**不写就只画轮廓**）、`outline`、`close`（`path` 是否闭合）。画轨道、区域边框时只写 `color`；画实心物体时写 `fill`。
-- `v.arrow(m, x1, y1, x2, y2, opts)`：箭头大小固定，不随线宽放大。
+- `v.arrow(m, x1, y1, x2, y2, opts)`：箭头大小固定，不随线宽放大。`v.arrow` 和 `v.vec(m, x, y, dx, dy, opts)` 的 `opts` 都可以写 `of`（字符串，可选）：这个箭头画的是哪个量，**带符号**，用课件里的 Param、Define 名字写，如 `of: "-Fa*sgn"`。浏览器里 `of` 不影响画法。校验器（`validate:lessons`）会在原题、快捷按钮和变式下核对它：量变号时箭头要跟着反向，量为 0 时不该画出箭头，箭头长度随量成比例（只提醒）。画力、速度、电流这类有方向的量，都要写 `of`。
 - `v.label(m, x, y, text, opts)`：文字标签。所有标签在 `draw` 结束后统一放置，**自动避开其他标签和本帧画的物体**，并且总在最上层。`v.text` 也在最后绘制。
 - `v.dim(m, x1, y1, x2, y2, text, opts)`：尺寸标注线。
 - `v.axisX(m, opts)`、`v.ruler(m, x1, x2, y, {step, minor, unit, body})`：刻度尺。`v.ruler` 默认画在一条铝尺身上（`body: false` 只画刻度线，和 `v.axisX` 一样）。`angle`（度，逆时针为正）让尺子绕 (x1, y) 转过去，沿斜面、斜管放尺子用；读数 k 落在沿尺方向离 (x1, y) 为 k − x1 的地方，所以要配 `equal: true` 的视图。

@@ -2,10 +2,14 @@
 // Usage: npx tsx scripts/generate.ts <problem-id>... [--engine codex|grok|deepseek] [--mode full|single|compact|agent]
 //          [--model M] [--effort high] [--rounds 3] [--jobs 3] [--out generated] [--timeout <minutes>]
 //          [--max-turns N] [--max-submits N] [--select-engine deepseek|grok] [--blind]
+//          [--solve-first] [--solve-rounds N]
 // --mode full (default) is the one-shot mega-prompt. single assembles L0 + picked cards. compact is single plus a
 // one-line table of every component signature. agent may call tools.
 // --blind: the answer key is checked and logged but never fed back, so retries fix only validator errors
 // (for evals: otherwise a wrong option letter gets retried until it matches).
+// --solve-first: before the lesson, the model solves the problem alone (genprompt.ts solvePrompt, no spec). The
+// solution is checked (parse, then answer key) and goes into the lesson prompt. --solve-rounds N (default 2) caps
+// the solve calls in all. Only with --mode full|single|compact.
 // Output: ../<out>/<id>.md (latest attempt) and ../<out>/.attempts/<id>-<n>.md, plus a log line per attempt.
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, appendFileSync } from 'node:fs'
@@ -15,7 +19,24 @@ import { assertFitsContext, deepseekComplete, formatUsageNote, runDeepseekAgent 
 import { appendPointedDocs, buildSinglePrompt, outputRequirements, selectCards, type LessonProblem } from '../src/agent/prompt'
 import { applyPatch, formatKeys, isPatch } from '../src/lesson/patch'
 import { checkAnswerKey } from './answerkey'
-import { FIRST_FULL, PATCH_HOW, cleanOutput, firstPrompt, issuesOf, readProblem, reportOf, retryPrompt, root, withProgress } from './genprompt'
+import {
+  FIRST_FULL,
+  PATCH_HOW,
+  cleanOutput,
+  firstPrompt,
+  insertBeforeProblem,
+  issuesOf,
+  judgeSolve,
+  readProblem,
+  reportOf,
+  retryPrompt,
+  root,
+  solutionSection,
+  solvePrompt,
+  solveRetryPrompt,
+  withProgress,
+  type Solution,
+} from './genprompt'
 import { formatProgress, progressOf, type ProgressIssue } from './progress'
 import { validateFile } from './validate'
 
@@ -27,7 +48,7 @@ const opt = (name: string, fallback: string) => {
   return i >= 0 ? args[i + 1] : fallback
 }
 const flagValues = new Set(
-  ['--rounds', '--jobs', '--effort', '--model', '--engine', '--out', '--timeout', '--mode', '--max-turns', '--max-submits', '--select-engine'].flatMap((f) => [f, opt(f, '\0')]),
+  ['--rounds', '--jobs', '--effort', '--model', '--engine', '--out', '--timeout', '--mode', '--max-turns', '--max-submits', '--select-engine', '--solve-rounds'].flatMap((f) => [f, opt(f, '\0')]),
 )
 const ids = args.filter((a) => !a.startsWith('--') && !flagValues.has(a))
 const rounds = Number(opt('--rounds', '3'))
@@ -60,6 +81,16 @@ const timeoutMin = Number(opt('--timeout', engine === 'grok' ? '60' : engine ===
 const maxTurns = Number(opt('--max-turns', mode === 'agent' && engine === 'grok' ? '60' : '40'))
 const maxSubmits = Number(opt('--max-submits', '6'))
 const blind = args.includes('--blind')
+const solveFirst = args.includes('--solve-first')
+const solveRounds = Number(opt('--solve-rounds', '2'))
+if (solveFirst && mode === 'agent') {
+  console.error('--solve-first 只支持 --mode full、single 或 compact')
+  process.exit(2)
+}
+if (!Number.isInteger(solveRounds) || solveRounds < 1) {
+  console.error(`--solve-rounds 要是正整数，收到 ${opt('--solve-rounds', '2')}`)
+  process.exit(2)
+}
 
 const outDir = join(root, opt('--out', 'generated'))
 const attemptsDir = join(outDir, '.attempts')
@@ -425,7 +456,8 @@ function chunkAtHeadings(text: string, limit: number): string[] {
  * then the problem.
  */
 async function splitFirstCall(id: string, base: string, dir: string): Promise<Call> {
-  const at = base.indexOf('\n## 题目（')
+  // The solution section (--solve-first) sits right before the problem, so it goes in the last message with it.
+  const at = base.search(/\n## (?:已经做好的解答|题目（)/)
   // Room for the note appended to each piece.
   const pieces = chunkAtHeadings(base.slice(0, at), GROK_INLINE_LIMIT - 1_000)
   const tail = `${base.slice(at).trim()}\n\n请按前面几条消息里的输出要求和《课件语法规范》为这道题写课件文件，只输出文件本身，第一行就是 \`---\`。`
@@ -439,6 +471,48 @@ async function splitFirstCall(id: string, base: string, dir: string): Promise<Ca
     session = primer.session
   }
   return { prompt: tail, dir, resume: session }
+}
+
+/**
+ * Step 0 of --solve-first: the model solves the problem alone, with no spec. A reply that does not parse, or
+ * (unless --blind) misses the answer key, goes back with what was wrong, at most `solveRounds` calls in all.
+ * `sol` is undefined when no reply was accepted; the lesson is then written without a solution.
+ */
+async function solveFirstFor(id: string, problem: LessonProblem, dir: string): Promise<{ sol?: Solution; cost: number }> {
+  let prompt = solvePrompt(problem)
+  let cost = 0
+  for (let n = 1; n <= solveRounds; n++) {
+    const started = Date.now()
+    let reply: Reply
+    try {
+      reply = await runWithoutTools(id, { prompt, dir })
+    } catch (e) {
+      log(`${id} 解题第 ${n} 次 ${engine} 失败：${(e as Error).message}`)
+      continue
+    }
+    cost += reply.costUsd ?? 0
+    // Not cleanOutput: it cuts everything before the first '---', which a solution may contain.
+    const text = reply.text.trim()
+    writeFileSync(join(attemptsDir, `${id}-solve-${n}.md`), text + '\n')
+    const secs = Math.round((Date.now() - started) / 1000)
+    const judged = judgeSolve(id, text)
+    const bytes = Buffer.byteLength(text)
+    if (!judged.parsed.ok) {
+      log(`${id} 解题第 ${n} 次：解析失败（${judged.parsed.error}），${bytes} 字节（${secs}s${reply.note}，engine=${engine}）`)
+      prompt = solveRetryPrompt(problem, text, judged.feedback)
+      continue
+    }
+    const keyNote = judged.checked ? '' : '（没有可核对的答案）'
+    log(`${id} 解题第 ${n} 次：解析成功，答案键核对 ${judged.missing.length} 处不符${keyNote}${blind && judged.missing.length ? '（盲模式，不反馈）' : ''}，${bytes} 字节（${secs}s${reply.note}，engine=${engine}）`)
+    if (judged.missing.length) log(`${id} 解题第 ${n} 次：标准答案核对未通过：${judged.missing.join('；')}`)
+    if (judged.missing.length && !blind) {
+      prompt = solveRetryPrompt(problem, text, judged.feedback)
+      continue
+    }
+    return { sol: judged.parsed as Solution, cost }
+  }
+  log(`${id} 解题 ${solveRounds} 次都没有通过，不带解答写课件`)
+  return { cost }
 }
 
 async function runRounds(id: string, dir: string): Promise<Outcome> {
@@ -475,6 +549,16 @@ async function runRounds(id: string, dir: string): Promise<Outcome> {
       return failed(id, 0)
     }
   }
+  if (solveFirst) {
+    try {
+      const solved = await solveFirstFor(id, problem, dir)
+      // Solve calls are billed to round 1 (like card selection), since generate.log counts cost per round.
+      selectionCost += solved.cost
+      if (solved.sol) base = insertBeforeProblem(base, solutionSection(solved.sol))
+    } catch (e) {
+      log(`${id} 解题步骤出错，不带解答写课件：${(e as Error).message}`)
+    }
+  }
   let call: Call = { prompt: base, dir }
   if (engine === 'grok' && Buffer.byteLength(base) > GROK_INLINE_LIMIT) {
     try {
@@ -484,6 +568,8 @@ async function runRounds(id: string, dir: string): Promise<Outcome> {
       return failed(id, 0)
     }
   }
+  // Round-1 prompt size for eval-standard.ts (a grok split prompt counts in full, not just its last message).
+  log(`${id} 第 1 次提示词 ${Buffer.byteLength(base)} 字节`)
   // The last full lesson stored. A patch is merged into it; a patch that fails to merge leaves it unchanged.
   let current: string | undefined
   // Errors of the last reply that was validated, so the next prompt can say what changed. Empty before round 1.
@@ -565,7 +651,7 @@ async function pool<T, R>(items: T[], size: number, fn: (x: T) => Promise<R>) {
 }
 
 if (ids.length === 0) {
-  console.error('usage: npx tsx scripts/generate.ts <problem-id>... [--engine codex|grok|deepseek] [--mode full|single|compact|agent] [--model M] [--effort high] [--rounds 3] [--jobs 3] [--out generated] [--timeout 分钟] [--max-turns N] [--max-submits N] [--select-engine deepseek|grok]')
+  console.error('usage: npx tsx scripts/generate.ts <problem-id>... [--engine codex|grok|deepseek] [--mode full|single|compact|agent] [--model M] [--effort high] [--rounds 3] [--jobs 3] [--out generated] [--timeout 分钟] [--max-turns N] [--max-submits N] [--select-engine deepseek|grok] [--solve-first] [--solve-rounds N]')
   process.exit(2)
 }
 log(`开始：${ids.join(', ')}（engine=${engine} mode=${mode}${model ? ` model=${model}` : ''} rounds=${rounds} jobs=${jobs} effort=${effort} timeout=${timeoutMin}min${mode === 'agent' ? ` max-turns=${maxTurns} max-submits=${maxSubmits}` : ''}${cardMode ? ` select=${selectEngine}` : ''}${blind ? ' blind' : ''}）`)
