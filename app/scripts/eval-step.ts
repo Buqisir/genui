@@ -16,7 +16,8 @@ import { join } from 'node:path'
 import { appendPointedDocs, buildSinglePrompt, selectCards, selectionUserPrompt, type LessonProblem } from '../src/agent/prompt'
 import { applyPatch, isPatch } from '../src/lesson/patch'
 import { checkAnswerKey } from './answerkey'
-import { FIRST_FULL, cleanOutput, firstPrompt, readProblem, reportOf, retryPrompt } from './genprompt'
+import { FIRST_FULL, cleanOutput, firstPrompt, issuesOf, readProblem, reportOf, retryPrompt, withProgress } from './genprompt'
+import { formatProgress, progressOf, type ProgressIssue } from './progress'
 import { validateFile } from './validate'
 
 /** Same default as generate.ts --rounds. */
@@ -33,6 +34,8 @@ interface Meta {
   refs?: string[]
   omittedRefs?: string[]
   unknown?: string[]
+  /** Validator errors of each validated round, keyed by round number. A check compares with the latest earlier round. */
+  issues?: Record<string, ProgressIssue[]>
 }
 
 interface Row {
@@ -175,6 +178,7 @@ function cmdCheck() {
   let mergeOk: boolean | null = null
   let applied: string[] = []
   let report = ''
+  let progress = ''
   let note = ''
   if (patchReply && current === undefined) {
     // Same as generate.ts: the first round must be a full lesson.
@@ -204,6 +208,12 @@ function cmdCheck() {
     const keyOk = key.missing.length === 0
     judged = { errors: r.errors.length, warnings: r.warnings.length, keyOk, passed: r.errors.length === 0 && keyOk }
     report = reportOf(r, key.missing)
+    // Saved before the retry prompt is built, so the next check can compare with this round.
+    const issues = issuesOf(r, key.missing)
+    const prevRound = Object.keys(meta.issues ?? {}).map(Number).filter((k) => k < n).sort((a, b) => b - a)[0]
+    progress = formatProgress(progressOf(prevRound === undefined ? [] : meta.issues![String(prevRound)], issues))
+    meta.issues = { ...meta.issues, [n]: issues }
+    writeMeta(dir, meta)
     note = `${judged.errors} errors, key ${keyOk ? 'ok' : 'wrong'}`
     if (!judged.passed && meta.arm !== 'full') {
       const grown = appendPointedDocs(base, meta.included, [...r.errors, ...r.warnings].map((e) => e.message))
@@ -244,7 +254,7 @@ function cmdCheck() {
 
   let next = ''
   if (!passed && n < MAX_ROUNDS) {
-    writeFileSync(join(dir, `prompt-${n + 1}.md`), retryPrompt(base, finalCurrent, report))
+    writeFileSync(join(dir, `prompt-${n + 1}.md`), retryPrompt(base, finalCurrent, withProgress(progress, report)))
     next = `; next: prompt-${n + 1}.md`
   }
   console.log(`round ${n}: ${passed ? 'passed' : 'failed'} (${note})${next}`)

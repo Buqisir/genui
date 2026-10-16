@@ -22,6 +22,7 @@ import { buildRegistry, ParamStore, type ParamDef } from './store'
 import { COMPONENTS, type PropKind } from './components'
 import { listKeys } from './patch'
 import { signature } from './signature'
+import { closestName } from './suggest'
 import { unusedNames } from './unused'
 
 export interface Issue {
@@ -149,7 +150,13 @@ function declaredNameAt(raw: string[], line: number | undefined): string | undef
 
 /** The name in a 「引用了未声明的名字 X」 message. */
 function undeclaredName(message: string): string | undefined {
-  return /引用了未声明的名字 ([^\s：]+)/.exec(message)?.[1]
+  return /引用了未声明的名字 ([^\s：（]+)/.exec(message)?.[1]
+}
+
+/** The 「（是不是 X？）」 suffix for an undeclared name, or '' when no declared name is close enough. */
+function didYouMean(name: string, candidates: Iterable<string>): string {
+  const hint = closestName(name, candidates)
+  return hint ? `（是不是 ${hint}？）` : ''
 }
 
 /**
@@ -261,7 +268,7 @@ export function validateLesson(source: string): ValidationResult {
         continue
       }
       if (!(a.name in scope)) {
-        errors.push({ message: `answers 里的 ${a.name} 没有对应的 Param/Define，无法核对`, code: 'answer-unknown-name' })
+        errors.push({ message: `answers 里的 ${a.name} 没有对应的 Param/Define${didYouMean(a.name, Object.keys(scope))}，无法核对`, code: 'answer-unknown-name' })
         continue
       }
       const got: number = scope[a.name]
@@ -286,7 +293,7 @@ export function validateLesson(source: string): ValidationResult {
       for (const [name, want] of Object.entries(b.props.expect as Record<string, unknown>)) {
         if (typeof want !== 'number' || !Number.isFinite(want)) continue // checkComponent reports non-numeric values
         if (!(name in after)) {
-          errors.push({ line: b.line, message: `变式「${label}」的 expect 里的 ${name} 没有对应的 Param/Define`, code: 'variant-unknown-name' })
+          errors.push({ line: b.line, message: `变式「${label}」的 expect 里的 ${name} 没有对应的 Param/Define${didYouMean(name, Object.keys(after))}`, code: 'variant-unknown-name' })
           continue
         }
         const got = after[name]
@@ -566,14 +573,14 @@ function checkComponent(
     }
     try {
       for (const s of symbolsOf(value)) {
-        if (!declared.has(s) && !extra.includes(s)) err(`${where} 引用了未声明的名字 ${s}：${value}`, 'undeclared-name')
+        if (!declared.has(s) && !extra.includes(s)) err(`${where} 引用了未声明的名字 ${s}：${value}${didYouMean(s, [...declared, ...extra])}`, 'undeclared-name')
       }
     } catch (e) {
       err(`${where} 表达式无法解析：${value}（${(e as Error).message}）`, 'bad-expr')
     }
   }
   const nameRef = (value: unknown, where: string, mustBeParam = false) => {
-    if (typeof value !== 'string' || !declared.has(value)) err(`${where} 引用了未声明的名字 ${String(value)}`, 'undeclared-name')
+    if (typeof value !== 'string' || !declared.has(value)) err(`${where} 引用了未声明的名字 ${String(value)}${typeof value === 'string' ? didYouMean(value, declared) : ''}`, 'undeclared-name')
     else if (mustBeParam && !params.has(value)) err(`${where} 必须是 Param（Define 不能被设置）：${value}`)
   }
   const sandboxApis = () => {
@@ -1032,7 +1039,7 @@ function checkComponent(
             try {
               for (const s of symbolsOf(value)) {
                 if (banned.has(s)) err(`${where} 用了 ${s}：轨道在一次运动里不变，只能用参数`)
-                else if (!declared.has(s)) err(`${where} 引用了未声明的名字 ${s}：${value}`, 'undeclared-name')
+                else if (!declared.has(s)) err(`${where} 引用了未声明的名字 ${s}：${value}${didYouMean(s, declared)}`, 'undeclared-name')
               }
             } catch (e) {
               err(`${where} 表达式无法解析：${value}（${(e as Error).message}）`, 'bad-expr')

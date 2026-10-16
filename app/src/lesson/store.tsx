@@ -3,6 +3,7 @@ import { ease } from '../theme'
 import { evaluate, num, settleSum, symbolsOf, type Scope } from './expr'
 import type { Block } from './parse'
 import { solverOf, type SolverDef } from './solvers'
+import { closestName } from './suggest'
 
 export interface ParamDef {
   name: string
@@ -120,7 +121,10 @@ function topoSort(defines: DefineDef[], known: Set<string>, errors: Registry['er
       errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 的表达式无法解析：${(e as Error).message}`, code: 'bad-expr' })
     }
     for (const dep of deps) {
-      if (!known.has(dep)) errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 引用了未声明的名字 ${dep}`, code: 'undeclared-name' })
+      if (!known.has(dep)) {
+        const hint = closestName(dep, known)
+        errors.push({ line: lineOf.get(d.name), message: `Define ${d.name} 引用了未声明的名字 ${dep}${hint ? `（是不是 ${hint}？）` : ''}`, code: 'undeclared-name' })
+      }
       const target = byName.get(dep)
       if (target) visit(target, [...chain, d.name])
     }

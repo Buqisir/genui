@@ -15,7 +15,8 @@ import { assertFitsContext, deepseekComplete, formatUsageNote, runDeepseekAgent 
 import { appendPointedDocs, buildSinglePrompt, outputRequirements, selectCards, type LessonProblem } from '../src/agent/prompt'
 import { applyPatch, formatKeys, isPatch } from '../src/lesson/patch'
 import { checkAnswerKey } from './answerkey'
-import { FIRST_FULL, PATCH_HOW, cleanOutput, firstPrompt, readProblem, reportOf, retryPrompt, root } from './genprompt'
+import { FIRST_FULL, PATCH_HOW, cleanOutput, firstPrompt, issuesOf, readProblem, reportOf, retryPrompt, root, withProgress } from './genprompt'
+import { formatProgress, progressOf, type ProgressIssue } from './progress'
 import { validateFile } from './validate'
 
 const genui = join(root, 'bin/genui')
@@ -268,7 +269,7 @@ function storeAttempt(id: string, n: number, text: string, started: number, note
   const keyOk = key.missing.length === 0
   const done = r.errors.length === 0 && (keyOk || blind)
   const outcome: Outcome = { id, ok: done, keyOk, manual: key.manual, attempts: n, warnings: done ? r.warnings.map((w) => w.message) : [] }
-  return { done, report: reportOf(r, key.missing, blind), errorCount: r.errors.length, messages: [...r.errors, ...r.warnings].map((e) => e.message), outcome }
+  return { done, report: reportOf(r, key.missing, blind), issues: issuesOf(r, key.missing, blind), errorCount: r.errors.length, messages: [...r.errors, ...r.warnings].map((e) => e.message), outcome }
 }
 
 function grokAgentPrompt(p: LessonProblem): string {
@@ -485,6 +486,8 @@ async function runRounds(id: string, dir: string): Promise<Outcome> {
   }
   // The last full lesson stored. A patch is merged into it; a patch that fails to merge leaves it unchanged.
   let current: string | undefined
+  // Errors of the last reply that was validated, so the next prompt can say what changed. Empty before round 1.
+  let lastIssues: ProgressIssue[] = []
   // Next call after a reply that did not pass. Grok resumes its session; the others get the full prompt again.
   const followUp = (problems: string, session: string | undefined, lastWasPatch: boolean, appendix = ''): Call => {
     if (engine === 'grok' && session) {
@@ -530,6 +533,8 @@ async function runRounds(id: string, dir: string): Promise<Outcome> {
     const stored = storeAttempt(id, n, text, started, note)
     current = text
     if (stored.done) return stored.outcome
+    const progress = formatProgress(progressOf(lastIssues, stored.issues))
+    lastIssues = stored.issues
     let appendix = ''
     if (cardMode) {
       const grown = appendPointedDocs(base, included, stored.messages)
@@ -540,7 +545,7 @@ async function runRounds(id: string, dir: string): Promise<Outcome> {
         log(`${id} 第 ${n} 次补读 ${grown.added.join(',')}`)
       }
     }
-    call = followUp(stored.report, session, isPatchReply, appendix)
+    call = followUp(withProgress(progress, stored.report), session, isPatchReply, appendix)
   }
   return failed(id, rounds)
 }

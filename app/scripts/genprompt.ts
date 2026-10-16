@@ -8,6 +8,7 @@ import YAML from 'yaml'
 import { docTitle, pointerFor } from '../src/agent/core'
 import type { LessonProblem } from '../src/agent/prompt'
 import { formatKeys, isPatch } from '../src/lesson/patch'
+import type { ProgressIssue } from './progress'
 
 const here = dirname(fileURLToPath(import.meta.url))
 export const root = join(here, '../..')
@@ -109,6 +110,22 @@ export function cleanOutput(text: string) {
   if (isPatch(t)) return t
   const start = t.indexOf('---')
   return start > 0 ? t.slice(start) : t
+}
+/** The errors and answer misses that reportOf lists, as issues to compare between rounds (warnings are left out). */
+export function issuesOf(
+  r: { errors: { line?: number; block?: string; code?: string; message: string }[] },
+  missing: string[],
+  blind = false,
+): ProgressIssue[] {
+  return [
+    ...r.errors.map((e) => ({ code: e.code, block: e.block, line: e.line, message: e.message })),
+    ...(blind ? [] : missing).map((q) => ({ code: 'answer-key', block: q, message: q })),
+  ]
+}
+
+/** Puts the progress sentence in front of a validator report, with a blank line between (nothing when empty). */
+export function withProgress(progress: string, report: string): string {
+  return progress ? `${progress}\n\n${report}` : report
 }
 export function reportOf(
   r: { errors: { line?: number; block?: string; hint?: string; message: string }[]; warnings: { line?: number; block?: string; hint?: string; message: string }[] },
