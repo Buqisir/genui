@@ -104,6 +104,23 @@ const differs = (a: number, b: number) =>
 const useZoom = () => useViewport().zoom
 const useFar = () => useZoom() < FAR_ZOOM
 
+/**
+ * A far layer of sparse dots under the board. It moves at 0.45 of the pan and grows with the zoom more
+ * slowly than the near grid, so the camera gets depth. Off with reduced motion.
+ */
+function ParallaxLayer() {
+  const { x, y, zoom } = useViewport()
+  if (reduceMotion()) return null
+  const tile = 140 * Math.sqrt(zoom)
+  return (
+    <div
+      className="fb-parallax"
+      aria-hidden
+      style={{ backgroundPosition: `${x * 0.45}px ${y * 0.45}px`, backgroundSize: `${tile}px ${tile}px` }}
+    />
+  )
+}
+
 /** Screen px to board px inside a Zoomed node (its CSS zoom is Z, the viewport's is `zoom`). */
 // Far sizes are set for a 1920×1080 screen and shrink with smaller ones, since the board's zoom shrinks with them.
 const screenScale = () => Math.min(1, window.innerWidth / 1920, window.innerHeight / 1080)
@@ -1075,6 +1092,21 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
     })
     return { nodes: ns, edges: es }
   }, [grow, nodes, edges, stationOf, reached, born])
+  // Depth: off the overview, the stations other than the one in focus step back (opacity only). The teacher's
+  // own pieces never step back, and an arrow stays clear while either end is the station in focus.
+  const focus = useMemo(() => {
+    if (overview) return grown
+    const far = (id: string) => !isAdded(id) && stationOf.get(id) !== at
+    const ns = grown.nodes.map((n): Node<AnyData> => {
+      if (n.className?.includes('fb-unborn') || !far(n.id)) return n
+      return { ...n, className: n.className ? `${n.className} fb-dim` : 'fb-dim' }
+    })
+    const es = grown.edges.map((e): Edge<EdgeData> => {
+      if (e.className?.includes('fb-edge-unborn') || !far(e.source) || !far(e.target)) return e
+      return { ...e, className: e.className ? `${e.className} fb-edge-dim` : 'fb-edge-dim' }
+    })
+    return { nodes: ns, edges: es }
+  }, [grown, overview, at, stationOf])
   const [shown, setShown] = useState<Record<number, boolean>>({})
   const [notes, setNotes] = useState(false)
   const [pen, setPen] = useState(false)
@@ -1233,7 +1265,24 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
     }
   }
 
+  // The camera swoops on each flight: the renderer (nodes and arrows, not the viewport React Flow moves) tilts
+  // for FLY_MS. Each call restarts the clock, so quick presses keep it tilted until the last one lands.
+  const viewRef = useRef<HTMLDivElement>(null)
+  const swoopTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(swoopTimer.current), [])
+  const swoop = () => {
+    if (reduceMotion()) return
+    const el = viewRef.current?.querySelector<HTMLElement>('.react-flow__renderer')
+    if (!el) return
+    el.classList.remove('fb-flying')
+    void el.offsetWidth
+    el.classList.add('fb-flying')
+    window.clearTimeout(swoopTimer.current)
+    swoopTimer.current = window.setTimeout(() => el.classList.remove('fb-flying'), FLY_MS)
+  }
+
   const flyTo = (i: number) => {
+    swoop()
     const k = Math.max(0, Math.min(navs.length - 1, i))
     setAt(k)
     setOverview(false)
@@ -1252,6 +1301,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
     void rf.fitBounds(rf.getNodesBounds(ids[k]), flyOpts())
   }
   const flyAll = () => {
+    swoop()
     setOverview(true)
     // Growing: the whole board is framed only as far as it has grown (the teacher's own pieces always count).
     const all = rf.getNodes()
@@ -1451,6 +1501,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
         </div>
         <div
           className="fb-view"
+          ref={viewRef}
           onDoubleClick={(e) => {
             if (!(e.target as HTMLElement).classList.contains('react-flow__pane')) return
             const r = e.currentTarget.getBoundingClientRect()
@@ -1458,9 +1509,9 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
           }}
         >
           <ReactFlow
-            nodes={grown.nodes}
+            nodes={focus.nodes}
             onNodesChange={onNodesChange}
-            edges={grown.edges}
+            edges={focus.edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             colorMode={theme === 'night' ? 'dark' : 'light'}
@@ -1478,6 +1529,7 @@ function FlowInner({ blocks, title, problem, theme, setTheme, onExit, onPages, l
             onMoveStart={(e) => e && setOverview(false)}
           >
             <Background variant={BackgroundVariant.Dots} gap={28} size={1.6} />
+            <ParallaxLayer />
             <MiniMap pannable zoomable className="fb-minimap" nodeClassName={(n) => (n.className?.includes('fb-unborn') ? 'fb-unborn' : '')} style={{ width: 160, height: 100 }} />
             <BoardPen on={pen} strokes={strokes} setStrokes={setStrokes} />
           </ReactFlow>
