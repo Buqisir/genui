@@ -1,5 +1,6 @@
 // Single-round prompt assembly: a cheap card pick, then L0 + those cards + L2 refs that fit.
 import { loadDocs } from '../docs/index'
+import { signatureTable } from '../lesson/signature'
 import { getDoc, listDocs, pointerFor } from './core'
 
 export interface LessonProblem {
@@ -223,13 +224,13 @@ function docBody(id: string, text: string | undefined): string {
  * Output requirements + L0 + the chosen L1 cards + L2 refs.
  * Required cards and the refs the selection named (at most MAX_SELECTED_REFS) are always included;
  * the cards' `related` refs are then added in order only while the total stays under `budget` bytes.
+ * `signatures` adds one line per component (every component, not only the picked cards) right after the output rules.
  */
 export function buildSinglePrompt(
   problem: LessonProblem,
   cardIds: string[],
-  opts?: { budget?: number; refs?: string[] },
+  opts?: { budget?: number; refs?: string[]; signatures?: boolean },
 ): BuiltPrompt {
-  const budget = opts?.budget ?? SINGLE_PROMPT_BUDGET
   const known = l1Ids()
   const cards: string[] = []
   for (const id of REQUIRED_CARDS) if (known.has(id)) cards.push(id)
@@ -237,15 +238,21 @@ export function buildSinglePrompt(
     if (!known.has(id) || cards.includes(id)) continue
     cards.push(id)
   }
-  const byId = new Map(loadDocs().map((d) => [d.id, d]))
+  const docs = loadDocs()
+  const byId = new Map(docs.map((d) => [d.id, d]))
   const index = getDoc('index')
   if ('error' in index) throw new Error(index.error)
 
+  const signatureSection = opts?.signatures
+    ? `## 全部组件一览（一行一个；* 为必填；用法细节见下面的卡片）\n\n${signatureTable(docs)}\n\n`
+    : ''
+  // The table rides on top of the budget, so compact differs from single by the table alone.
+  const budget = (opts?.budget ?? SINGLE_PROMPT_BUDGET) + Buffer.byteLength(signatureSection)
   const head = `你是高中物理课件作者。请按下面给出的文档为这道题写一份课件文件：完整解答，并做交互演示。
 
 ${outputRequirements(problem, false)}
 
-## 入口
+${signatureSection}## 入口
 
 ${docBody('index', index.text)}
 `

@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { repoRoot } from '../docs/index'
+import { loadDocs, repoRoot } from '../docs/index'
+import { signature, signatureTable } from '../lesson/signature'
 import {
   REQUIRED_CARDS,
   SINGLE_PROMPT_BUDGET,
@@ -78,6 +79,21 @@ describe('single-round prompt', () => {
     const again = appendPointedDocs(grown.text, [...built.included, ...grown.added], ['<Motion> friction 再次'])
     expect(again.added).toEqual([])
     expect(again.text).toBe(grown.text)
+  })
+
+  it('compact prompt adds the one-line component table after the output rules; single prompt has none', () => {
+    const single = buildSinglePrompt(problem, ['plot'])
+    const compact = buildSinglePrompt(problem, ['plot'], { signatures: true })
+    expect(single.text).not.toContain('## 全部组件一览')
+    expect(single.text).not.toContain(signature('Define')!)
+    expect(compact.text).toContain('## 全部组件一览（一行一个；* 为必填；用法细节见下面的卡片）')
+    expect(compact.text).toContain(signatureTable(loadDocs()))
+    expect(compact.text).toContain(signature('Define')!)
+    const at = compact.text.indexOf('## 全部组件一览')
+    expect(compact.text.indexOf('不要读写文件')).toBeLessThan(at)
+    expect(at).toBeLessThan(compact.text.indexOf('## 入口'))
+    expect(compact.cards).toEqual(single.cards)
+    expect(compact.bytes).toBeGreaterThan(single.bytes)
   })
 
   it('drops unknown card ids and always keeps the three required cards', async () => {
