@@ -66,11 +66,11 @@ zj-22:
 zj-23:
   - { q: "(1) 阻值", any: [34] }
   - { q: "(2) 选项", choice: "AD" }
-  - { q: "(3) 波形", text: "C", manual: true }
+  - { q: "(3) 波形", choice: "C" }
 zj-24:
-  - { q: "(1)① 图1", text: "B", manual: true }
-  - { q: "(1)② 图2", text: "C", manual: true }
-  - { q: "(1)③ 初速度", text: "D", manual: true }
+  - { q: "(1)① 图1", choice: "B" }
+  - { q: "(1)② 图2", choice: "C" }
+  - { q: "(1)③ 初速度", choice: "D" }
   - { q: "(2) ΔxA", any: [0.78] }
   - { q: "(2) ΔxB", any: [1.29] }
   - { q: "(2) 势能与重力做功", text: "<", manual: true }

@@ -1714,6 +1714,12 @@
       ],
       "required": false
     },
+    "expect": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
     "label": {
       "kind": [
         "string"

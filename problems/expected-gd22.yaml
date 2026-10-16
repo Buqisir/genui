@@ -21,7 +21,7 @@ gd22-10:
   - { q: "选项", choice: "AC" }
 gd22-11:
   - { q: "(2) 直径", any: [7.883, 7.884] }
-  - { q: "(3) 操作顺序", text: "B", manual: true }
+  - { q: "(3) 操作顺序", choice: "B" }
   - { q: "(4) 机械能损失", text: "(1/2)m(d/t_1)^2-(1/2)m(d/t_2)^2", manual: true }
   - { q: "(5) 空气阻力引起的误差", text: "增大", manual: true }
 gd22-12:

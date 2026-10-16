@@ -94,7 +94,7 @@ answers:                      # 参考答案，校验用，不显示
 ```
 
 - 开头是 YAML 头信息，`id`、`title`、`question`（题目原文，页头「题目原文」按钮展开）必填；非选择题还必须有 `answers`。`answers` 用来自动核对，学生看不到。
-- 选择题另写 `choice`：选出的选项字母，多选按字母顺序连写（`choice: C`、`choice: BD`），同样只用于核对。选项里能写成数值的量照样写进 `answers`；没有数值时写 `answers: []`。
+- 选择题另写 `choice`：选出的选项字母，多选按字母顺序连写（`choice: C`、`choice: BD`），同样只用于核对。一题有几道选择小问时，`choice` 按小问顺序写成列表，如 `choice: [AD, C]`。选项里能写成数值的量照样写进 `answers`；没有数值时写 `answers: []`。
 - 可选头信息：`breadcrumb`（字符串数组，页头面包屑，不写时用 `topic`、`source`）、`theme`（`light` 默认，`night` 夜光主题，适合天体、光学、电磁这类"发光"情景；学生也可以在页头切换）。
 
 ### 页面布局（自动）

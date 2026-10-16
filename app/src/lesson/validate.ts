@@ -166,9 +166,11 @@ export function validateLesson(source: string): ValidationResult {
     if (meta[key] === undefined) errors.push({ message: `头信息缺少 ${key}` })
   }
   if (meta.choice !== undefined) {
-    const c = String(meta.choice)
-    if (!/^[A-H]+$/.test(c) || [...c].sort().join('') !== c || new Set(c).size !== c.length) {
-      errors.push({ message: `头信息 choice 写选出的选项字母，多选按字母顺序连写（如 C、BD）：${JSON.stringify(meta.choice)}` })
+    // One string, or a non-empty list with one string per choice sub-question in sub-question order.
+    const oneChoice = (v: unknown) => typeof v === 'string' && /^[A-H]+$/.test(v) && [...v].sort().join('') === v && new Set(v).size === v.length
+    const ok = Array.isArray(meta.choice) ? meta.choice.length > 0 && meta.choice.every(oneChoice) : oneChoice(meta.choice)
+    if (!ok) {
+      errors.push({ message: `头信息 choice 写选出的选项字母，多选按字母顺序连写（如 C、BD）；有几道选择小问时按小问顺序写成列表（如 [AD, C]）：${JSON.stringify(meta.choice)}` })
     }
   }
   if (meta.theme !== undefined && meta.theme !== 'light' && meta.theme !== 'night') {
@@ -252,6 +254,32 @@ export function validateLesson(source: string): ValidationResult {
       const tol = Math.max(1e-6, Math.abs(a.value) * 0.01)
       if (!(Math.abs(got - a.value) <= tol)) {
         errors.push({ message: `答案不一致：${a.name} 按课件公式算出 ${got}，answers 写的是 ${a.value}` })
+      }
+    }
+    // A Variant's expect: the initial scope with its numeric set values applied (as on the board), checked like answers.
+    for (const b of comps) {
+      if (b.name !== 'Variant' || !b.props.expect || typeof b.props.expect !== 'object' || Array.isArray(b.props.expect)) continue
+      const label = String(b.props.label)
+      const patch: Record<string, number> = {}
+      for (const [k, x] of Object.entries((b.props.set ?? {}) as Record<string, unknown>)) if (typeof x === 'number' && Number.isFinite(x)) patch[k] = x
+      let after: Record<string, number>
+      try {
+        after = new ParamStore(reg).scopeWith(patch)
+      } catch (e) {
+        errors.push({ line: b.line, message: `变式「${label}」应用后求值失败：${(e as Error).message}` })
+        continue
+      }
+      for (const [name, want] of Object.entries(b.props.expect as Record<string, unknown>)) {
+        if (typeof want !== 'number' || !Number.isFinite(want)) continue // checkComponent reports non-numeric values
+        if (!(name in after)) {
+          errors.push({ line: b.line, message: `变式「${label}」的 expect 里的 ${name} 没有对应的 Param/Define` })
+          continue
+        }
+        const got = after[name]
+        const tol = Math.max(1e-6, Math.abs(want) * 0.01)
+        if (!(Math.abs(got - want) <= tol)) {
+          errors.push({ line: b.line, message: `变式「${label}」应用后 ${name} 按课件公式算出 ${got}，expect 写的是 ${want}` })
+        }
       }
     }
   }
@@ -597,6 +625,11 @@ function checkComponent(
     case 'Variant':
       if (!props.set || typeof props.set !== 'object' || Array.isArray(props.set)) err('要写 set：应用时写入哪些参数')
       else setMap(props.set, 'set')
+      if (props.expect !== undefined) {
+        const ex = props.expect as unknown
+        if (!ex || typeof ex !== 'object' || Array.isArray(ex)) err('expect 要写对象，如 {Uef: 0}')
+        else for (const [k, x] of Object.entries(ex as Record<string, unknown>)) if (typeof x !== 'number' || !Number.isFinite(x)) err(`expect 的值要写数字：${k}`)
+      }
       break
     case 'Question':
       if (props.set !== undefined) setMap(props.set, 'set')

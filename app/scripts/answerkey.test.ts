@@ -29,4 +29,20 @@ describe('checkAnswerKey', () => {
     expect(checkAnswerKey('gd23-10', lesson([], 'BD')).missing).toEqual([])
     expect(checkAnswerKey('gd23-10', lesson([], 'CD')).missing).toEqual(['选项'])
   })
+
+  it('pairs a choice list with the key choice entries in order', () => {
+    // zj-23: (2) 选项 AD, (3) 波形 C.
+    expect(checkAnswerKey('zj-23', lesson([34], '[AD, C]')).missing).toEqual([])
+    expect(checkAnswerKey('zj-23', lesson([34], '[C, AD]')).missing).toEqual(['(2) 选项', '(3) 波形'])
+  })
+
+  it('reports the second choice entry when the lesson gives one string', () => {
+    expect(checkAnswerKey('zj-23', lesson([34], 'AD')).missing).toEqual(['(3) 波形'])
+  })
+
+  it('checks three choice sub-questions from a list', () => {
+    // zj-24: (1)① B, (1)② C, (1)③ D, and two numeric values.
+    expect(checkAnswerKey('zj-24', lesson([0.78, 1.29], '[B, C, D]')).missing).toEqual([])
+    expect(checkAnswerKey('zj-24', lesson([0.78, 1.29], '[B, C, A]')).missing).toEqual(['(1)③ 初速度'])
+  })
 })

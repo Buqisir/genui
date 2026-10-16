@@ -1,4 +1,7 @@
 // Checks a lesson's `answers` / `choice` against problems/expected*.yaml (kept away from the model).
+// A question with several choice sub-questions writes `choice` as a list in sub-question order
+// (`choice: [AD, C]`). The k-th `choice` entry in a key matches the k-th element of that list;
+// a plain string (`choice: C`) is a one-element list, so old lessons behave as before.
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,7 +9,8 @@ import YAML from 'yaml'
 
 const dir = join(dirname(fileURLToPath(import.meta.url)), '../../problems')
 
-// `any`: numeric alternatives (unit variants), matched within 1%. `choice`: option letters in A–D order.
+// `any`: numeric alternatives (unit variants), matched within 1%. `choice`: option letters in A–D order;
+// the k-th `choice` entry of a question is compared with the k-th lesson `choice` (see the file header).
 // `text`: answers only a person can grade (symbolic expressions, 选填 words); listed, never auto-checked.
 interface Expect {
   q: string
@@ -36,6 +40,11 @@ const letters = (s: unknown) => [...new Set(String(s ?? '').toUpperCase().replac
 /**
  * `missing`: questions whose expected answer is not in the lesson (values within 1%, or the exact option set).
  * `manual`: questions that need a person to compare against the reference.
+ *
+ * Choice entries are paired by order: the lesson's `choice` list is read as a list (a string counts as
+ * one element, no `choice` counts as none), and the k-th choice entry in the key is compared with its
+ * k-th element. A missing or different element puts that question in `missing`, so a lesson that writes
+ * one string for two choice sub-questions fails the second one.
  */
 export function checkAnswerKey(id: string, lessonSource: string): { checked: boolean; missing: string[]; manual: string[] } {
   const key = answerKey(id)
@@ -47,6 +56,8 @@ export function checkAnswerKey(id: string, lessonSource: string): { checked: boo
   } catch {
     // An unparsable header is reported by the validator; here it simply matches nothing.
   }
+  const lessonChoices: unknown[] = Array.isArray(meta.choice) ? meta.choice : meta.choice === undefined ? [] : [meta.choice]
+  let choiceIndex = 0
   const values = (Array.isArray(meta.answers) ? meta.answers : []).map((a) => Number(a?.value)).filter(Number.isFinite)
   const close = (a: number, b: number) => Math.abs(a - b) <= Math.max(1e-9, Math.abs(b) * 0.01)
   const missing: string[] = []
@@ -76,7 +87,8 @@ export function checkAnswerKey(id: string, lessonSource: string): { checked: boo
     if (e.any) {
       if (!matched.has(numeric.indexOf(e))) missing.push(e.q)
     } else if (e.choice !== undefined) {
-      if (letters(meta.choice) !== letters(e.choice)) missing.push(e.q)
+      const k = choiceIndex++
+      if (k >= lessonChoices.length || letters(lessonChoices[k]) !== letters(e.choice)) missing.push(e.q)
     } else {
       manual.push(e.q)
     }

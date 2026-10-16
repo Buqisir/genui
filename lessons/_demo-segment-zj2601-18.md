@@ -287,9 +287,9 @@ $$
   {label: "e、f 电势差", symbol: "U_ef", expr: "Uef*1000", unit: "mV", digits: 2, color: "charge"}
 ]} />
 
-<Variant label="两杆电流同向" set={{same: 1, flip: 0}} ask="cd 中的电流改成和 ab 同向，U_ef 会怎样？" reveal="U_ef = 0。两根杆受力同向，两条梁都往下弯：上支路 R_1、R_2 同时变大，下支路 R_3、R_4 同时变小，e、f 两点电势都是 E/2。所以题目让两杆电流反向，输出才和 B 成正比。" />
+<Variant label="两杆电流同向" set={{same: 1, flip: 0}} expect={{Uef: 0}} ask="cd 中的电流改成和 ab 同向，U_ef 会怎样？" reveal="U_ef = 0。两根杆受力同向，两条梁都往下弯：上支路 R_1、R_2 同时变大，下支路 R_3、R_4 同时变小，e、f 两点电势都是 E/2。所以题目让两杆电流反向，输出才和 B 成正比。" />
 
-<Variant label="磁场反向" set={{flip: 1, same: 0}} ask="磁场反过来，U_ef 会怎样？" reveal="U_ef 变成负的，大小不变：所有力反向，变大的电阻变小、变小的变大。U_ef 的正负就能告诉你磁场朝哪边。" />
+<Variant label="磁场反向" set={{flip: 1, same: 0}} expect={{Uef: -0.006, Bcalc: -0.2}} ask="磁场反过来，U_ef 会怎样？" reveal="U_ef 变成负的，大小不变：所有力反向，变大的电阻变小、变小的变大。U_ef 的正负就能告诉你磁场朝哪边。" />
 
 <Segment title="完整解答" />
 
