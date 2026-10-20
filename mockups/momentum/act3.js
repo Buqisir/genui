@@ -27,27 +27,38 @@
   function d3(x) { return f(x, 3); }
 
   // ---------- 画面：导轨、两车、速度箭头 ----------
-  function scene(r, label) {
-    return function (ctx, w, h, t, C) {
-      var x0 = 24, x1 = w - 24, y = h * 0.6;
-      var cw = Math.max(70, Math.min(130, w * 0.15)), chH = Math.max(34, Math.min(46, cw * 0.36));
-      var wA = cw * (r.mA >= r.mB ? 1.15 : 0.9), wB = cw * (r.mB >= r.mA ? 1.15 : 0.9);
-      var k = (x1 - x0) * 0.42;
+  // holdUpTo：讲到第几句之前（含），动画停在碰撞前，免得学生还没预测就看到答案
+  function scene(r, label, holdUpTo) {
+    return function (ctx, w, h, t, C, beat) {
+      var narrow = w < 520;
+      var x0 = 16, x1 = w - 16, y = h * (narrow ? 0.26 : 0.32);
+      var cw = Math.max(64, Math.min(110, w * 0.15)), chH = Math.max(30, Math.min(40, cw * 0.36));
+      var wA = cw * (r.mA >= r.mB ? 1.12 : 0.9), wB = cw * (r.mB >= r.mA ? 1.12 : 0.9);
+      var cfg = {
+        xA0: x0 + 8, xB0: x0 + (x1 - x0) * 0.42, wA: wA, wB: wB, k: (x1 - x0) * 0.27,
+        mA: r.mA, mB: r.mB, vA: r.vA, vB: r.vB, a: r.a, b: r.b,
+        hold: holdUpTo != null && beat <= holdUpTo
+      };
+      var s = MOM.sim(t, cfg);
       MOM.track(ctx, x0, x1, y, C);
-      var run = MOM.run(t, {
-        xA0: x0 + 20, xB0: x0 + (x1 - x0) * 0.5, wA: wA, wB: wB,
-        vA: r.vA, vB: r.vB, vA2: r.a, vB2: r.b, k: k, x0: x0, x1: x1
-      });
-      var stuck = r.side === 'velcro';
-      MOM.cart(ctx, run.xA, y, wA, chH, C, { name: 'A', label: r.mA + ' kg', heavy: r.mA > r.mB, face: 1, side: r.side });
-      MOM.cart(ctx, run.xB, y, wB, chH, C, { name: 'B', label: r.mB + ' kg', heavy: r.mB > r.mA, face: -1, side: r.side });
-      var ay = y + 32, sc = 90;
-      var va = run.after ? r.a : r.vA, vb = run.after ? r.b : r.vB;
-      MOM.vArrow(ctx, run.xA + wA / 2, ay, va, sc, C, f(va, 2) + ' m/s');
-      if (!(stuck && run.after)) MOM.vArrow(ctx, run.xB + wB / 2, ay + 26, vb, sc, C, f(vb, 2) + ' m/s');
-      GRAV.draw.text(ctx, run.after ? '碰后' : '碰前', x0, h * 0.22, { size: 13, color: C.graphite });
-      GRAV.draw.text(ctx, '向右为正', x1, h * 0.22, { size: 12, color: C.steel, align: 'right' });
-      if (label) GRAV.draw.note(ctx, label, w, h, C);
+      MOM.cart(ctx, s.xA, y, wA, chH, C, { name: 'A', label: r.mA + ' kg', heavy: r.mA > r.mB, face: 1, side: r.side });
+      MOM.cart(ctx, s.xB, y, wB, chH, C, { name: 'B', label: r.mB + ' kg', heavy: r.mB > r.mA, face: -1, side: r.side });
+      var ay = y + 28, sc = 70;
+      MOM.vArrow(ctx, s.xA + wA / 2, ay, s.vA, sc, C, f(s.vA, 2) + ' m/s');
+      if (!(r.side === 'velcro' && s.after)) MOM.vArrow(ctx, s.xB + wB / 2, ay + 24, s.vB, sc, C, f(s.vB, 2) + ' m/s');
+      GRAV.draw.text(ctx, '向右为正', x1, 16, { size: 12, color: C.steel, align: 'right' });
+      if (label) GRAV.draw.text(ctx, label, x0, 16, { size: 12, color: C.steel });
+      // 下半：v–t 图 + 动量柱子
+      var top = y + 78;
+      if (narrow) {
+        var gh = (h - top - 20) * 0.5;
+        MOM.vtGraph(ctx, { x: x0, y: top, w: x1 - x0 - 30, h: gh }, s, cfg, C);
+        MOM.pBars(ctx, { x: x0, y: top + gh + 16, w: x1 - x0, h: h - top - gh - 40 }, s, cfg, C);
+      } else {
+        var gw = (x1 - x0) * 0.56;
+        MOM.vtGraph(ctx, { x: x0, y: top, w: gw - 30, h: h - top - 24 }, s, cfg, C);
+        MOM.pBars(ctx, { x: x0 + gw + 10, y: top, w: x1 - x0 - gw - 10, h: h - top - 24 }, s, cfg, C);
+      }
     };
   }
 
@@ -109,6 +120,7 @@
         beats: [
           { say: '气垫导轨把小车托起来，摩擦很小。光电门测出每辆车碰撞前后的速度。' },
           { say: '约定向右为正。每一轮都算三个候选量在碰撞前后的和：v 之和、mv 之和、mv² 之和。' },
+          { say: '下面左边是两车的 v–t 图，碰撞前后各有一段平台，速度就从平台上读。右边的柱子实时画出 mv 和 mv²：A、B 和它们的和，虚线是碰前的和。' },
           { say: '实验有误差，数字不会完全相等。我们约定：前后相差 5% 以内，算没变；超过 10%，算变了。' }
         ],
         button: '开始第 1 轮',
@@ -124,7 +136,7 @@
         title: '第 1 轮：重车撞轻车，碰后分开',
         beats: [
           { say: 'A 车 0.4 kg 以 0.60 m/s 撞上静止的 B 车 0.2 kg，碰撞面装着磁体，碰后分开。' },
-          { say: '测得碰后 A ' + d3(R[0].a) + ' m/s，B ' + d3(R[0].b) + ' m/s。来算三个量。' },
+          { say: '从 v–t 图的平台读出碰后速度：A ' + d3(R[0].a) + ' m/s，B ' + d3(R[0].b) + ' m/s。来算三个量。' },
           { say: say(R[0], 'v') + '。猜想 1 又被推翻。' },
           { say: say(R[0], 'mv') + '，没变。' },
           { say: say(R[0], 'mv2') + '，也没变。' },
@@ -138,14 +150,14 @@
         title: '第 2 轮：同样两辆车，碰后粘在一起',
         beats: [
           { say: '把碰撞面换成粘扣，碰后两车粘在一起。先想一想：粘住之后，mv² 之和会怎样？' },
-          { say: '测得两车的共同速度是 ' + d3(R[1].a) + ' m/s。' },
+          { say: 'v–t 图上，碰后两条线并成了一条：两车的共同速度是 ' + d3(R[1].a) + ' m/s。看右下的柱子：mv 之和贴着虚线，mv² 之和掉下去了。' },
           { say: say(R[1], 'mv') + '，还是没变。' },
           { say: say(R[1], 'mv2') + '，远远超出误差。猜想 3 出局。' },
           { say: '这是最关键的一轮：第 1 轮里 mv² 也不变，可它不是每次碰撞都不变。只有粘在一起的碰撞，才把它和 mv 分开。' }
         ],
         gateAt: 0,
         button: '开始第 3 轮',
-        draw: scene(R[1], '碰撞面装粘扣：碰后粘在一起'),
+        draw: scene(R[1], '碰撞面装粘扣：碰后粘在一起', 0),
         mount: roundMount(R[1], [[2, 'mv'], [3, 'mv2']], function (el, api) {
           var box = document.createElement('div');
           box.style.marginTop = '22px';
@@ -168,12 +180,12 @@
           { say: '这次反过来：A 车 0.2 kg 以 0.60 m/s 撞上静止的 B 车 0.4 kg。' },
           { say: 'A 被弹了回来，速率 0.197 m/s。按向右为正，它的速度该记作多少？' },
           { say: 'B 车以 ' + d3(R[2].b) + ' m/s 向右。先不管方向，把 mv 的大小加起来：' + say(R[2], 'abs').split('：')[1] + '。' },
-          { say: '带上方向再算：' + say(R[2], 'mv').split('：')[1] + '，不变。' },
+          { say: '带上方向再算：' + say(R[2], 'mv').split('：')[1] + '，不变。看柱子：A 的 mv 翻到了零线下面，和却没变。' },
           { say: '所以守得住的，是 mv 的矢量和。方向要算进去。' }
         ],
         gateAt: 1,
         button: '回头看三轮',
-        draw: scene(R[2]),
+        draw: scene(R[2], null, 1),
         mount: roundMount(R[2], [[2, 'abs'], [3, 'mv']], function (el, api) {
           var box = document.createElement('div');
           box.style.marginTop = '22px';

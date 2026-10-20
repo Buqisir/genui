@@ -182,4 +182,114 @@
     xA = Math.max(lo, Math.min(xA, xB - cfg.wA));
     return { xA: xA, xB: xB, after: after, u: tt / P };
   };
+
+  // ---------- 带接触过程的一维碰撞（v–t 图和动量柱子用） ----------
+  // 碰撞不是瞬间完成的：接触的 TR 秒里，两车速度线性过渡到碰后值（DIS 的 v–t 图上也是一小段斜线）。
+  // cfg：xA0, xB0, wA, wB（像素），mA, mB, vA, vB, a, b（碰前碰后速度，m/s），k（像素/(m/s)/秒）
+  var TR = 0.14, AFTER = 1.7, PAUSE = 0.8;
+  MOM.sim = function (t, cfg) {
+    var gap = cfg.xB0 - (cfg.xA0 + cfg.wA);
+    var tc = gap / ((cfg.vA - cfg.vB) * cfg.k);
+    var T = tc + TR + AFTER, P = T + PAUSE;
+    var tt = cfg.hold ? Math.min(t, tc - 0.02) : Math.min(t % P, T);
+    function vel(v0, v1, s) {
+      if (s <= tc) return v0;
+      if (s >= tc + TR) return v1;
+      return v0 + (v1 - v0) * (s - tc) / TR;
+    }
+    // 位置 = 速度的积分（分三段算）
+    function pos(x0, v0, v1, s) {
+      var d = Math.min(s, tc) * v0;
+      if (s > tc) { var u = Math.min(s, tc + TR) - tc; d += v0 * u + (v1 - v0) * u * u / (2 * TR); }
+      if (s > tc + TR) d += v1 * (s - tc - TR);
+      return x0 + d * cfg.k;
+    }
+    var xA = pos(cfg.xA0, cfg.vA, cfg.a, tt), xB = pos(cfg.xB0, cfg.vB, cfg.b, tt);
+    xA = Math.min(xA, xB - cfg.wA);   // 接触时不穿透
+    return {
+      tt: tt, T: T, tc: tc, xA: xA, xB: xB,
+      vA: vel(cfg.vA, cfg.a, tt), vB: vel(cfg.vB, cfg.b, tt),
+      after: tt > tc + TR / 2, vel: vel
+    };
+  };
+
+  // v–t 图：box {x, y, w, h}；A 实线、B 虚线，都用速度色；画到当前时刻，碰后标出平台值
+  MOM.vtGraph = function (ctx, box, s, cfg, C) {
+    var vmin = Math.min(0, cfg.a, cfg.b, cfg.vB) - 0.1, vmax = Math.max(cfg.vA, cfg.a, cfg.b) + 0.1;
+    var X = function (t) { return box.x + 34 + (box.w - 44) * t / s.T; };
+    var Y = function (v) { return box.y + box.h - 18 - (box.h - 30) * (v - vmin) / (vmax - vmin); };
+    ctx.save();
+    // 坐标轴与 0 线
+    ctx.strokeStyle = C.hair; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(0), Y(vmin)); ctx.lineTo(X(0), Y(vmax)); ctx.stroke();
+    ctx.strokeStyle = C.steel;
+    ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(s.T), Y(0)); ctx.stroke();
+    ctx.restore();
+    GRAV.draw.text(ctx, 'v（m/s）', box.x, box.y + 6, { size: 11, color: C.steel });
+    GRAV.draw.text(ctx, '0', X(0) - 6, Y(0) + 4, { font: 'num', size: 11, color: C.steel, align: 'right' });
+    GRAV.draw.text(ctx, 't', X(s.T) + 4, Y(0) + 4, { font: 'sym', size: 13, color: C.steel });
+    // 碰撞时刻
+    ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = C.hair;
+    ctx.beginPath(); ctx.moveTo(X(s.tc), Y(vmin)); ctx.lineTo(X(s.tc), Y(vmax)); ctx.stroke(); ctx.restore();
+    GRAV.draw.text(ctx, '碰撞', X(s.tc) + 4, box.y + 6, { size: 11, color: C.steel });
+    // 两条速度线
+    [['A', cfg.vA, cfg.a, []], ['B', cfg.vB, cfg.b, [5, 4]]].forEach(function (L) {
+      ctx.save();
+      ctx.strokeStyle = C.vel; ctx.lineWidth = 2; ctx.setLineDash(L[3]);
+      ctx.beginPath();
+      for (var t = 0, first = true; t <= s.tt + 1e-9; t += s.T / 160) {
+        var px = X(t), py = Y(s.vel(L[1], L[2], t));
+        if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+      }
+      ctx.lineTo(X(s.tt), Y(s.vel(L[1], L[2], s.tt)));
+      ctx.stroke();
+      ctx.restore();
+      var vEnd = s.vel(L[1], L[2], s.tt);
+      // 两条线重合（粘在一起）时，B 的标签挪到线下面
+      var dy = L[0] === 'B' && Math.abs(vEnd - s.vel(cfg.vA, cfg.a, s.tt)) < 0.06 ? 16 : 0;
+      GRAV.draw.text(ctx, L[0], X(s.tt) + 6, Y(vEnd) + 4 + dy, { font: 'sym', size: 13, color: C.vel });
+    });
+    // 碰后平台值
+    if (s.tt > s.tc + 0.5) {
+      GRAV.draw.text(ctx, MOM.f(cfg.a, 3), X(s.T) + 4, Y(cfg.a) - 8, { font: 'num', size: 11, color: C.graphite, align: 'right' });
+      if (Math.abs(cfg.b - cfg.a) > 0.05) GRAV.draw.text(ctx, MOM.f(cfg.b, 3), X(s.T) + 4, Y(cfg.b) - 8, { font: 'num', size: 11, color: C.graphite, align: 'right' });
+    }
+  };
+
+  // 动量柱子：两组（mv、mv²），每组 A、B、和；和用 ink，A、B 用 steel；虚线是碰前的和
+  MOM.pBars = function (ctx, box, s, cfg, C) {
+    var groups = [
+      { name: 'mv', unit: 'kg·m/s', f: function (m, v) { return m * v; } },
+      { name: 'mv²', unit: '', f: function (m, v) { return m * v * v; } }
+    ];
+    var gw = box.w / 2;
+    groups.forEach(function (g, gi) {
+      var vals = [g.f(cfg.mA, s.vA), g.f(cfg.mB, s.vB)];
+      vals.push(vals[0] + vals[1]);
+      var pre = g.f(cfg.mA, cfg.vA) + g.f(cfg.mB, cfg.vB);
+      // 刻度要装得下碰前、碰后的每一根柱子
+      var comps = [g.f(cfg.mA, cfg.vA), g.f(cfg.mB, cfg.vB), g.f(cfg.mA, cfg.a), g.f(cfg.mB, cfg.b), pre];
+      var max = Math.max.apply(null, comps) * 1.2;
+      var neg = Math.min.apply(null, comps);
+      var lo = gi === 0 ? Math.min(-pre * 0.25, neg * 1.4) : 0;
+      var gx = box.x + gi * gw, base = box.y + 20 + (box.h - 44) * max / (max - lo);
+      var Y = function (v) { return base - (box.h - 44) * v / (max - lo); };
+      var bw = Math.min(22, gw / 6), gap = (gw - 3 * bw) / 4;
+      ctx.save();
+      ctx.strokeStyle = C.hair; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(gx + gap * 0.5, base); ctx.lineTo(gx + gw - gap * 0.5, base); ctx.stroke();
+      ctx.setLineDash([3, 3]); ctx.strokeStyle = C.graphite;
+      ctx.beginPath(); ctx.moveTo(gx + gap * 0.5, Y(pre)); ctx.lineTo(gx + gw - gap * 0.5, Y(pre)); ctx.stroke();
+      ctx.restore();
+      ['A', 'B', '和'].forEach(function (lab, i) {
+        var x = gx + gap + i * (bw + gap), v = vals[i], y0 = Y(0), y1 = Y(v);
+        ctx.fillStyle = i === 2 ? C.ink : MOM.rgba(C.steel, 0.75);
+        ctx.fillRect(x, Math.min(y0, y1), bw, Math.max(1, Math.abs(y1 - y0)));
+        GRAV.draw.text(ctx, lab, x + bw / 2, box.y + box.h - 6, { size: 11, color: i === 2 ? C.ink : C.graphite, align: 'center' });
+        if (i === 2) GRAV.draw.text(ctx, MOM.f(v, 3), x + bw / 2, Math.min(y0, y1) - 6, { font: 'num', size: 11, color: C.ink, align: 'center' });
+      });
+      GRAV.draw.text(ctx, g.name + ' 之和', gx + gw / 2, box.y + 6, { font: 'sym', size: 13, color: C.graphite, align: 'center' });
+    });
+    GRAV.draw.text(ctx, '虚线：碰前的和', box.x + box.w, box.y + box.h + 12, { size: 11, color: C.steel, align: 'right' });
+  };
 })();

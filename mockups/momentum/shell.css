@@ -122,7 +122,7 @@ button { font-family: inherit; }
 .title { font: 500 26px/1.4 'Noto Serif SC', serif; margin: 10px 0 0; color: var(--c-ink); text-wrap: balance; }
 
 .work { flex: 1; min-height: 0; display: flex; gap: 36px; margin-top: 20px; }
-.canvas-wrap { flex: 1; min-width: 0; position: relative; min-height: 400px; }
+.canvas-wrap { flex: 1; min-width: 0; position: relative; min-height: 460px; }
 .canvas-wrap canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
 .answer { width: 340px; flex: 0 0 auto; align-self: flex-start; min-width: 0; }
 .work.single .canvas-wrap { display: none; }
@@ -239,7 +239,7 @@ button { font-family: inherit; }
   .log .item.say.cur { font-size: 16px; }
   .board { margin: 0 16px 24px; padding: 20px 16px 24px; }
   .work { flex-direction: column; gap: 16px; }
-  .canvas-wrap { flex: none; height: 400px; min-height: 0; }
+  .canvas-wrap { flex: none; height: 480px; min-height: 0; }
   .answer { width: 100%; }
   .title { font-size: 26px; }
   .concl { font-size: 26px; }
