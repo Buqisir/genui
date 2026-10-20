@@ -1,9 +1,4 @@
-<!doctype html>
-<html lang="zh">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>播放器样张：月亮来作证</title>
+<title>月亮来作证</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@400;500&family=Source+Serif+4:ital,wght@0,400;1,400;1,500&display=swap" rel="stylesheet">
@@ -12,12 +7,24 @@
     --c-page: #ffffff; --c-side: #f7f7f5; --c-card: #ffffff; --c-hairline: #e1e4e8;
     --c-steel: #9aa0a8; --c-graphite: #5d636c; --c-ink: #1f2329; --c-accel: #a62c77;
     --c-velocity: #1f4fd8; --c-field: #0e9c85; --c-bar: #e2e2df;
+    --board-shadow: 0 0 40px rgba(51, 51, 51, .06);
+    --won-shadow: 0 0 40px rgba(51, 51, 51, .06), inset 0 0 0 1.5px #0e9c85;
     color-scheme: light;
   }
-  :root[data-theme='night'] {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --c-page: #0a0a0b; --c-side: #0f1013; --c-card: #0f1013; --c-hairline: #24252a;
+      --c-steel: #6b6c70; --c-graphite: #9a9a98; --c-ink: #f2f2f0; --c-accel: #e07ab8;
+      --c-velocity: #6e9bff; --c-field: #6ff0c8; --c-bar: #2a2b30;
+      --board-shadow: inset 0 0 0 1px #24252a; --won-shadow: inset 0 0 0 1.5px #6ff0c8;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
     --c-page: #0a0a0b; --c-side: #0f1013; --c-card: #0f1013; --c-hairline: #24252a;
     --c-steel: #6b6c70; --c-graphite: #9a9a98; --c-ink: #f2f2f0; --c-accel: #e07ab8;
     --c-velocity: #6e9bff; --c-field: #6ff0c8; --c-bar: #2a2b30;
+    --board-shadow: inset 0 0 0 1px #24252a; --won-shadow: inset 0 0 0 1.5px #6ff0c8;
     color-scheme: dark;
   }
 
@@ -73,12 +80,10 @@
   .board {
     flex: 1; min-width: 0; margin: 24px 24px 24px 0; padding: 30px 40px 24px;
     background: var(--c-card); border-radius: 24px; display: flex; flex-direction: column;
-    box-shadow: 0 0 40px rgba(51, 51, 51, .06);
+    box-shadow: var(--board-shadow);
     transition: box-shadow .3s;
   }
-  .board.won { box-shadow: 0 0 40px rgba(51, 51, 51, .06), inset 0 0 0 1.5px var(--c-field); }
-  :root[data-theme='night'] .board { box-shadow: inset 0 0 0 1px var(--c-hairline); }
-  :root[data-theme='night'] .board.won { box-shadow: inset 0 0 0 1.5px var(--c-field); }
+  .board.won { box-shadow: var(--won-shadow); }
 
   .tag {
     display: inline-block; align-self: flex-start; font: 500 12px/1 'JetBrains Mono', 'Noto Sans SC', monospace;
@@ -155,8 +160,6 @@
     .title { font-size: 26px; }
   }
 </style>
-</head>
-<body>
 
 <header class="top">
   <button class="icon-btn" type="button" aria-label="关闭" title="关闭">
@@ -273,7 +276,12 @@
   })();
   var tried = new Set(((params.get('tried') || '').split(',')).map(function (v) { return parseInt(v, 10); }).filter(validN));
   if (pick !== null) tried.add(pick);
-  if (params.get('theme') === 'night') root.setAttribute('data-theme', 'night');
+  if (params.get('theme') === 'night') root.setAttribute('data-theme', 'dark');
+  var darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function isDark() {
+    var t = root.getAttribute('data-theme');
+    return t === 'dark' || (t !== 'light' && !!(darkMQ && darkMQ.matches));
+  }
 
   // ---------- 动画时钟（1 天 = 0.25 秒） ----------
   var vt = 0;
@@ -514,8 +522,7 @@
     el.go.disabled = step === 1 && !canAdvance();
     el.prevBtn.disabled = step === 0;
     el.nextBtn.disabled = step >= 4 || !canAdvance();
-    var night = root.getAttribute('data-theme') === 'night';
-    el.theme.setAttribute('aria-pressed', String(night));
+    el.theme.setAttribute('aria-pressed', String(isDark()));
   }
 
   function prevStep() { if (step > 0) goStep(step - 1); }
@@ -536,8 +543,7 @@
   el.prevBtn.addEventListener('click', prevStep);
   el.nextBtn.addEventListener('click', nextStep);
   $('#theme').addEventListener('click', function () {
-    if (root.getAttribute('data-theme') === 'night') root.removeAttribute('data-theme');
-    else root.setAttribute('data-theme', 'night');
+    root.setAttribute('data-theme', isDark() ? 'light' : 'dark');
     render();
   });
   document.addEventListener('keydown', function (e) {
@@ -554,5 +560,3 @@
   requestAnimationFrame(frame);
 })();
 </script>
-</body>
-</html>
