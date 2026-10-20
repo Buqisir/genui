@@ -63,7 +63,7 @@ button { font-family: inherit; }
 .seg { height: 8px; border-radius: 4px; background: var(--c-bar); position: relative; overflow: hidden; flex: 0.6 0 auto; min-width: 20px; }
 .seg.done { flex: 1 1 0; background: var(--c-ink); }
 .seg.cur { flex: 3.2 1 0; min-width: 0; }
-.seg .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--c-ink); border-radius: 4px; }
+.seg .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--c-ink); border-radius: 4px; transition: width .3s; }
 .tools { display: flex; align-items: center; gap: 4px; }
 
 /* ---------- 目录面板 ---------- */
@@ -80,16 +80,28 @@ button { font-family: inherit; }
 .toc-item .num { width: 14px; font-size: 13px; color: var(--c-steel); }
 .toc-item.on { color: var(--c-ink); font-weight: 600; }
 
-/* ---------- 舞台：左栏字幕 + 板子 ---------- */
+/* ---------- 舞台：左栏讲解记录 + 板子 ---------- */
 .stage { display: flex; min-height: calc(100vh - 64px); }
 
 .caption {
   width: 30%; max-width: 400px; flex: 0 0 auto; background: var(--c-side);
-  display: flex; flex-direction: column; padding: 56px 40px 36px;
+  display: flex; flex-direction: column; padding: 56px 40px 36px; min-width: 0;
 }
-.prev { font-size: 15px; line-height: 1.6; color: var(--c-steel); margin-bottom: 12px; }
-.prev:empty { margin-bottom: 0; }
-.cur { font-size: 18px; line-height: 1.6; color: var(--c-ink); }
+
+/* 讲解记录：老师的话（上面的是 steel 15px，最新一句 ink 18px）；学生的话是靠右的气泡 */
+.log {
+  display: flex; flex-direction: column; gap: 14px; min-height: 0;
+  max-height: calc(100vh - 260px); overflow-y: auto; scrollbar-width: thin;
+}
+.log .item { line-height: 1.6; overflow-wrap: anywhere; }
+.log .item.say { font-size: 15px; color: var(--c-steel); }
+.log .item.say.cur { font-size: 18px; color: var(--c-ink); }
+.log .item.me {
+  align-self: flex-end; max-width: 85%; padding: 8px 14px; border-radius: 14px;
+  font-size: 15px; color: var(--c-ink); background: var(--c-bar);
+  background: color-mix(in srgb, var(--c-ink) 6%, var(--c-side));
+}
+.log .item .sym { font-size: 1.06em; }
 .status { margin-top: 16px; font-size: 13px; color: var(--c-steel); }
 .status:empty { margin-top: 0; }
 .status .ok { color: var(--c-field); }
@@ -113,7 +125,7 @@ button { font-family: inherit; }
 .work { flex: 1; min-height: 0; display: flex; gap: 40px; margin-top: 16px; }
 .canvas-wrap { flex: 1; min-width: 0; position: relative; min-height: 440px; }
 .canvas-wrap canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
-.answer { width: 340px; flex: 0 0 auto; align-self: flex-start; }
+.answer { width: 340px; flex: 0 0 auto; align-self: flex-start; min-width: 0; }
 .work.single .canvas-wrap { display: none; }
 .work.single .answer { width: 100%; max-width: 640px; }
 .work.wide .answer { display: none; }
@@ -151,8 +163,11 @@ button { font-family: inherit; }
 .opt:disabled { cursor: default; }
 .opt .opt-html { min-width: 0; }
 .opt .opt-html .sym { font-size: 17px; }
-.opt .t { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; font-size: 15px; color: var(--c-graphite); }
+.opt .t { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; font-size: 15px; color: var(--c-graphite); white-space: nowrap; }
 .opt .mark { flex: 0 0 auto; font-size: 16px; color: var(--c-field); }
+/* 不可点的候选名：样式同候选块，但文字 steel、无边框无底色 */
+.opt.plain { border-color: transparent; background: transparent; color: var(--c-steel); cursor: default; }
+.opt.plain:hover { border-color: transparent; }
 .opt.on { border-color: var(--c-ink); }
 .opt.reveal { border-color: var(--c-field); }
 .opt.lose { color: var(--c-steel); }
@@ -170,6 +185,22 @@ button { font-family: inherit; }
 .real.shown, .real.shown .num { color: var(--c-ink); font-weight: 500; }
 .res { font-size: 14px; color: var(--c-graphite); padding: 2px 4px 8px 19px; line-height: 1.6; max-width: 340px; }
 .res .sym { font-size: 15px; }
+
+/* ---------- 演算板 GRAV.ui.work：一行一行出现，左侧一条细竖线 ---------- */
+.wk {
+  display: flex; flex-direction: column; gap: 10px; margin-top: 18px;
+  padding-left: 14px; border-left: 2px solid var(--c-hairline); min-width: 0;
+}
+.wk-line {
+  display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; row-gap: 2px;
+  animation: wkIn .3s ease both;
+}
+.wk-eq { font-size: 20px; line-height: 1.5; color: var(--c-graphite); min-width: 0; overflow-wrap: anywhere; }
+.wk-eq .sym { font-size: 21px; }
+.wk-line.last .wk-eq { color: var(--c-ink); }
+.wk-note { margin-left: auto; font-size: 12px; color: var(--c-steel); line-height: 1.6; }
+.wk-note .sym { font-size: 13px; }
+@keyframes wkIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 /* ---------- 结论、横条、代入卡、大字（通用） ---------- */
 .concl { font: 500 30px/1.45 'Noto Serif SC', serif; color: var(--c-ink); }
@@ -201,7 +232,12 @@ button { font-family: inherit; }
   .progress { gap: 4px; }
   .stage { flex-direction: column; min-height: 0; }
   .caption { width: auto; max-width: none; padding: 14px 16px; }
-  .prev, .status { display: none; }
+  .status { display: none; }
+  /* 左栏只显示最后两句（气泡也算一句） */
+  .log { max-height: none; overflow: visible; gap: 10px; }
+  .log .item:not(:nth-last-child(-n+2)) { display: none; }
+  .log .item.say { font-size: 14px; }
+  .log .item.say.cur { font-size: 16px; }
   .board { margin: 0 16px 24px; padding: 20px 16px 24px; }
   .work { flex-direction: column; gap: 16px; }
   .canvas-wrap { flex: none; height: 400px; min-height: 0; }
