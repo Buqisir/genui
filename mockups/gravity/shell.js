@@ -261,6 +261,7 @@
       E.title.innerHTML = st.title || '';
       var canvasOn = (st.layout || 'split') === 'split' && typeof st.draw === 'function';
       E.work.classList.toggle('single', !canvasOn);
+      E.work.classList.toggle('wide', canvasOn && typeof st.mount !== 'function');
       drawFn = canvasOn ? st.draw : null;
       E.btnGo.textContent = st.button || '继续';
       E.btnGo.disabled = !unlocked;
