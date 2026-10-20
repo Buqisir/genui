@@ -313,6 +313,7 @@
     render();
     if (typeof st.mount === 'function') st.mount(E.answer, makeApi(my));
     render();
+    sizeCanvas();
   }
 
   function go(a, s) {
@@ -409,7 +410,7 @@
 
   function frame(now) {
     requestAnimationFrame(frame);
-    if (!drawFn || finished || !ctx) return;
+    if (!drawFn || finished || !ctx || cw < 2 || ch < 2) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
     drawFn(ctx, cw, ch, Math.max(0, (now - stepStart) / 1000), palette());
