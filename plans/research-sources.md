@@ -42,6 +42,7 @@
 | [Feynman Lectures](https://www.feynmanlectures.caltech.edu/) | 费曼物理学讲义原文 | 网站拦截程序访问（403） |
 | [NASA Glenn K-12 火箭教程](https://www.grc.nasa.gov/WWW/k-12/rocket/) | 火箭、水火箭的入门物理 | 能（curl 可以，WebFetch 解析不了域名） |
 | [NASA 历史](https://www.nasa.gov/history/) | 航天史料，如 1969 年《纽约时报》更正 | 能 |
+| [ChemTeam 化学史](https://www.chemteam.info/Chem-History/) | 经典论文全文转录，如查德威克 1932 年两篇中子论文 | 能 |
 | [Project Gutenberg](https://www.gutenberg.org/) | 原典，如牛顿《原理》Motte 英译本 | 能 |
 
 ## 五、题目
