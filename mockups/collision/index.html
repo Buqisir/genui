@@ -1,0 +1,74 @@
+<title>弹性碰撞和非弹性碰撞</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@400;500&family=Source+Serif+4:ital,wght@0,400;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../momentum/shell.css">
+<script src="../momentum/shell.js"></script>
+<script src="../momentum/lib.js"></script>
+<script src="../conservation/draw.js"></script>
+<script src="draw.js"></script>
+<script src="act1.js"></script>
+<script src="act2.js"></script>
+<script src="act3.js"></script>
+<script src="act4.js"></script>
+<script src="act5.js"></script>
+<script src="act6.js"></script>
+<script src="act7.js"></script>
+<script src="board.js"></script>
+
+<header class="top">
+  <button class="icon-btn" id="btn-close" type="button" aria-label="关闭" title="关闭">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>
+  </button>
+  <button class="arrow-btn" id="btn-back" type="button" aria-label="上一步" title="上一步（←）">‹</button>
+  <div class="progress" id="progress" aria-label="进度"></div>
+  <button class="arrow-btn" id="btn-next" type="button" aria-label="下一步" title="下一步（→）">›</button>
+  <div class="tools">
+    <button class="txt-btn notes-btn" id="btn-notes" type="button" aria-expanded="false" hidden>结论</button>
+    <button class="icon-btn" id="btn-toc" type="button" aria-label="目录" title="目录" aria-expanded="false">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+    </button>
+    <button class="txt-btn" id="btn-theme" type="button" aria-pressed="false">夜光</button>
+  </div>
+</header>
+
+<nav class="toc" id="toc" aria-label="目录" hidden></nav>
+<aside class="notes-sheet" id="notes-sheet" aria-label="结论区" hidden></aside>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<main class="stage">
+  <aside class="caption">
+    <div class="prev" id="cap-prev"></div>
+    <div class="cur" id="cap-cur"></div>
+    <div class="status" id="status"></div>
+    <div class="foot"><button class="go" id="btn-go" type="button"></button></div>
+    <section class="notes" id="notes" aria-label="结论区">
+      <div class="notes-h">结论区</div>
+      <div id="notes-list"></div>
+    </section>
+  </aside>
+
+  <section class="board" id="board">
+    <div class="tag" id="tag"></div>
+    <h1 class="title" id="title"></h1>
+    <div class="work single" id="work">
+      <div class="scene-col">
+        <div class="canvas-wrap" id="canvas-wrap"><canvas id="scene" aria-label="示意图"></canvas></div>
+        <div class="playbar" id="playbar" hidden>
+          <button class="pb" id="btn-replay" type="button">
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7a4.5 4.5 0 1 0 1.4-3.3M2.5 1.8v2.4h2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>重播</button>
+          <button class="pb" id="btn-slow" type="button" aria-pressed="false">慢放</button>
+        </div>
+      </div>
+      <div class="answer" id="answer"></div>
+    </div>
+    <div class="finish">
+      <div class="finish-big">完成</div>
+      <div class="finish-sub">弹性碰撞和非弹性碰撞 · 7 幕</div>
+      <button class="restart" id="btn-restart" type="button">从头再来</button>
+      <div class="finish-credit">碰撞数据沿用第 1 节的气垫导轨实验；部分题目改编自 2024 年广东卷，选做题选自 2023 年广东卷</div>
+    </div>
+  </section>
+</main>
+
+<script>GRAV.start()</script>

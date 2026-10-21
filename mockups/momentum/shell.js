@@ -511,7 +511,7 @@
     E.btnNotes.hidden = !notes.length;
     // 手机上看不到常驻的结论区：有新结论时弹一条提示
     if (lastNotes >= 0 && count > lastNotes && newest && window.innerWidth <= 760) {
-      E.toast.innerHTML = '<span class="note-tag">结论区</span>' + newest.html;
+      E.toast.innerHTML = '<span class="note-tag">结论区</span><span>' + newest.html + '</span>';
       E.toast.hidden = false;
       clearTimeout(toastTimer);
       toastTimer = setTimeout(function () { E.toast.hidden = true; }, 2600);
