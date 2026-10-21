@@ -414,11 +414,13 @@
   }
 
   // ---------- 渲染 ----------
+  // 进度条：每幕一段，可以点，点了跳到那一幕的开头
   function renderProgress() {
     var html = '';
     acts.forEach(function (a, i) {
+      var cls = 'seg', fill = '';
       if (finished || i < ai) {
-        html += '<span class="seg done"></span>';
+        cls += ' done';
       } else if (i === ai) {
         var total = 0, before = 0;
         a.steps.forEach(function (s, j) {
@@ -427,10 +429,12 @@
           if (j < si) before += c;
         });
         var pct = clamp((before + bi + 1) / total * 100, 0, 100).toFixed(1);
-        html += '<span class="seg cur"><span class="fill" style="width:' + pct + '%"></span></span>';
-      } else {
-        html += '<span class="seg"></span>';
+        cls += ' cur';
+        fill = '<span class="fill" style="width:' + pct + '%"></span>';
       }
+      var name = '第 ' + a.id + ' 幕 · ' + a.name;
+      html += '<button type="button" class="' + cls + '" data-i="' + i + '" title="' + name + '" aria-label="跳到' + name + '"' +
+        (!finished && i === ai ? ' aria-current="step"' : '') + '><span class="bar">' + fill + '</span></button>';
     });
     E.progress.innerHTML = html;
   }
@@ -481,6 +485,7 @@
     return at && !finished && acts[ai] && acts[ai].id === at[0] && si === at[1] - 1;
   }
   var maskIds = [], lastNotes = -1, toastTimer = null;
+  var returnTo = null;   // 从小测结果跳去回看时，记下回来的位置
   function noteState(n) {
     if (!reached(n.at)) return null;
     if (n.out && reached(n.out)) return { cls: 'out', html: n.html, tag: '出局', fresh: sameStep(n.out) };
@@ -565,6 +570,10 @@
       E.playbar.hidden = !(canvasOn && st.play);
     }
     E.btnGo.hidden = finished;
+    // 回看时的"回到小测结果"：走到那一步或点了它就消失
+    if (returnTo && !finished && ai === returnTo.ai && si === returnTo.si) returnTo = null;
+    E.btnReturn.hidden = !returnTo || finished;
+    if (returnTo) E.btnReturn.textContent = '↩ 回到' + returnTo.title;
     if (finished) E.goTip.hidden = true;
     E.btnSlow.setAttribute('aria-pressed', String(rate !== 1));
     E.btnBack.disabled = !finished && ai === 0 && si === 0 && bi === 0;
@@ -613,9 +622,11 @@
         fn(bi);   // 注册时先按当前句调用一次
       },
       next: function () { if (alive()) nextStep(); },
+      // 跳到某一幕；记下现在这一步，回看时页面上一直有"回到这里"的按钮
       jump: function (id) {
         if (!alive()) return;
-        for (var i = 0; i < acts.length; i++) if (acts[i].id === id) { go(i, 0, 0); return; }
+        var from = { ai: ai, si: si, title: plainText(curStep().title || '') };
+        for (var i = 0; i < acts.length; i++) if (acts[i].id === id) { go(i, 0, 0); returnTo = from; render(); return; }
       },
       replay: function () { if (alive()) replay(); },
       // 回忆时盖住结论区里这些条目的关键词；传空数组揭开
@@ -772,6 +783,7 @@
   }
 
   function restart() {
+    returnTo = null;
     Object.keys(GRAV.state).forEach(function (k) { delete GRAV.state[k]; });
     go(0, 0, 0);
   }
@@ -844,6 +856,18 @@
     E.btnNext.addEventListener('click', advance);
     E.btnGo.addEventListener('click', advance);
     E.btnRestart.addEventListener('click', restart);
+    E.btnReturn.addEventListener('click', function () {
+      if (!returnTo) return;
+      var r = returnTo;
+      returnTo = null;
+      go(r.ai, r.si, 0);
+    });
+    E.progress.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('.seg') : null;
+      if (!b) return;
+      go(Number(b.getAttribute('data-i')), 0, 0);
+      closeToc();
+    });
     E.btnClose.addEventListener('click', function () { try { window.close(); } catch (e) { /* 忽略 */ } });
     E.btnToc.addEventListener('click', toggleToc);
     E.btnTheme.addEventListener('click', toggleTheme);
@@ -920,6 +944,11 @@
     E.goTip.textContent = '先在右边作答';
     E.goTip.hidden = true;
     E.btnGo.parentNode.appendChild(E.goTip);
+    E.btnReturn = document.createElement('button');
+    E.btnReturn.type = 'button';
+    E.btnReturn.className = 'return-btn';
+    E.btnReturn.hidden = true;
+    E.btnGo.parentNode.insertBefore(E.btnReturn, E.btnGo);
 
     // 讲解记录放在 #cap-cur 里；#cap-prev 不再用
     if (E.log) E.log.className = 'log';

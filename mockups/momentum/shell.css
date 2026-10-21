@@ -72,9 +72,13 @@ button { font-family: inherit; }
 }
 .txt-btn:hover { background: var(--c-side); }
 .progress { flex: 1; min-width: 0; max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 6px; }
-.seg { height: 6px; border-radius: 3px; background: var(--c-bar); position: relative; overflow: hidden; flex: 0.6 0 auto; min-width: 20px; }
-.seg.done { flex: 1 1 0; background: var(--c-ink); }
+/* 每段是一个按钮：可点的高度 24px，看得见的条 6px */
+.seg { height: 24px; border: 0; padding: 0; background: transparent; cursor: pointer; display: flex; align-items: center; flex: 0.6 0 auto; min-width: 20px; }
+.seg .bar { width: 100%; height: 6px; border-radius: 3px; background: var(--c-bar); position: relative; overflow: hidden; transition: height .15s; }
+.seg.done { flex: 1 1 0; }
+.seg.done .bar { background: var(--c-ink); }
 .seg.cur { flex: 3.2 1 0; min-width: 0; }
+.seg:hover .bar, .seg:focus-visible .bar { height: 10px; }
 .seg .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--c-ink); border-radius: 3px; transition: width .3s; }
 .tools { display: flex; align-items: center; gap: 4px; }
 
@@ -124,6 +128,10 @@ button { font-family: inherit; }
 .go:disabled { background: var(--c-bar); color: var(--c-steel); cursor: default; }
 .go:disabled::after { content: none; }
 .go-tip { margin-top: 12px; font-size: var(--fs-sm); color: var(--c-steel); }
+.return-btn {
+  display: flex; align-items: center; height: 36px; margin-bottom: 12px; padding: 0 14px; border-radius: 999px;
+  border: 1.5px solid var(--c-ink); background: var(--c-card); color: var(--c-ink); font: 500 var(--fs-sm) 'Noto Sans SC', sans-serif; cursor: pointer;
+}
 
 .board {
   flex: 1; min-width: 0; margin: 0 24px 24px 0; padding: 32px 40px 40px;
@@ -288,6 +296,7 @@ button { font-family: inherit; }
     background: var(--c-page); border-top: 1px solid var(--c-hairline);
   }
   .go { width: 100%; height: 48px; }
+  .return-btn { width: 100%; justify-content: center; margin-bottom: 8px; }
   .go-tip { display: none; }
   .board { margin: 0 12px 16px; padding: 24px 16px; min-height: 0; border-radius: 16px; }
   .work, .work.single { grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
@@ -364,3 +373,4 @@ button { font-family: inherit; }
 .hw-a div { margin-top: 4px; }
 .finish-credit { margin-top: 24px; font-size: var(--fs-xs); color: var(--c-steel); }
 .opt:disabled:not(.on):not(.win):not(.reveal):not(.lose) { color: var(--c-steel); }
+@media (max-width: 760px) { body:has(.return-btn:not([hidden])) { padding-bottom: 136px; } }
