@@ -6,7 +6,7 @@
 
   // 冰面布局：A 从左边滑来，B 静止在中间偏右，靶心在右边
   function layout(w, h) {
-    var y = h * 0.5, r = Math.max(18, Math.min(34, w * 0.04));
+    var y = h * 0.5, r = Math.max(22, Math.min(36, w * 0.05));
     var x0 = Math.max(10, w * 0.04), x1 = w - x0;
     return { y: y, r: r, x0: x0, x1: x1, bx: w * 0.55, house: w * 0.8, k: w * 0.22, sh: r * 2.6 };
   }
@@ -16,7 +16,7 @@
     var L = layout(w, h);
     MOM.sheet(ctx, L.x0, L.x1, L.y, C, L.house, L.sh);
     var start = L.x0 + L.r + 20, stop = L.bx - 2 * L.r - 18;
-    var ax = Math.min(stop, start + L.k * (tb % 4));
+    var ax = Math.min(stop, start + L.k * tb);
     if (beat >= 1) ax = stop;
     MOM.stone(ctx, ax, L.y, L.r, C, 'A');
     MOM.stone(ctx, L.bx, L.y, L.r, C, 'B');
@@ -31,13 +31,14 @@
     MOM.sheet(ctx, L.x0, L.x1, L.y, C, L.house, L.sh);
     var run = MOM.run(t, {
       xA0: L.x0 + 12, xB0: L.bx - L.r, wA: 2 * L.r, wB: 2 * L.r,
-      vA: 1, vB: 0, vA2: 0, vB2: 1, k: L.k, x0: L.x0, x1: L.x1
+      vA: 1, vB: 0, vA2: 0, vB2: 1, k: L.k, x0: L.x0, x1: L.x1,
+      after: (L.house - L.bx) / L.k   // B 停在靶心
     });
     var ax = run.xA + L.r, bx = run.xB + L.r;
     MOM.stone(ctx, ax, L.y, L.r, C, 'A');
     MOM.stone(ctx, bx, L.y, L.r, C, 'B');
     if (!run.after) MOM.vArrow(ctx, ax + L.r + 4, L.y + L.r + 22, 1, 50, C);
-    else MOM.vArrow(ctx, bx + L.r + 4, L.y + L.r + 22, 1, 50, C);
+    else if (run.u < 1) MOM.vArrow(ctx, bx + L.r + 4, L.y + L.r + 22, 1, 50, C);   // B 停在靶心后不再画速度
     GRAV.draw.note(ctx, '俯视图', w, h, C);
   }
 
@@ -95,6 +96,7 @@
           { say: 'A 的运动好像整个"交"给了 B。碰撞前后，有没有什么量是不变的？这节课就来找它。' }
         ],
         button: '下一幕',
+        play: true,
         draw: drawHit
       }
     ]

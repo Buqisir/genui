@@ -2,6 +2,7 @@
  * 画布课件 · 播放器外壳与公共工具（window.GRAV），从万有引力课件复制而来
  * 接口见规格第四节；v2 增补：step.beats 逐句讲解、讲解记录、学生气泡、GRAV.kit、GRAV.ui.work。
  * 各幕文件只通过 GRAV.act 注册，不改这里。没有 beats 的旧步骤按 beats: [{ say: caption }] 运行。
+ * 动量课增补：step.play 有动画（画布下出现重播、慢放），step.playAt 讲到第几句才从头播，step.tall 手机上用高画布。
  */
 (function () {
   'use strict';
@@ -67,7 +68,7 @@
     text: function (ctx, str, x, y, o) {
       o = o || {};
       ctx.save();
-      ctx.font = fontFor(o.font, o.size || 13);
+      ctx.font = fontFor(o.font, o.size || 14);
       ctx.fillStyle = o.color || cssVar('--c-ink') || '#1f2329';
       ctx.textAlign = o.align || 'left';
       ctx.textBaseline = 'alphabetic';
@@ -92,7 +93,7 @@
       ctx.restore();
     },
     note: function (ctx, str, w, h, C) {
-      GRAV.draw.text(ctx, str, 14, h - 6, { font: 'ui', size: 11, color: C.steel });
+      GRAV.draw.text(ctx, str, 14, h - 6, { font: 'ui', size: 12, color: C.steel });
     }
   };
 
@@ -375,7 +376,10 @@
   var items = [], pushed = {}, hooks = [];   // 讲解记录；每项 {type:'say'|'me', beat, html}
   var lastCount = -1;
   var statusHTML = '';
-  var drawFn = null, stepStart = 0, beatStart = 0;
+  var drawFn = null;
+  // 播放时钟：动画只播一次、停在最后一帧；重播把它拨回 0，慢放让它走得慢
+  var playT = 0, beatT = 0, lastTs = 0, rate = 1, SLOW = 0.3;
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var canvas = null, ctx = null, wrap = null;
   var cw = 1, ch = 1, dpr = 1;
 
@@ -493,12 +497,18 @@
       E.title.innerHTML = st.title || '';
       var canvasOn = (st.layout || 'split') === 'split' && typeof st.draw === 'function';
       E.work.classList.toggle('single', !canvasOn);
+      E.work.classList.toggle('tall', !!st.tall);
       E.work.classList.toggle('wide', canvasOn && !answerHasContent());
       drawFn = canvasOn ? st.draw : null;
       var last = beatsOf(st).length - 1;
       E.btnGo.textContent = bi >= last ? (st.button || '继续') : '下一句';
       E.btnGo.disabled = locked();
+      E.goTip.hidden = !locked();
+      E.playbar.hidden = !(canvasOn && st.play);
     }
+    E.btnGo.hidden = finished;
+    if (finished) E.goTip.hidden = true;
+    E.btnSlow.setAttribute('aria-pressed', String(rate !== 1));
     E.btnBack.disabled = !finished && ai === 0 && si === 0 && bi === 0;
     E.btnNext.disabled = finished || locked();
     E.btnTheme.setAttribute('aria-pressed', String(isDark()));
@@ -549,6 +559,7 @@
         if (!alive()) return;
         for (var i = 0; i < acts.length; i++) if (acts[i].id === id) { go(i, 0, 0); return; }
       },
+      replay: function () { if (alive()) replay(); },
       redraw: function () {}
     };
   }
@@ -559,7 +570,7 @@
     var my = token;
     var last = beatsOf(st).length - 1;
     bi = clamp(b || 0, 0, last);
-    beatStart = stepStart = now();
+    playT = beatT = 0;
     // 停在本步的后面几句（从后往前退回来的）说明已经过了作答关
     unlocked = gateBeat(st) < 0 || bi > gateBeat(st);
     won = false;
@@ -605,8 +616,11 @@
   function setBeat(b) {
     bi = b;
     for (var j = 0; j <= b; j++) pushBeat(j);
-    beatStart = now();
+    beatT = 0;
+    var st = curStep();
+    if (st.playAt === b) playT = 0;   // 讲到这一句才开始播（之前停在碰撞前）
     render();
+    showCaption();
     hooks.slice().forEach(function (fn) { fn(bi); });
     render();
   }
@@ -643,6 +657,16 @@
       var pa = ai - 1, ps = acts[pa].steps.length - 1;
       go(pa, ps, lastBeatOf(pa, ps));
     }
+  }
+
+  function replay() { playT = beatT = 0; }
+  function toggleSlow() { rate = rate === 1 ? SLOW : 1; render(); }
+
+  // 手机上讲解在页面最上面：翻到下一句时，如果它已滚出屏幕，滚回去
+  function showCaption() {
+    var cap = E.log && E.log.parentNode;
+    if (!cap || window.innerWidth > 760) return;
+    if (cap.getBoundingClientRect().bottom < 40) cap.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function restart() {
@@ -694,15 +718,17 @@
     canvas.height = Math.round(ch * dpr);
   }
 
-  // draw(ctx, w, h, t, C, beat, tb)：t 是本步开始后的秒数，beat 是当前句序号，tb 是本句开始后的秒数
+  // draw(ctx, w, h, t, C, beat, tb)：t 是本步（或重播）开始后的秒数，beat 是当前句序号，tb 是本句开始后的秒数。
+  // 两个时间都按播放速度走；系统设置了"减少动画"时直接给一个很大的 t，画面就是最后一帧。
   function frame(ts) {
     requestAnimationFrame(frame);
+    var dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0;
+    lastTs = ts;
+    playT += dt * rate; beatT += dt * rate;
     if (!drawFn || finished || !ctx || cw < 2 || ch < 2) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cw, ch);
-    drawFn(ctx, cw, ch,
-      Math.max(0, (ts - stepStart) / 1000), palette(), bi,
-      Math.max(0, (ts - beatStart) / 1000));
+    drawFn(ctx, cw, ch, reduceMotion ? 1e4 : playT, palette(), bi, reduceMotion ? 1e4 : beatT);
   }
 
   // ---------- 事件 ----------
@@ -714,6 +740,8 @@
     E.btnClose.addEventListener('click', function () { try { window.close(); } catch (e) { /* 忽略 */ } });
     E.btnToc.addEventListener('click', toggleToc);
     E.btnTheme.addEventListener('click', toggleTheme);
+    E.btnReplay.addEventListener('click', replay);
+    E.btnSlow.addEventListener('click', toggleSlow);
     E.toc.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('.toc-item') : null;
       if (!b) return;
@@ -741,6 +769,8 @@
   }
 
   // ---------- 启动 ----------
+  GRAV.replay = replay;
+
   GRAV.start = function () {
     if (started) return;
     started = true;
@@ -763,6 +793,14 @@
     E.answer = document.getElementById('answer');
     E.btnGo = document.getElementById('btn-go');
     E.btnRestart = document.getElementById('btn-restart');
+    E.playbar = document.getElementById('playbar');
+    E.btnReplay = document.getElementById('btn-replay');
+    E.btnSlow = document.getElementById('btn-slow');
+    E.goTip = document.createElement('div');
+    E.goTip.className = 'go-tip';
+    E.goTip.textContent = '先在右边作答';
+    E.goTip.hidden = true;
+    E.btnGo.parentNode.appendChild(E.goTip);
 
     // 讲解记录放在 #cap-cur 里；#cap-prev 不再用
     if (E.log) E.log.className = 'log';

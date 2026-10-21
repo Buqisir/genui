@@ -14,8 +14,8 @@
     ctx.strokeStyle = MOM.rgba(C.graphite, 0.4);
     for (var k = -60; k < 60; k += 12) { ctx.beginPath(); ctx.moveTo(wall + 16, y + k); ctx.lineTo(wall + 26, y + k + 10); ctx.stroke(); }
     ctx.restore();
-    // 小球来回：去 1.6 秒，回 1.6 秒，停 0.6 秒
-    var span = wall - r - x0, T = 1.6, tt = t % (2 * T + 0.6), x, v;
+    // 小球去 1.6 秒、回 1.6 秒，停在回到起点、还在向左运动的那一刻
+    var span = wall - r - x0, T = 1.6, tt = Math.min(t, 2 * T - 1e-3), x, v;
     if (tt < T) { x = x0 + span * tt / T; v = V; }
     else if (tt < 2 * T) { x = wall - r - span * (tt - T) / T; v = -V; }
     else { x = x0; v = 0; }
@@ -26,9 +26,9 @@
     // 矢量图：p 和 p′ 从同一点出发，Δp 从 p 的末端指向 p′ 的末端
     var ox = w * 0.5, oy = h * 0.72, s = Math.min(w * 0.3, 220) / 0.6;
     GRAV.draw.arrow(ctx, ox, oy - 16, ox + P0 * s, oy - 16, C.vel, 2.5);
-    GRAV.draw.text(ctx, 'p = 0.6', ox + P0 * s / 2, oy - 26, { font: 'num', size: 13, color: C.vel, align: 'center' });
+    GRAV.draw.text(ctx, 'p = 0.6', ox + P0 * s / 2, oy - 26, { font: 'num', size: 14, color: C.vel, align: 'center' });
     GRAV.draw.arrow(ctx, ox, oy + 16, ox + P1 * s, oy + 16, C.vel, 2.5);
-    GRAV.draw.text(ctx, 'p′ = −0.6', ox + P1 * s / 2, oy + 38, { font: 'num', size: 13, color: C.vel, align: 'center' });
+    GRAV.draw.text(ctx, 'p′ = −0.6', ox + P1 * s / 2, oy + 38, { font: 'num', size: 14, color: C.vel, align: 'center' });
     GRAV.draw.arrow(ctx, ox + P0 * s, oy + 52, ox + P1 * s, oy + 52, C.accel, 2.5);
     GRAV.draw.text(ctx, 'Δp = −1.2 kg·m/s', ox, oy + 76, { font: 'num', size: 14, color: C.accel, align: 'center' });
     ctx.save(); ctx.setLineDash([2, 4]); ctx.strokeStyle = C.steel;
@@ -50,6 +50,8 @@
         ],
         gateAt: 1,
         button: '下一幕',
+        play: true,
+        tall: true,
         draw: draw,
         mount: function (el, api) {
           var box = document.createElement('div');

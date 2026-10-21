@@ -28,14 +28,13 @@
 
   // ---------- 画面：导轨、两车、速度箭头 ----------
   // holdUpTo：讲到第几句之前（含），动画停在碰撞前，免得学生还没预测就看到答案
-  // r 可以是数据对象，也可以是返回数据的函数（第 2 轮由学生设计）；r.t0 是本次实验开始的时刻，r.idle 表示还没开始
+  // r 可以是数据对象，也可以是返回数据的函数（第 2 轮由学生设计）；r.idle 表示还没开始
   function scene(r0, label0, holdUpTo) {
     return function (ctx, w, h, t, C, beat) {
       var r = typeof r0 === 'function' ? r0() : r0;
-      if (r.t0 != null) t = (performance.now() - r.t0) / 1000;
       var label = typeof label0 === 'function' ? label0() : label0;
       var narrow = w < 520;
-      var x0 = 16, x1 = w - 16, y = h * (narrow ? 0.26 : 0.32);
+      var x0 = 8, x1 = w - 8, y = Math.max(110, h * (narrow ? 0.24 : 0.25));
       var cw = Math.max(64, Math.min(110, w * 0.15)), chH = Math.max(30, Math.min(40, cw * 0.36));
       var wA = cw * (r.mA >= r.mB ? 1.12 : 0.9), wB = cw * (r.mB >= r.mA ? 1.12 : 0.9);
       var cfg = {
@@ -75,7 +74,7 @@
   function candTable() {
     var t = document.createElement('table');
     t.className = 'dt';
-    t.style.marginTop = '22px';
+    t.classList.add('dt-gap');
     t.innerHTML = '<tr><th>候选量</th><th>碰前</th><th>碰后</th><th></th></tr>';
     return {
       el: t,
@@ -117,13 +116,13 @@
 
   // ---------- 第 2 轮：学生自己设计实验 ----------
   var MASSES = [
-    { label: '重车撞轻车（0.4 / 0.2 kg）', mA: 0.4, mB: 0.2 },
-    { label: '一样重（0.2 / 0.2 kg）', mA: 0.2, mB: 0.2 },
-    { label: '轻车撞重车（0.2 / 0.4 kg）', mA: 0.2, mB: 0.4 }
+    { name: '重车撞轻车', note: '0.4 / 0.2 kg', mA: 0.4, mB: 0.2 },
+    { name: '一样重', note: '0.2 / 0.2 kg', mA: 0.2, mB: 0.2 },
+    { name: '轻车撞重车', note: '0.2 / 0.4 kg', mA: 0.2, mB: 0.4 }
   ];
   var SIDES = [
-    { label: '磁体：碰后弹开', side: 'mag', e: 1 },
-    { label: '粘扣：碰后粘住', side: 'velcro', e: 0 }
+    { name: '磁体', note: '碰后弹开', side: 'mag', e: 1 },
+    { name: '粘扣', note: '碰后粘住', side: 'velcro', e: 0 }
   ];
   // 一次"实测"：理想碰撞的碰后速度乘 0.99，模拟一点损耗和测量误差
   function design(mi, si) {
@@ -141,15 +140,16 @@
     LAB.cur.idle = true;
     var tries = 0, done = !!LAB.ch;
     var panel = document.createElement('div');
-    function group(title, list, key) {
+    function group(title, list, key, one) {
       var g = document.createElement('div');
       g.className = 'lab-g';
       g.innerHTML = '<div class="lab-t">' + title + '</div>';
       var row = document.createElement('div');
-      row.className = 'chips';
+      row.className = 'chips' + (one ? ' one' : '');
       list.forEach(function (it, k) {
         var c = document.createElement('button');
-        c.type = 'button'; c.className = 'chip pick' + (LAB[key] === k ? ' on' : ''); c.textContent = it.label;
+        c.type = 'button'; c.className = 'chip pick' + (LAB[key] === k ? ' on' : '');
+        c.innerHTML = '<span>' + it.name + '</span><span class="u">' + it.note + '</span>';
         c.addEventListener('click', function () {
           LAB[key] = k;
           Array.prototype.forEach.call(row.children, function (x, n) { x.classList.toggle('on', n === k); });
@@ -160,14 +160,15 @@
       g.appendChild(row);
       return g;
     }
-    panel.appendChild(group('两车的质量', MASSES, 'mi'));
+    panel.appendChild(group('两车的质量', MASSES, 'mi', true));
     panel.appendChild(group('碰撞面', SIDES, 'si'));
     var run = document.createElement('button');
-    run.type = 'button'; run.className = 'run'; run.textContent = '做一次';
+    run.type = 'button'; run.className = 'run';
+    run.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.8v8.4L10 6z" fill="currentColor"/></svg>做一次';
     panel.appendChild(run);
     var log = document.createElement('table');
     log.className = 'dt';
-    log.style.marginTop = '18px';
+    log.classList.add('dt-gap');
     log.innerHTML = '<tr><th>你的设计</th><th>' + S('mv') + ' 之和</th><th>' + S('mv') + '² 之和</th></tr>';
     log.hidden = true;
     panel.appendChild(log);
@@ -175,20 +176,20 @@
 
     run.addEventListener('click', function () {
       var d = design(LAB.mi, LAB.si);
-      d.t0 = performance.now();
       LAB.cur = d;
+      api.replay();
       tries++;
       // 窄屏上画布在面板上方，点完滚回去看碰撞
       var cv = document.getElementById('canvas-wrap');
       if (cv && cv.getBoundingClientRect().top < 0) cv.scrollIntoView({ behavior: 'smooth', block: 'start' });
       var m = MASSES[LAB.mi], sd = SIDES[LAB.si];
-      api.me('我试：' + m.label.replace(/（.*）/, '') + '，' + sd.label.split('：')[0]);
+      api.me('我试：' + m.name + '，' + sd.name);
       var a = sums(d, 'mv'), b = sums(d, 'mv2');
       var ka = MOM.kept(a.pre, a.post), kb = MOM.kept(b.pre, b.post);
       var tr = document.createElement('tr');
       tr.className = 'in';
       function chip(k) { return '<span class="vd ' + (k ? 'keep' : 'drop') + '">' + (k ? '不变' : '变了') + '</span>'; }
-      tr.innerHTML = '<td>' + m.label.replace(/（.*）/, '') + '，' + sd.label.split('：')[0] + '</td><td>' + chip(ka) + '</td><td>' + chip(kb) + '</td>';
+      tr.innerHTML = '<td>' + m.name + '，' + sd.name + '</td><td>' + chip(ka) + '</td><td>' + chip(kb) + '</td>';
       log.appendChild(tr); log.hidden = false;
       if (ka && !kb) {
         api.say('分出来了：mv 之和不变，mv² 之和' + pctTxt(b) + '。');
@@ -207,7 +208,7 @@
       panel.hidden = bt > 0;
       if (bt >= 1 && LAB.ch) {
         if (!sp.innerHTML) sp.innerHTML = speedTable(LAB.ch);
-        if (LAB.cur !== LAB.ch) { LAB.cur = LAB.ch; LAB.cur.t0 = performance.now(); }
+        if (LAB.cur !== LAB.ch) { LAB.cur = LAB.ch; api.replay(); }
       }
       sp.hidden = bt < 1;
       var rows = [[2, 'mv'], [3, 'mv2']];
@@ -230,6 +231,8 @@
           { say: '实验有误差，数字不会完全相等。我们约定：前后相差 5% 以内，算没变；超过 10%，算变了。' }
         ],
         button: '开始第 1 轮',
+        play: true,
+        tall: true,
         draw: scene(R[0], '碰撞面装磁体：碰后弹开'),
         mount: function (el, api) {
           var d = document.createElement('div');
@@ -249,6 +252,8 @@
           { say: 'mv 和 mv² 都过关了，这一轮分不出谁对。得找一种碰撞，让它们表现不同。' }
         ],
         button: '开始第 2 轮',
+        play: true,
+        tall: true,
         draw: scene(R[0]),
         mount: roundMount(R[0], [[2, 'v'], [3, 'mv'], [4, 'mv2']])
       },
@@ -263,6 +268,8 @@
         ],
         gateAt: 0,
         button: '开始第 3 轮',
+        play: true,
+        tall: true,
         draw: scene(function () { return LAB.cur; }, function () { return LAB.cur.side === 'velcro' ? '碰撞面装粘扣：碰后粘在一起' : '碰撞面装磁体：碰后弹开'; }),
         mount: mountLab
       },
@@ -277,10 +284,12 @@
         ],
         gateAt: 1,
         button: '回头看三轮',
+        play: true,
+        tall: true,
+        playAt: 2,
         draw: scene(R[2], null, 1),
         mount: roundMount(R[2], [[2, 'abs'], [3, 'mv']], function (el, api) {
           var box = document.createElement('div');
-          box.style.marginTop = '22px';
           el.insertBefore(box, el.firstChild);
           GRAV.ui.choice(box, {
             options: [
@@ -303,13 +312,13 @@
         button: '给它起个名字',
         mount: function (el, api) {
           var d = document.createElement('div');
-          d.innerHTML = '<table class="dt" style="max-width:520px"><tr><th>轮次</th><th>碰撞</th><th>淘汰了</th></tr>' +
+          d.innerHTML = '<table class="dt"><tr><th>轮次</th><th>碰撞</th><th>淘汰了</th></tr>' +
             '<tr><td>第 1 轮</td><td>重车撞轻车，分开</td><td>' + S('v') + ' 之和</td></tr>' +
             '<tr><td>第 2 轮</td><td>碰后粘在一起</td><td>' + S('mv') + '² 之和</td></tr>' +
             '<tr><td>第 3 轮</td><td>轻车撞重车，反弹</td><td>不带方向的 ' + S('mv') + ' 之和</td></tr></table>';
           var big = document.createElement('div');
           big.className = 'big';
-          big.style.marginTop = '28px';
+          big.style.marginTop = '40px';
           big.innerHTML = '两车 ' + S('mv') + ' 的矢量和不变';
           el.appendChild(d); el.appendChild(big);
           api.onBeat(function (bt) { big.hidden = bt < 1; api.win(bt >= 1); });

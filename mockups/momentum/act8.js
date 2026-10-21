@@ -104,7 +104,6 @@
       mount: function (el, api) {
         var st = document.createElement('div');
         st.className = 'stem';
-        st.style.cssText = 'width:auto;max-width:560px;font-size:16px;color:var(--c-ink);margin-bottom:18px';
         st.textContent = q.stem;
         el.appendChild(st);
         var r = rec();
@@ -134,7 +133,7 @@
       Qs.forEach(function (q, i) { if (r[i] === true) n++; });
       var d = document.createElement('div');
       d.innerHTML = '<div class="score">' + n + ' / ' + Qs.length + '</div>' +
-        '<div style="color:var(--c-steel);font-size:14px;margin-top:4px">一次就答对的题数</div>';
+        '<div class="score-sub">一次就答对的题数</div>';
       var rows = document.createElement('div');
       rows.className = 'score-rows';
       GOALS.forEach(function (g, gi) {

@@ -36,16 +36,23 @@
     <div class="prev" id="cap-prev"></div>
     <div class="cur" id="cap-cur"></div>
     <div class="status" id="status"></div>
+    <div class="foot"><button class="go" id="btn-go" type="button"></button></div>
   </aside>
 
   <section class="board" id="board">
-    <div class="tagrow"><span class="tag" id="tag"></span></div>
+    <div class="tag" id="tag"></div>
     <h1 class="title" id="title"></h1>
     <div class="work single" id="work">
-      <div class="canvas-wrap" id="canvas-wrap"><canvas id="scene" aria-label="示意图"></canvas></div>
+      <div class="scene-col">
+        <div class="canvas-wrap" id="canvas-wrap"><canvas id="scene" aria-label="示意图"></canvas></div>
+        <div class="playbar" id="playbar" hidden>
+          <button class="pb" id="btn-replay" type="button">
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7a4.5 4.5 0 1 0 1.4-3.3M2.5 1.8v2.4h2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>重播</button>
+          <button class="pb" id="btn-slow" type="button" aria-pressed="false">慢放</button>
+        </div>
+      </div>
       <div class="answer" id="answer"></div>
     </div>
-    <div class="foot"><button class="go" id="btn-go" type="button"></button></div>
     <div class="finish">
       <div class="finish-big">完成</div>
       <div class="finish-sub">动量 · 8 幕</div>

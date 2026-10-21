@@ -22,7 +22,7 @@
           d.className = 'tk';
           d.innerHTML =
             '<div class="lead"><span class="big">' + S('p') + ' = ' + S('m') + S('v') + '</span>' +
-            '<span style="color:var(--c-graphite);font-size:15px">单位 kg·m/s；矢量，方向与速度相同</span></div>' +
+            '<span>单位 kg·m/s；矢量，方向与速度相同</span></div>' +
             '<div><h3>碰撞中的不变量</h3><p>两物体 ' + S('mv') + ' 的<b>矢量和</b>。' + S('v') + ' 之和、' + S('mv') + '² 之和都不是。</p></div>' +
             '<div><h3>怎么分辨 ' + S('mv') + ' 和 ' + S('mv') + '²</h3><p>看碰后粘在一起的碰撞：' + S('mv') + ' 之和不变，' + S('mv') + '² 之和变小。</p></div>' +
             '<div><h3>动量的变化量</h3><p>Δ' + S('p') + ' = ' + S('p') + '′ − ' + S('p') + '。先规定正方向，再带正负相减。</p></div>' +

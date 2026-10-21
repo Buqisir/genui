@@ -88,11 +88,11 @@
     ctx.restore();
     if (o.label) {
       GRAV.draw.text(ctx, o.label, x + w / 2, top + h / 2 + 5, {
-        font: 'num', size: 13, color: o.dark ? C.page : C.ink, align: 'center'
+        font: 'num', size: 14, color: o.dark ? C.page : C.ink, align: 'center'
       });
     }
     if (o.name) {
-      GRAV.draw.text(ctx, o.name, x + w / 2, top - 10, { font: 'sym', size: 16, color: C.graphite, align: 'center' });
+      GRAV.draw.text(ctx, o.name, x + w / 2, top - 10, { font: 'sym', size: 14, color: C.graphite, align: 'center' });
     }
   };
 
@@ -120,7 +120,7 @@
     ctx.lineCap = 'round'; ctx.lineWidth = r * 0.22; ctx.strokeStyle = C.graphite;
     ctx.beginPath(); ctx.moveTo(x - r * 0.35, y); ctx.lineTo(x + r * 0.35, y); ctx.stroke();
     ctx.restore();
-    if (name) GRAV.draw.text(ctx, name, x, y - r - 10, { font: 'sym', size: 16, color: C.graphite, align: 'center' });
+    if (name) GRAV.draw.text(ctx, name, x, y - r - 10, { font: 'sym', size: 14, color: C.graphite, align: 'center' });
   };
 
   // 冰壶场地的一段（俯视）：冰面、靶心
@@ -154,25 +154,25 @@
     ctx.fillStyle = g; ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = C.graphite; ctx.stroke();
     ctx.restore();
-    if (o.name) GRAV.draw.text(ctx, o.name, x, y + r + 18, { font: 'sym', size: 15, color: C.graphite, align: 'center' });
+    if (o.name) GRAV.draw.text(ctx, o.name, x, y + r + 18, { font: 'sym', size: 14, color: C.graphite, align: 'center' });
     return { x: x, y: y };
   };
 
   // ---------- 一维碰撞动画：返回两车左边缘位置 ----------
   // cfg：xA0, xB0（左边缘起点，像素），wA, wB（宽），vA, vB, vA2, vB2（m/s），k（像素/(m/s)/秒），x1（导轨右端）
-  // 动画循环：碰前段 + 碰后 2.6 秒 + 停 0.8 秒
+  // 碰前段 + 碰后 2.6 秒，只播一次，停在最后一帧
   MOM.run = function (t, cfg) {
     var gap = cfg.xB0 - (cfg.xA0 + cfg.wA);
     var rel = (cfg.vA - cfg.vB) * cfg.k;
     var tc = rel > 0 ? gap / rel : 1e9;
-    var P = tc + 3.4;
-    var tt = t % P;
+    var P = tc + (cfg.after || 2.6);
+    var tt = Math.min(t, P);
     var xA, xB, after = tt > tc;
     if (!after) {
       xA = cfg.xA0 + cfg.vA * cfg.k * tt;
       xB = cfg.xB0 + cfg.vB * cfg.k * tt;
     } else {
-      var d = Math.min(tt - tc, 2.6);
+      var d = Math.min(tt - tc, cfg.after || 2.6);
       var xAc = cfg.xA0 + cfg.vA * cfg.k * tc, xBc = cfg.xB0 + cfg.vB * cfg.k * tc;
       xA = xAc + cfg.vA2 * cfg.k * d;
       xB = xBc + cfg.vB2 * cfg.k * d;
@@ -186,12 +186,13 @@
   // ---------- 带接触过程的一维碰撞（v–t 图和动量柱子用） ----------
   // 碰撞不是瞬间完成的：接触的 TR 秒里，两车速度线性过渡到碰后值（DIS 的 v–t 图上也是一小段斜线）。
   // cfg：xA0, xB0, wA, wB（像素），mA, mB, vA, vB, a, b（碰前碰后速度，m/s），k（像素/(m/s)/秒）
-  var TR = 0.14, AFTER = 1.7, PAUSE = 0.8;
+  var TR = 0.14, AFTER = 1.7;
   MOM.sim = function (t, cfg) {
     var gap = cfg.xB0 - (cfg.xA0 + cfg.wA);
     var tc = gap / ((cfg.vA - cfg.vB) * cfg.k);
-    var T = tc + TR + AFTER, P = T + PAUSE;
-    var tt = cfg.hold ? Math.min(t, tc - 0.02) : Math.min(t % P, T);
+    var T = tc + TR + AFTER;
+    // 只播一次，停在最后一帧；hold 时停在接触前
+    var tt = cfg.hold ? Math.min(t, tc - 0.02) : Math.min(t, T);
     function vel(v0, v1, s) {
       if (s <= tc) return v0;
       if (s >= tc + TR) return v1;
@@ -225,13 +226,13 @@
     ctx.strokeStyle = C.steel;
     ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(s.T), Y(0)); ctx.stroke();
     ctx.restore();
-    GRAV.draw.text(ctx, 'v（m/s）', box.x, box.y + 6, { size: 11, color: C.steel });
-    GRAV.draw.text(ctx, '0', X(0) - 6, Y(0) + 4, { font: 'num', size: 11, color: C.steel, align: 'right' });
-    GRAV.draw.text(ctx, 't', X(s.T) + 4, Y(0) + 4, { font: 'sym', size: 13, color: C.steel });
+    GRAV.draw.text(ctx, 'v（m/s）', box.x, box.y + 6, { size: 12, color: C.steel });
+    GRAV.draw.text(ctx, '0', X(0) - 6, Y(0) + 4, { font: 'num', size: 12, color: C.steel, align: 'right' });
+    GRAV.draw.text(ctx, 't', X(s.T) + 4, Y(0) + 4, { font: 'sym', size: 14, color: C.steel });
     // 碰撞时刻
     ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = C.hair;
     ctx.beginPath(); ctx.moveTo(X(s.tc), Y(vmin)); ctx.lineTo(X(s.tc), Y(vmax)); ctx.stroke(); ctx.restore();
-    GRAV.draw.text(ctx, '碰撞', X(s.tc) + 4, box.y + 6, { size: 11, color: C.steel });
+    GRAV.draw.text(ctx, '碰撞', X(s.tc) + 4, box.y + 6, { size: 12, color: C.steel });
     // 两条速度线
     [['A', cfg.vA, cfg.a, []], ['B', cfg.vB, cfg.b, [5, 4]]].forEach(function (L) {
       ctx.save();
@@ -247,12 +248,12 @@
       var vEnd = s.vel(L[1], L[2], s.tt);
       // 两条线重合（粘在一起）时，B 的标签挪到线下面
       var dy = L[0] === 'B' && Math.abs(vEnd - s.vel(cfg.vA, cfg.a, s.tt)) < 0.06 ? 16 : 0;
-      GRAV.draw.text(ctx, L[0], X(s.tt) + 6, Y(vEnd) + 4 + dy, { font: 'sym', size: 13, color: C.vel });
+      GRAV.draw.text(ctx, L[0], X(s.tt) + 6, Y(vEnd) + 4 + dy, { font: 'sym', size: 14, color: C.vel });
     });
     // 碰后平台值
     if (s.tt > s.tc + 0.5) {
-      GRAV.draw.text(ctx, MOM.f(cfg.a, 3), X(s.T) + 4, Y(cfg.a) - 8, { font: 'num', size: 11, color: C.graphite, align: 'right' });
-      if (Math.abs(cfg.b - cfg.a) > 0.05) GRAV.draw.text(ctx, MOM.f(cfg.b, 3), X(s.T) + 4, Y(cfg.b) - 8, { font: 'num', size: 11, color: C.graphite, align: 'right' });
+      GRAV.draw.text(ctx, MOM.f(cfg.a, 3), X(s.T) + 4, Y(cfg.a) - 8, { font: 'num', size: 12, color: C.graphite, align: 'right' });
+      if (Math.abs(cfg.b - cfg.a) > 0.05) GRAV.draw.text(ctx, MOM.f(cfg.b, 3), X(s.T) + 4, Y(cfg.b) - 8, { font: 'num', size: 12, color: C.graphite, align: 'right' });
     }
   };
 
@@ -285,11 +286,11 @@
         var x = gx + gap + i * (bw + gap), v = vals[i], y0 = Y(0), y1 = Y(v);
         ctx.fillStyle = i === 2 ? C.ink : MOM.rgba(C.steel, 0.75);
         ctx.fillRect(x, Math.min(y0, y1), bw, Math.max(1, Math.abs(y1 - y0)));
-        GRAV.draw.text(ctx, lab, x + bw / 2, box.y + box.h - 6, { size: 11, color: i === 2 ? C.ink : C.graphite, align: 'center' });
-        if (i === 2) GRAV.draw.text(ctx, MOM.f(v, 3), x + bw / 2, Math.min(y0, y1) - 6, { font: 'num', size: 11, color: C.ink, align: 'center' });
+        GRAV.draw.text(ctx, lab, x + bw / 2, box.y + box.h - 6, { size: 12, color: i === 2 ? C.ink : C.graphite, align: 'center' });
+        if (i === 2) GRAV.draw.text(ctx, MOM.f(v, 3), x + bw / 2, Math.min(y0, y1) - 6, { font: 'num', size: 12, color: C.ink, align: 'center' });
       });
-      GRAV.draw.text(ctx, g.name + ' 之和', gx + gw / 2, box.y + 6, { font: 'sym', size: 13, color: C.graphite, align: 'center' });
+      GRAV.draw.text(ctx, g.name + ' 之和', gx + gw / 2, box.y + 6, { font: 'sym', size: 14, color: C.graphite, align: 'center' });
     });
-    GRAV.draw.text(ctx, '虚线：碰前的和', box.x + box.w, box.y + box.h + 12, { size: 11, color: C.steel, align: 'right' });
+    GRAV.draw.text(ctx, '虚线：碰前的和', box.x + box.w, box.y + box.h + 12, { size: 12, color: C.steel, align: 'right' });
   };
 })();

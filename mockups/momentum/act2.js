@@ -11,13 +11,13 @@
     return { a: v[0], b: v[1] };
   }
 
-  // 摆的一次碰撞：A 从 TH0 摆下（Q 秒），碰后 A、B 按速度比摆出去再摆回（2Q 秒），停 0.8 秒后重来
+  // 摆的一次碰撞：A 从 TH0 摆下（Q 秒），碰后 A、B 按速度比摆出去（Q 秒），停在摆得最高的那一刻
   function pend(ctx, w, h, t, C, ratio, labelB) {
     var L = Math.min(h * 0.62, 320, w * 0.4), r = Math.max(14, Math.min(24, w * 0.03));
     var py = h * 0.16, cx = w * 0.5;
     var pA = cx - r, pB = cx + r;            // 两个悬点，静止时两球相切
     var v = after(ratio);
-    var P = 3 * Q + 0.8, tt = t % P;
+    var tt = Math.min(t, 2 * Q);
     var thA, thB;
     if (tt < Q) {
       thA = -TH0 * Math.cos(Math.PI / 2 * tt / Q); thB = 0;
@@ -38,11 +38,11 @@
     var thBmax = Math.min(1.2, TH0 * v.b), hB = py + L * Math.cos(thBmax);
     if (Math.abs(hB - hA) > 2) {
       ctx.strokeStyle = MOM.rgba(C.vel, 0.6);
-      ctx.beginPath(); ctx.moveTo(cx, hB); ctx.lineTo(cx + L * 0.95, hB); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - L * 0.95, hB); ctx.lineTo(cx + L * 0.95, hB); ctx.stroke();
     }
     ctx.restore();
     GRAV.kit.label(ctx, 'A 放手的高度', cx - L * 0.95, hA - 6, C);
-    if (Math.abs(hB - hA) > 2) GRAV.draw.text(ctx, 'B 摆到的高度', cx + L * 0.95, hB - 6, { size: 12, color: C.vel, align: 'right' });
+    if (Math.abs(hB - hA) > 2) GRAV.draw.text(ctx, 'B 摆到的高度', cx - L * 0.95, hB - 6, { size: 12, color: C.vel });
     MOM.bob(ctx, pA, py, L, thA, ratio > 1 ? r * 1.15 : r, C, { name: 'A' });
     MOM.bob(ctx, pB, py, L, thB, ratio > 1 ? r * 0.85 : r, C, { name: labelB, light: ratio > 1 });
   }
@@ -95,6 +95,8 @@
           { say: '这对所有碰撞都成立吗？换两个不一样重的球试试。' }
         ],
         button: '换一对球',
+        play: true,
+        tall: true,
         draw: function (ctx, w, h, t, C) { pend(ctx, w, h, t, C, 1, 'B'); },
         mount: function (el, api) {
           var wk = GRAV.ui.work(el), shown = false;
@@ -114,6 +116,8 @@
         ],
         gateAt: 4,
         button: '去测数字',
+        play: true,
+        tall: true,
         draw: function (ctx, w, h, t, C) { pend(ctx, w, h, t, C, 3, 'B（塑料）'); },
         mount: function (el, api) {
           var wk = GRAV.ui.work(el), shown = false;

@@ -12,11 +12,11 @@
     var x0 = 40, x1 = w - 40, full = x1 - x0 - 120;
     var rows = [{ o: B, name: '子弹', sub: '10 g · 800 m/s' }, { o: P, name: '铅球', sub: '2 kg · 4 m/s' }];
     var y = h * 0.18;
-    GRAV.draw.text(ctx, '动量 p', x0, y, { size: 13, color: C.graphite });
+    GRAV.draw.text(ctx, '动量 p', x0, y, { size: 14, color: C.graphite });
     rows.forEach(function (r, i) {
       var yy = y + 30 + i * 46;
       GRAV.draw.text(ctx, r.name, x0, yy + 5, { size: 14, color: C.ink });
-      GRAV.draw.text(ctx, r.sub, x0, yy + 22, { size: 11, color: C.steel });
+      GRAV.draw.text(ctx, r.sub, x0, yy + 22, { size: 12, color: C.steel });
       if (beat >= 2) {
         var L = full * p(r.o) / 8;
         ctx.fillStyle = C.vel; MOM.rr(ctx, x0 + 110, yy - 7, L, 12, 6); ctx.fill();
@@ -25,7 +25,7 @@
     });
     if (beat < 3) return;
     var y2 = y + 150;
-    GRAV.draw.text(ctx, '动能 Eₖ', x0, y2, { size: 13, color: C.graphite });
+    GRAV.draw.text(ctx, '动能 Eₖ', x0, y2, { size: 14, color: C.graphite });
     var max = ek(B);
     rows.forEach(function (r, i) {
       var yy = y2 + 30 + i * 46;
@@ -72,6 +72,7 @@
           { say: '动量跟 v 成正比，动能跟 v² 成正比。同样的动量，速度大的那个动能大得多。' }
         ],
         gateAt: 1,
+        tall: true,
         draw: drawCompare,
         mount: function (el, api) {
           var box = document.createElement('div');

@@ -4,14 +4,14 @@
 
   function carts(cfgA, cfgB, sticky) {
     return function (ctx, w, h, t, C) {
-      var x0 = 24, x1 = w - 24, y = h * 0.55, cw = Math.max(70, Math.min(130, w * 0.15));
+      var x0 = 24, x1 = w - 24, y = h * 0.45, cw = Math.max(70, Math.min(130, w * 0.15));
       MOM.track(ctx, x0, x1, y, C);
       var xa = w * 0.22, xb = w * 0.6;
       MOM.cart(ctx, xa, y, cw, 34, C, { name: 'A', label: cfgA.m + ' kg', face: 1, side: sticky ? 'velcro' : 'mag' });
       MOM.cart(ctx, xb, y, cw, 34, C, { name: 'B', label: cfgB.m + ' kg', face: -1, side: sticky ? 'velcro' : 'mag' });
       MOM.vArrow(ctx, xa + cw / 2, y + 32, cfgA.v, 110, C, MOM.f(cfgA.v, 1) + ' m/s');
       MOM.vArrow(ctx, xb + cw / 2, y + 32, cfgB.v, 110, C, cfgB.v ? MOM.f(cfgB.v, 1) + ' m/s' : undefined);
-      GRAV.draw.text(ctx, '向右为正', x1, h * 0.22, { size: 12, color: C.steel, align: 'right' });
+      GRAV.draw.text(ctx, '向右为正', x1, h * 0.2, { size: 12, color: C.steel, align: 'right' });
     };
   }
 
