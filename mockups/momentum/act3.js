@@ -56,11 +56,11 @@
       if (narrow) {
         var gh = (h - top - 20) * 0.5;
         MOM.vtGraph(ctx, { x: x0, y: top, w: x1 - x0 - 30, h: gh }, s, cfg, C);
-        MOM.pBars(ctx, { x: x0, y: top + gh + 16, w: x1 - x0, h: h - top - gh - 40 }, s, cfg, C);
+        MOM.pBars(ctx, { x: x0, y: top + gh + 16, w: x1 - x0, h: h - top - gh - 24 }, s, cfg, C);
       } else {
         var gw = (x1 - x0) * 0.56;
-        MOM.vtGraph(ctx, { x: x0, y: top, w: gw - 30, h: h - top - 24 }, s, cfg, C);
-        MOM.pBars(ctx, { x: x0 + gw + 10, y: top, w: x1 - x0 - gw - 10, h: h - top - 24 }, s, cfg, C);
+        MOM.vtGraph(ctx, { x: x0, y: top, w: gw - 30, h: h - top - 8 }, s, cfg, C);
+        MOM.pBars(ctx, { x: x0 + gw + 10, y: top, w: x1 - x0 - gw - 10, h: h - top - 8 }, s, cfg, C);
       }
     };
   }

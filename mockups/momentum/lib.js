@@ -214,25 +214,52 @@
     };
   };
 
+  // ---------- v–t 图和动量柱子共用一条零线 ----------
+  // 三张图各有各的刻度，但零线画在同一高度；只有真的出现负值（第 3 轮 A 反弹）时，三张图才一起在零线下留出同样的空间。
+  // 每张图的竖向：上面 30 像素放标题，下面 24 像素放 A、B、和；中间是绘图区，零线以下占 nf。
+  function vtRange(cfg) {
+    return { pos: Math.max(cfg.vA, cfg.a, cfg.b) * 1.15, neg: -Math.min(0, cfg.a, cfg.b, cfg.vB) * 1.25 };
+  }
+  var GROUPS = [
+    { name: 'mv', f: function (m, v) { return m * v; } },
+    { name: 'mv²', f: function (m, v) { return m * v * v; } }
+  ];
+  function barRange(g, cfg) {
+    // 刻度要装得下碰前、碰后的每一根柱子
+    var pre = g.f(cfg.mA, cfg.vA) + g.f(cfg.mB, cfg.vB);
+    var comps = [g.f(cfg.mA, cfg.vA), g.f(cfg.mB, cfg.vB), g.f(cfg.mA, cfg.a), g.f(cfg.mB, cfg.b), pre,
+      g.f(cfg.mA, cfg.a) + g.f(cfg.mB, cfg.b)];
+    return { pos: Math.max.apply(null, comps) * 1.2, neg: -Math.min(0, Math.min.apply(null, comps)) * 1.25, pre: pre };
+  }
+  // 零线以下要占绘图区的几成：取三张图里最大的
+  MOM.negFrac = function (cfg) {
+    return [vtRange(cfg)].concat(GROUPS.map(function (g) { return barRange(g, cfg); }))
+      .reduce(function (m, r) { return Math.max(m, r.neg / (r.pos + r.neg)); }, 0);
+  };
+  function frame(box, nf) {
+    var top = box.y + 30, bot = box.y + box.h - 24;
+    var zero = bot - (bot - top) * nf;
+    return { top: top, bot: bot, zero: zero };
+  }
+
   // v–t 图：box {x, y, w, h}；A 实线、B 虚线，都用速度色；画到当前时刻，碰后标出平台值
   MOM.vtGraph = function (ctx, box, s, cfg, C) {
-    var vmin = Math.min(0, cfg.a, cfg.b, cfg.vB) - 0.1, vmax = Math.max(cfg.vA, cfg.a, cfg.b) + 0.1;
+    var F = frame(box, MOM.negFrac(cfg)), R = vtRange(cfg);
     var X = function (t) { return box.x + 34 + (box.w - 44) * t / s.T; };
-    var Y = function (v) { return box.y + box.h - 18 - (box.h - 30) * (v - vmin) / (vmax - vmin); };
+    var Y = function (v) { return F.zero - (F.zero - F.top) * v / R.pos; };
     ctx.save();
-    // 坐标轴与 0 线
     ctx.strokeStyle = C.hair; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(X(0), Y(vmin)); ctx.lineTo(X(0), Y(vmax)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(0), F.top - 8); ctx.lineTo(X(0), F.bot); ctx.stroke();
     ctx.strokeStyle = C.steel;
-    ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(s.T), Y(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(0), F.zero); ctx.lineTo(X(s.T), F.zero); ctx.stroke();
     ctx.restore();
-    GRAV.draw.text(ctx, 'v（m/s）', box.x, box.y + 6, { size: 12, color: C.steel });
-    GRAV.draw.text(ctx, '0', X(0) - 6, Y(0) + 4, { font: 'num', size: 12, color: C.steel, align: 'right' });
-    GRAV.draw.text(ctx, 't', X(s.T) + 4, Y(0) + 4, { font: 'sym', size: 14, color: C.steel });
+    GRAV.draw.text(ctx, 'v（m/s）', box.x, box.y + 14, { size: 12, color: C.steel });
+    GRAV.draw.text(ctx, '0', X(0) - 6, F.zero + 4, { font: 'num', size: 12, color: C.steel, align: 'right' });
+    GRAV.draw.text(ctx, 't', X(s.T) + 4, F.zero + 4, { font: 'sym', size: 14, color: C.steel });
     // 碰撞时刻
     ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = C.hair;
-    ctx.beginPath(); ctx.moveTo(X(s.tc), Y(vmin)); ctx.lineTo(X(s.tc), Y(vmax)); ctx.stroke(); ctx.restore();
-    GRAV.draw.text(ctx, '碰撞', X(s.tc) + 4, box.y + 6, { size: 12, color: C.steel });
+    ctx.beginPath(); ctx.moveTo(X(s.tc), F.top - 8); ctx.lineTo(X(s.tc), F.bot); ctx.stroke(); ctx.restore();
+    GRAV.draw.text(ctx, '碰撞', X(s.tc) + 4, box.y + 14, { size: 12, color: C.steel });
     // 两条速度线
     [['A', cfg.vA, cfg.a, []], ['B', cfg.vB, cfg.b, [5, 4]]].forEach(function (L) {
       ctx.save();
@@ -252,45 +279,40 @@
     });
     // 碰后平台值
     if (s.tt > s.tc + 0.5) {
-      GRAV.draw.text(ctx, MOM.f(cfg.a, 3), X(s.T) + 4, Y(cfg.a) - 8, { font: 'num', size: 12, color: C.graphite, align: 'right' });
-      if (Math.abs(cfg.b - cfg.a) > 0.05) GRAV.draw.text(ctx, MOM.f(cfg.b, 3), X(s.T) + 4, Y(cfg.b) - 8, { font: 'num', size: 12, color: C.graphite, align: 'right' });
+      // 正值标在线上方，负值标在线下方（免得压住 t 轴）
+      var lab = function (v) { GRAV.draw.text(ctx, MOM.f(v, 3), X(s.T) + 4, Y(v) + (v < 0 ? 18 : -8), { font: 'num', size: 12, color: C.graphite, align: 'right' }); };
+      lab(cfg.a);
+      if (Math.abs(cfg.b - cfg.a) > 0.05) lab(cfg.b);
     }
   };
 
-  // 动量柱子：两组（mv、mv²），每组 A、B、和；和用 ink，A、B 用 steel；虚线是碰前的和
+  // 动量柱子：两组（mv、mv²），每组 A、B、和；和用 ink，A、B 用 steel；虚线是碰前的和，左端直接标"碰前"
   MOM.pBars = function (ctx, box, s, cfg, C) {
-    var groups = [
-      { name: 'mv', unit: 'kg·m/s', f: function (m, v) { return m * v; } },
-      { name: 'mv²', unit: '', f: function (m, v) { return m * v * v; } }
-    ];
+    var F = frame(box, MOM.negFrac(cfg));
     var gw = box.w / 2;
-    groups.forEach(function (g, gi) {
+    GROUPS.forEach(function (g, gi) {
+      var R = barRange(g, cfg);
       var vals = [g.f(cfg.mA, s.vA), g.f(cfg.mB, s.vB)];
       vals.push(vals[0] + vals[1]);
-      var pre = g.f(cfg.mA, cfg.vA) + g.f(cfg.mB, cfg.vB);
-      // 刻度要装得下碰前、碰后的每一根柱子
-      var comps = [g.f(cfg.mA, cfg.vA), g.f(cfg.mB, cfg.vB), g.f(cfg.mA, cfg.a), g.f(cfg.mB, cfg.b), pre];
-      var max = Math.max.apply(null, comps) * 1.2;
-      var neg = Math.min.apply(null, comps);
-      var lo = gi === 0 ? Math.min(-pre * 0.25, neg * 1.4) : 0;
-      var gx = box.x + gi * gw, base = box.y + 20 + (box.h - 44) * max / (max - lo);
-      var Y = function (v) { return base - (box.h - 44) * v / (max - lo); };
-      var bw = Math.min(22, gw / 6), gap = (gw - 3 * bw) / 4;
+      var Y = function (v) { return F.zero - (F.zero - F.top) * v / R.pos; };
+      var gx = box.x + gi * gw;
+      var bw = Math.min(28, gw / 6), gap = (gw - 3 * bw) / 4;
+      var xl = gx + gap * 0.5, xr = gx + gw - gap * 0.5;
       ctx.save();
-      ctx.strokeStyle = C.hair; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(gx + gap * 0.5, base); ctx.lineTo(gx + gw - gap * 0.5, base); ctx.stroke();
+      ctx.strokeStyle = C.steel; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xl, F.zero); ctx.lineTo(xr, F.zero); ctx.stroke();
       ctx.setLineDash([3, 3]); ctx.strokeStyle = C.graphite;
-      ctx.beginPath(); ctx.moveTo(gx + gap * 0.5, Y(pre)); ctx.lineTo(gx + gw - gap * 0.5, Y(pre)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xl, Y(R.pre)); ctx.lineTo(xr, Y(R.pre)); ctx.stroke();
       ctx.restore();
+      GRAV.draw.text(ctx, '碰前', xl, Y(R.pre) - 5, { size: 12, color: C.steel });
       ['A', 'B', '和'].forEach(function (lab, i) {
-        var x = gx + gap + i * (bw + gap), v = vals[i], y0 = Y(0), y1 = Y(v);
+        var x = gx + gap + i * (bw + gap), v = vals[i], y0 = F.zero, y1 = Y(v);
         ctx.fillStyle = i === 2 ? C.ink : MOM.rgba(C.steel, 0.75);
         ctx.fillRect(x, Math.min(y0, y1), bw, Math.max(1, Math.abs(y1 - y0)));
-        GRAV.draw.text(ctx, lab, x + bw / 2, box.y + box.h - 6, { size: 12, color: i === 2 ? C.ink : C.graphite, align: 'center' });
+        GRAV.draw.text(ctx, lab, x + bw / 2, box.y + box.h - 4, { size: 12, color: i === 2 ? C.ink : C.graphite, align: 'center' });
         if (i === 2) GRAV.draw.text(ctx, MOM.f(v, 3), x + bw / 2, Math.min(y0, y1) - 6, { font: 'num', size: 12, color: C.ink, align: 'center' });
       });
-      GRAV.draw.text(ctx, g.name + ' 之和', gx + gw / 2, box.y + 6, { font: 'sym', size: 14, color: C.graphite, align: 'center' });
+      GRAV.draw.text(ctx, g.name + ' 之和', gx + gw / 2, box.y + 14, { font: 'sym', size: 14, color: C.graphite, align: 'center' });
     });
-    GRAV.draw.text(ctx, '虚线：碰前的和', box.x + box.w, box.y + box.h + 12, { size: 12, color: C.steel, align: 'right' });
   };
 })();
