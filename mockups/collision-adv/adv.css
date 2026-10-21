@@ -1,0 +1,11 @@
+/* 进阶课 A：带吸附点的滑块 */
+.adv-slider { max-width: 520px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--c-hairline); background: var(--c-page); }
+.as-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: var(--fs-sm); color: var(--c-graphite); }
+.as-v { font: 500 var(--fs-md) 'Inter', 'Noto Sans SC', sans-serif; color: var(--c-ink); }
+.adv-slider input[type=range] { width: 100%; margin: 12px 0 8px; accent-color: var(--c-ink); }
+.as-snaps { display: flex; flex-wrap: wrap; gap: 6px; }
+.as-snap { border: 1px solid var(--c-hairline); background: var(--c-card); color: var(--c-graphite); border-radius: 14px; height: 28px; padding: 0 10px; font: var(--fs-xs) 'Noto Sans SC', sans-serif; cursor: pointer; }
+.as-snap:hover { border-color: var(--c-steel); }
+.as-snap.on { border-color: var(--c-ink); color: var(--c-ink); }
+.as-tip { margin-top: 8px; font-size: var(--fs-xs); color: var(--c-steel); }
+.as-tip:empty { display: none; }
