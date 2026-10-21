@@ -12,9 +12,9 @@
   // 前半段三种一样：压到最紧时两车共速 0.40 m/s，动能 0.048 J；后半段弹回多少因碰撞面而异（e = 弹回的相对速度 ÷ 接近的相对速度）
   var T0 = 1.0, TC = 1.6, T2 = 1.4, KMIN = 0.5 * 0.6 * 0.4 * 0.4;
   var KINDS = [
-    { k: 'mag', e: 1, dash: [], note: '完全弹回' },
-    { k: 'rub', e: 0.5, dash: [6, 4], note: '弹回一半' },
-    { k: 'vel', e: 0, dash: [2, 3], note: '不弹回' }
+    { k: 'mag', e: 1, dash: [], note: '完全弹回', short: '完全弹回' },
+    { k: 'rub', e: 0.5, dash: [6, 4], note: '弹回一半，其余发热', short: '弹回一半' },
+    { k: 'vel', e: 0, dash: [2, 3], note: '不弹回，变成热', short: '不弹回' }
   ];
   function squeezeAt(u, e) {          // 接触中第 u（0→1）段，压缩量（0 = 原长，1 = 最紧）
     return u <= 0.5 ? Math.sin(Math.PI * u) : 1 - e * (1 - Math.sin(Math.PI * u));
@@ -45,9 +45,21 @@
       ctx.save(); ctx.fillStyle = C.graphite;
       MOM.rr(ctx, ax - s, cy - s / 2, s, s, 3); ctx.fill();
       MOM.rr(ctx, bx, cy - s / 2, s, s, 3); ctx.fill(); ctx.restore();
-      zigzag(ctx, ax, ax + Math.min(d, rest), cy, s * 0.22, C);
+      // 弹不回去的部分不画成"还压着的弹簧"（那样像能量还存着），而画成压扁的垫子和几道发热的纹路：它变成了内能
+      var lost = kd.e < 1 && (kd.e === 0 ? tt > T0 + TC * 0.5 : tt > T0 + TC);
+      if (lost) {
+        var len = Math.min(d, rest), ph = s * 0.5;
+        ctx.save(); ctx.fillStyle = MOM.rgba(C.graphite, 0.35); MOM.rr(ctx, ax, cy - ph / 2, len, ph, 3); ctx.fill();
+        ctx.strokeStyle = MOM.rgba(C.charge, 0.8); ctx.lineWidth = 1.2;
+        for (var j = 0; j < 3; j++) {
+          var hx = ax + len * (j + 1) / 4, hy = cy - ph / 2 - 4;
+          ctx.beginPath(); ctx.moveTo(hx, hy);
+          ctx.bezierCurveTo(hx - 3, hy - 4, hx + 3, hy - 7, hx, hy - 11); ctx.stroke();
+        }
+        ctx.restore();
+      } else zigzag(ctx, ax, ax + Math.min(d, rest), cy, s * 0.22, C);
       GRAV.draw.text(ctx, D[kd.k].name, cx, cy - s / 2 - 14, { size: 14, color: C.graphite, align: 'center' });
-      if (tt > T0 + TC * 0.5) GRAV.draw.text(ctx, kd.note, cx, cy + s / 2 + 18, { size: 12, color: C.steel, align: 'center' });
+      if (tt > T0 + TC * 0.5) GRAV.draw.text(ctx, narrow ? kd.short : kd.note, cx, cy + s / 2 + 18, { size: 12, color: C.steel, align: 'center' });
     });
     // 动能–时间
     var top = cy + s / 2 + 44, box = { x: 8, y: top, w: Math.min(w - 16, 620), h: h - top - 8 };
@@ -98,7 +110,7 @@
           { say: '挤得最紧时，两车速度相同，都是 0.24 ÷ 0.6 = 0.40 m/s，动能只剩 ½ × 0.6 × 0.40² = 0.048 J。少掉的 0.024 J 暂时存进了碰撞面的形变里。' },
           { say: '后半段才分出不同。粘扣那次，碰后动能停在约 0.048 J（实测 0.047 J），为什么？' },
           { say: '"弹性"说的就是弹回原样。形变完全弹回，存进去的动能全部还回来，叫弹性碰撞（磁体）；只弹回一部分，叫非弹性碰撞（橡皮）；一点也不弹回、两车粘在一起，叫完全非弹性碰撞（粘扣）。' },
-          { say: '弹不回去的那部分形变能，最后变成了内能：碰撞面发热、留下凹痕、发出声音。总能量仍然守恒。' }
+          { say: '弹不回去的那部分，一般最后变成内能：碰撞面发热、留下凹痕、发出声音。总能量仍然守恒。（如果是一根弹簧被卡扣锁住，这部分就存在弹簧里，进阶课再讲。）' }
         ],
         gateAt: 2,
         button: '给三类碰撞起名',
@@ -135,7 +147,7 @@
           d.innerHTML =
             '<div class="row"><b>弹性</b><span>形变完全弹回，碰撞前后总动能不变</span></div>' +
             '<div class="row"><b>非弹性</b><span>只弹回一部分，总动能减少（碰后可以分开）</span></div>' +
-            '<div class="row"><b>完全非弹性</b><span>不弹回，碰后粘在一起，动能减少最多</span></div>' +
+            '<div class="row"><b>完全非弹性</b><span>不弹回，碰后粘在一起（同速），动能减少最多</span></div>' +
             '<div class="row"><b>都一样</b><span>三种碰撞，动量都守恒</span></div>' +
             '<div class="row" data-b="1"><b>注意</b><span>物理的"弹性"是弹回原样，不是容易拉长；判断看动能，不看弹没弹开</span></div>' +
             '<div class="row" data-b="2"><b>牛顿</b><span>玻璃球弹回约 15/16，毛线球约 5/9（《自然哲学的数学原理》运动定律附注）</span></div>';
