@@ -40,6 +40,8 @@
 | [Concord Consortium](https://concord.org/) | 交互式科学模型与课程 | 能 |
 | [HyperPhysics](https://hyperphysics.phy-astr.gsu.edu/) | 概念图式的物理速查 | 连接被对方断开 |
 | [Feynman Lectures](https://www.feynmanlectures.caltech.edu/) | 费曼物理学讲义原文 | 网站拦截程序访问（403） |
+| [NASA Glenn K-12 火箭教程](https://www.grc.nasa.gov/WWW/k-12/rocket/) | 火箭、水火箭的入门物理 | 能（curl 可以，WebFetch 解析不了域名） |
+| [NASA 历史](https://www.nasa.gov/history/) | 航天史料，如 1969 年《纽约时报》更正 | 能 |
 | [Project Gutenberg](https://www.gutenberg.org/) | 原典，如牛顿《原理》Motte 英译本 | 能 |
 
 ## 五、题目
@@ -54,6 +56,7 @@
 |---|---|---|
 | [国家中小学智慧教育平台](https://basic.smartedu.cn/) | 教材电子版（人教版原文） | 连接被对方断开；教材文件要登录 |
 | [人民教育出版社](https://www.pep.com.cn/) | 教材与教参信息 | 连不上 |
+| [enjoyphysics.cn](https://enjoyphysics.cn/) | 上海一所中学物理教研组的网站，逐节转录了人教版教材正文、练习答案和教参的教学建议（如第一章第 6 节 https://enjoyphysics.cn/Article2868） | 能；引用时注明"据转录，未对照纸本" |
 | [中国知网](https://www.cnki.net/) | 《物理教师》《物理教学》《中学物理教学参考》等教学期刊 | 一般只能看摘要 |
 
 ## 用法
