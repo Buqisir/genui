@@ -1,170 +1,106 @@
-/* 第 8 幕 · 小测：6 道单选，记录一次就对的题数，按目标给出回看链接 */
+/* 第 8 幕 · 收束：先从结论区回忆、补全两句关键结论，再展开工具箱；最后回到冰壶，留下一节的钩子 */
 (function () {
   'use strict';
+  var S = GRAV.h.sym;
 
-  // 第 1 题的"实测"数据
-  var m1 = 0.5, m2 = 0.3, v1 = 0.4, vc = 0.246;
-  var mvPre = m1 * v1, mvPost = (m1 + m2) * vc;
-  var m2Pre = m1 * v1 * v1, m2Post = (m1 + m2) * vc * vc;
-  function pc(a, b) { var p = (b - a) / a * 100; return (p < 0 ? '少了 ' : '多了 ') + Math.abs(p).toFixed(1) + '%'; }
-
-  var Qs = [
-    {
-      goal: 0,
-      title: '哪个量可以看作不变？',
-      stem: 'A 车 0.5 kg 以 0.40 m/s 撞上静止的 B 车 0.3 kg，碰后粘在一起，测得共同速度 0.246 m/s。按"相差 5% 以内算不变"，哪个量可以看作不变？',
-      options: [
-        { html: '<i class="sym">v</i> 之和', say: '0.40 → 0.49，多了两成多，变了。' },
-        { html: '<i class="sym">mv</i> 之和', correct: true, say: '对。' + mvPre.toFixed(3) + ' → ' + mvPost.toFixed(3) + '，' + pc(mvPre, mvPost) + '，在误差范围内。' },
-        { html: '<i class="sym">mv</i>² 之和', say: m2Pre.toFixed(3) + ' → ' + m2Post.toFixed(3) + '，' + pc(m2Pre, m2Post) + '，变了。' },
-        { html: '三个都变了', say: '实验数据不会完全相等。按规则，差 5% 以内算不变。' }
-      ],
-      hints: ['分别算三个量碰撞前后的和。', 'mv：0.5 × 0.40 和 0.8 × 0.246。', 'mv 之和只差 1.6%，可以看作不变。']
-    },
-    {
-      goal: 0,
-      title: '哪种碰撞能分辨 mv 和 mv²？',
-      stem: '要判断碰撞中不变的是"mv 之和"还是"mv² 之和"，应该选哪种碰撞来做实验？',
-      options: [
-        { html: '等质量，碰后分开', say: '这种碰撞里两者都不变，分不出来。' },
-        { html: '不等质量，碰后分开', say: '这种碰撞里两者也都不变，第 1 轮就是这样。' },
-        { html: '碰后粘在一起', correct: true, say: '对。粘住时 mv² 之和会变小，mv 之和不变，一下就分开了。' },
-        { html: '哪种都可以', say: '碰后分开的碰撞里，mv 和 mv² 之和都不变，分不出谁对。' }
-      ],
-      hints: ['想想第 3 幕的第 1 轮：两者都过关了。', '哪种碰撞会让 mv² 之和变小？', '碰后粘在一起。']
-    },
-    {
-      goal: 1,
-      title: '两物体的总动量',
-      stem: '光滑水平面上，A 物体 1 kg 以 3 m/s 向右运动，B 物体 2 kg 以 1 m/s 向左运动。两物体的总动量是多少？',
-      options: [
-        { html: '1 kg·m/s，向右', correct: true, say: '对。取向右为正：1 × 3 + 2 × (−1) = 1 kg·m/s。' },
-        { html: '5 kg·m/s', say: '把动量当标量加了。B 向左，要记作负值。' },
-        { html: '1 kg·m/s，向左', say: '算一算正负：3 − 2 = 1，是正的。' },
-        { html: '0', say: '相向运动不一定抵消，要算一算：3 和 2 不相等。' }
-      ],
-      hints: ['先规定向右为正。', 'A：1 × 3；B：2 × (−1)。', '3 − 2 = 1，向右。']
-    },
-    {
-      goal: 1,
-      title: '网球的动量变化',
-      stem: '0.06 kg 的网球以 30 m/s 飞来，被球拍以 40 m/s 反向击回。网球动量变化量的大小是多少？',
-      options: [
-        { html: '0.6 kg·m/s', say: '这是用速率直接相减：40 − 30。方向反了，要带正负算。' },
-        { html: '4.2 kg·m/s，方向与来球方向相同', say: '大小对了，方向反了：Δp 和击回的方向相同。' },
-        { html: '0', say: '速度方向变了，动量就变了。' },
-        { html: '4.2 kg·m/s，方向与击回方向相同', correct: true, say: '对。取击回方向为正：Δp = 0.06 × [40 − (−30)] = 4.2 kg·m/s。' }
-      ],
-      hints: ['取击回方向为正，来球速度记作负值。', 'Δp = 0.06 × 40 − 0.06 × (−30)。', '4.2 kg·m/s，与击回方向相同。']
-    },
-    {
-      goal: 2,
-      title: '动能相等，动量之比是多少？',
-      stem: '质量之比为 1 : 4 的两个物体，动能相等。它们的动量大小之比是多少？',
-      options: [
-        { html: '1 : 1', say: '动能相等，动量不一定相等。用 p = √(2mEₖ)。' },
-        { html: '1 : 4', say: '动量不和质量成正比，两者速度不同。用 p = √(2mEₖ)。' },
-        { html: '1 : 2', correct: true, say: '对。p = √(2mEₖ) ∝ √m，√1 : √4 = 1 : 2。' },
-        { html: '1 : 16', say: '把平方关系用反了。p 和 √m 成正比。' }
-      ],
-      hints: ['把 p = mv 和 Eₖ = ½mv² 联系起来。', 'p = √(2mEₖ)，动能相等时 p ∝ √m。', '√1 : √4 = 1 : 2。']
-    },
-    {
-      goal: 2,
-      title: '匀速圆周运动',
-      stem: '物体做匀速圆周运动时，下列说法正确的是？',
-      options: [
-        { html: '动量和动能都不变', say: '"匀速"指速率不变，速度方向一直在变。' },
-        { html: '动能不变，动量变', correct: true, say: '对。速率不变，所以动能不变；方向一直在变，所以动量在变。' },
-        { html: '动量不变，动能变', say: '弄反了。动能只看速率，动量还看方向。' },
-        { html: '都在变', say: '动能是标量，只看速率，速率不变动能就不变。' }
-      ],
-      hints: ['动量是矢量，动能是标量。', '匀速圆周运动：速率变不变？方向变不变？', '动能不变，动量变。']
-    }
-  ];
-
-  var GOALS = [
-    { name: '碰撞中的不变量是 mv', act: 3 },
-    { name: '动量是矢量，Δp 带方向', act: 5 },
-    { name: '动量和动能的区别', act: 4 }
-  ];
-
-  function rec() {
-    if (!GRAV.state.quiz) GRAV.state.quiz = {};
-    return GRAV.state.quiz;
+  function toolkit() {
+    var d = document.createElement('div');
+    d.className = 'tk';
+    d.innerHTML =
+      '<div class="lead"><span class="big">' + S('p') + ' = ' + S('m') + S('v') + '</span>' +
+      '<span>单位 kg·m/s；矢量，方向与速度相同</span></div>' +
+      '<div><h3>碰撞中不变的量</h3><p>两物体 ' + S('mv') + ' 的<b>矢量和</b>。' + S('v') + ' 之和、' + S('mv') + '² 之和都不是。</p></div>' +
+      '<div><h3>怎么分清 ' + S('mv') + ' 和 ' + S('mv') + '²</h3><p>看碰后粘在一起的碰撞：' + S('mv') + ' 之和不变，' + S('mv') + '² 之和变小。</p></div>' +
+      '<div><h3>动量的变化量</h3><p>Δ' + S('p') + ' = ' + S('p') + '′ − ' + S('p') + '。先规定正方向，再带正负相减。</p></div>' +
+      '<div><h3>动量和动能</h3><p>' + S('p') + ' = ' + S('mv') + '，跟 ' + S('v') + ' 成正比，是矢量；' + S('E') + 'ₖ = ½' + S('mv') + '²，跟 ' + S('v') + '² 成正比，没有方向。</p></div>' +
+      '<div class="warn"><h3>易错</h3><ul>' +
+      '<li>小球原速弹回，Δ' + S('p') + ' 不是 0。</li>' +
+      '<li>动量相加要带方向，相向运动时一正一负。</li>' +
+      '<li>动量变了，动能不一定变；动能没变，动量也可能变了。</li>' +
+      '<li>实验里"没变"指在误差范围内没变，不是数字完全相等。</li></ul></div>';
+    return d;
   }
 
-  var steps = Qs.map(function (q, i) {
-    return {
-      title: '小测 ' + (i + 1) + ' / ' + Qs.length + '：' + q.title,
-      layout: 'answer',
-      beats: [{ say: '第 ' + (i + 1) + ' 题。' }],
-      gateAt: 0,
-      button: i === Qs.length - 1 ? '看结果' : '下一题',
-      mount: function (el, api) {
-        var st = document.createElement('div');
-        st.className = 'stem';
-        st.textContent = q.stem;
-        el.appendChild(st);
-        var r = rec();
-        GRAV.ui.choice(el, {
-          options: q.options,
-          hints: q.hints,
-          onWrong: function () { if (r[i] == null) r[i] = false; },
-          onCorrect: function () { if (r[i] == null) r[i] = true; }
-        }, api);
-      }
-    };
-  });
-
-  steps.push({
-    title: '小测结果',
-    layout: 'answer',
-    beats: [{
-      say: function () {
-        var r = rec(), n = 0;
-        Qs.forEach(function (q, i) { if (r[i] === true) n++; });
-        return n === Qs.length ? '6 道题都是一次答对，三个目标都达成了。' : '一次答对 ' + n + ' 道。没全对的目标，点右边回去再看一遍。';
-      }
-    }],
-    button: '完成',
-    mount: function (el, api) {
-      var r = rec(), n = 0;
-      Qs.forEach(function (q, i) { if (r[i] === true) n++; });
-      var d = document.createElement('div');
-      d.innerHTML = '<div class="score">' + n + ' / ' + Qs.length + '</div>' +
-        '<div class="score-sub">一次就答对的题数</div>';
-      var rows = document.createElement('div');
-      rows.className = 'score-rows';
-      GOALS.forEach(function (g, gi) {
-        var ok = Qs.every(function (q, i) { return q.goal !== gi || r[i] === true; });
-        var row = document.createElement('div');
-        row.className = 'score-row';
-        row.innerHTML = '<span>' + g.name + '</span>';
-        if (ok) {
-          row.innerHTML += '<span class="ok">✓ 掌握了</span>';
-        } else {
-          var b = document.createElement('button');
-          b.type = 'button'; b.className = 'txt-btn';
-          b.textContent = '回第 ' + g.act + ' 幕再看 →';
-          b.addEventListener('click', function () { api.jump(g.act); });
-          row.appendChild(b);
+  GRAV.act({
+    id: 8,
+    name: '收束',
+    tag: '第 8 幕 · 收束',
+    steps: [
+      {
+        title: '补全结论区',
+        layout: 'answer',
+        beats: [
+          { say: '结论区里有两句关键的话被盖住了。不往回翻，你能补全吗？' },
+          { say: '补全了。把这节课收进一个工具箱。' }
+        ],
+        gateAt: 0,
+        button: '回到冰壶',
+        mount: function (el, api) {
+          var q = document.createElement('div');
+          el.appendChild(q);
+          var b1 = document.createElement('div'), b2 = document.createElement('div');
+          b1.innerHTML = '<div class="stem">碰撞前后，两物体 ___ 和不变。</div>';
+          b2.innerHTML = '<div class="stem">能分清 ' + S('mv') + ' 和 ' + S('mv') + '² 的，是 ___ 的碰撞。</div>';
+          b2.className = 'q-gap';
+          b2.hidden = true;
+          q.appendChild(b1); q.appendChild(b2);
+          // 第一空答对还不能往下走：给它一个不开闸的 api
+          var api1 = Object.assign({}, api, { open: function () {}, win: function () {} });
+          GRAV.ui.choice(b1, {
+            options: [
+              { html: S('mv') + ' 的矢量', correct: true, say: '对：两物体 mv 的矢量和不变。' },
+              { html: S('mv') + ' 的大小', say: '第 3 轮里 A 被弹回，不带方向加，和多了 65%。' },
+              { html: S('mv') + '²', say: '第 2 轮粘住的碰撞里，mv² 之和明显变小，出局了。' },
+              { html: S('v'), say: '第 1 轮里速度之和多了 65%，最早出局。' }
+            ],
+            hints: ['三轮实验里，最后剩下的是哪个量？', '第 3 轮告诉我们，还要带上方向。', 'mv 的矢量和。'],
+            onCorrect: function () { b2.hidden = false; api.boardMask(['stick']); }
+          }, api1);
+          GRAV.ui.choice(b2, {
+            options: [
+              { html: '碰后弹开', say: '弹开的碰撞里，mv 和 mv² 都没变，分不出。' },
+              { html: '碰后粘在一起', correct: true, say: '对。粘住时 mv² 之和变小，mv 之和不变。' },
+              { html: '两车一样重', say: '质量相等不是关键；关键是碰后粘不粘在一起。' }
+            ],
+            hints: ['回想第 2 轮你的设计。', '哪种碰撞让 mv² 之和变小了？', '碰后粘在一起。'],
+            onCorrect: function () { api.boardMask([]); }
+          }, api);
+          var tk = toolkit();
+          el.appendChild(tk);
+          api.boardMask(['mv', 'stick']);
+          api.onBeat(function (bt) {
+            q.hidden = bt > 0;
+            tk.hidden = bt < 1;
+            if (bt > 0) api.boardMask([]);
+          });
         }
-        rows.appendChild(row);
-      });
-      d.appendChild(rows);
-      el.appendChild(d);
-    }
+      },
+      {
+        title: '回到冰壶',
+        beats: [
+          { say: '回到开头的冰壶。两只一样重，碰前 A 的速度是 v，B 静止；碰后 A 停住。B 的速度是多少？' },
+          { say: '两只冰壶 mv 的和不变：m·v + 0 = 0 + m·v_B，所以 v_B = v。A 的动量几乎全部交给了 B。' },
+          { say: '可是 B 滑了一段，最后也停下了。它的动量去哪了？是什么改变了它的动量？下一节：动量定理。' }
+        ],
+        gateAt: 0,
+        button: '开始小测',
+        play: true,
+        draw: MOM.curlHit,
+        mount: function (el, api) {
+          var box = document.createElement('div');
+          el.appendChild(box);
+          GRAV.ui.choice(box, {
+            options: [
+              { html: S('v'), correct: true, say: '对。m·v + 0 = 0 + m·v_B，v_B = v。' },
+              { html: S('v') + '/2', say: '那是把速度平分了。碰后 A 停住，动量全在 B 身上。' },
+              { html: '2' + S('v'), say: '列出来算一算：m·v + 0 = 0 + m·v_B。' },
+              { html: '0', say: 'B 被撞走了，它在动。' }
+            ],
+            hints: ['碰撞前后，两只冰壶 mv 的和不变。', '碰前：m·v + 0；碰后：0 + m·v_B。', 'v_B = v。'],
+            onCorrect: function () { api.win(false); }
+          }, api);
+        }
+      }
+    ]
   });
-
-  // 完成页的一句话：按小测成绩说
-  GRAV.finishNote = function () {
-    var r = rec(), n = 0;
-    Qs.forEach(function (q, i) { if (r[i] === true) n++; });
-    var head = '你走完了动量这一课：自己设计实验，找出了碰撞里守得住的量。';
-    if (n === Qs.length) return head + '<br>小测 <span class="num">' + n + ' / ' + n + '</span> 一次全对，三个目标都拿下了。';
-    return head + '<br>小测一次答对 <span class="num">' + n + ' / ' + Qs.length + '</span>，没拿下的目标，回去再看一遍就好。';
-  };
-
-  GRAV.act({ id: 8, name: '小测', tag: '第 8 幕 · 小测', steps: steps });
 })();

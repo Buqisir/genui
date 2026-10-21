@@ -1,135 +1,160 @@
-/* 第 2 幕 · 猜想：等质量钢球（猜想 v 之和不变）→ 重球撞轻球（推翻，留下 mv、mv²） */
+/* 第 2 幕 · 第 1 轮：重车撞轻车、碰后弹开。数据推翻猜想 1；学生筛候选组合；在真实数据上引出"变没变"的判断标准 */
 (function () {
   'use strict';
 
-  var TH0 = 0.5;          // A 放手的偏角（弧度）
-  var Q = 1.4;            // 四分之一周期（屏幕秒）
+  var S = GRAV.h.sym, R = RD.R1;
 
-  // 一维弹性碰撞后的速度比（以 A 碰前速度为 1）
-  function after(ratio) {   // ratio = mA / mB
-    var v = MOM.collide(ratio, 1, 1, 0, 1);
-    return { a: v[0], b: v[1] };
-  }
-
-  // 摆的一次碰撞：A 从 TH0 摆下（Q 秒），碰后 A、B 按速度比摆出去（Q 秒），停在摆得最高的那一刻
-  function pend(ctx, w, h, t, C, ratio, labelB) {
-    var L = Math.min(h * 0.62, 320, w * 0.4), r = Math.max(14, Math.min(24, w * 0.03));
-    var py = h * 0.16, cx = w * 0.5;
-    var pA = cx - r, pB = cx + r;            // 两个悬点，静止时两球相切
-    var v = after(ratio);
-    var tt = Math.min(t, 2 * Q);
-    var thA, thB;
-    if (tt < Q) {
-      thA = -TH0 * Math.cos(Math.PI / 2 * tt / Q); thB = 0;
-    } else if (tt < 3 * Q) {
-      var s = Math.sin(Math.PI / 2 * (tt - Q) / Q);
-      thA = TH0 * v.a * s; thB = TH0 * v.b * s;
-    } else { thA = 0; thB = 0; }
-    // 支架
-    ctx.save();
-    ctx.strokeStyle = C.graphite; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(cx - L * 0.9, py); ctx.lineTo(cx + L * 0.9, py); ctx.stroke();
-    ctx.restore();
-    // 高度参考线：A 放手的高度、B 摆到的最高点
-    var hA = py + L * Math.cos(TH0);
-    ctx.save();
-    ctx.setLineDash([3, 4]); ctx.strokeStyle = C.steel; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(cx - L * 0.95, hA); ctx.lineTo(cx + L * 0.95, hA); ctx.stroke();
-    var thBmax = Math.min(1.2, TH0 * v.b), hB = py + L * Math.cos(thBmax);
-    if (Math.abs(hB - hA) > 2) {
-      ctx.strokeStyle = MOM.rgba(C.vel, 0.6);
-      ctx.beginPath(); ctx.moveTo(cx - L * 0.95, hB); ctx.lineTo(cx + L * 0.95, hB); ctx.stroke();
+  // 候选判断：每个组合三选一（留下 / 淘汰：单位不同 / 淘汰：和现象相反），选的就是理由
+  var REASONS = [
+    { k: 'keep', t: '留下' },
+    { k: 'unit', t: '淘汰：单位不同，不能相加' },
+    { k: 'opp', t: '淘汰：和现象相反' }
+  ];
+  var CANDS = [
+    {
+      t: S('m') + ' + ' + S('v'), right: 'unit',
+      say: {
+        unit: '对。质量和速度单位不同，不能相加。',
+        keep: 'kg 和 m/s 能直接相加吗？',
+        opp: '先别看现象，先看单位：kg 和 m/s 能直接相加吗？'
+      }
+    },
+    {
+      t: S('v') + ' / ' + S('m'), right: 'opp',
+      say: {
+        opp: '对。按 v/m，质量越大，这一项越小、越不重要；可重车 A 只慢下来一部分，轻车 B 却跑得飞快，重的那辆分量反而更大。',
+        keep: '按 v/m，质量越大越不重要。和刚才的现象对得上吗？',
+        unit: '不同单位相除是可以的，m/s 除以 kg 是个正常的单位。毛病在别处。'
+      }
+    },
+    {
+      t: S('mv'), right: 'keep',
+      say: {
+        keep: '留下。质量乘进去：重车速度变得少，轻车速度变得多，正好对得上。',
+        unit: '相乘不要求单位相同，kg·m/s 是个正常的单位。',
+        opp: '质量越大，mv 越大，重的那辆分量更大，和现象一致。'
+      }
+    },
+    {
+      t: S('mv') + '²', right: 'keep',
+      say: {
+        keep: '留下。这个组合也和现象一致，值得检验。',
+        unit: '相乘不要求单位相同。',
+        opp: '质量越大，mv² 也越大，和现象一致。'
+      }
     }
-    ctx.restore();
-    GRAV.kit.label(ctx, 'A 放手的高度', cx - L * 0.95, hA - 6, C);
-    if (Math.abs(hB - hA) > 2) GRAV.draw.text(ctx, 'B 摆到的高度', cx - L * 0.95, hB - 6, { size: 12, color: C.vel });
-    MOM.bob(ctx, pA, py, L, thA, ratio > 1 ? r * 1.15 : r, C, { name: 'A' });
-    MOM.bob(ctx, pB, py, L, thB, ratio > 1 ? r * 0.85 : r, C, { name: labelB, light: ratio > 1 });
-  }
+  ];
 
-  function chips(el, api) {
-    var list = [
-      { t: 'm + v', keep: false, say: '质量和速度单位不同，不能相加。' },
-      { t: 'v / m', keep: false, say: '这样质量越大越不重要。可重球几乎不减速，说明它更"有分量"，方向反了。' },
-      { t: 'mv', keep: true, say: '留下。质量乘进去，重的球速度变得少、轻的球速度变得多，正好对得上。' },
-      { t: 'mv²', keep: true, say: '留下。这个组合在动能里见过，也值得一试。' }
-    ];
-    var done = 0, wrap = document.createElement('div');
-    var box = document.createElement('div');
-    box.className = 'chips';
-    var wk = GRAV.ui.work(wrap);
-    list.forEach(function (c) {
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'chip'; b.textContent = c.t;
-      b.addEventListener('click', function () {
-        if (b.disabled) return;
-        b.disabled = true; b.classList.add(c.keep ? 'keep' : 'drop');
-        api.me('「' + c.t + '」呢？');
-        api.say(c.say);
-        if (++done === list.length) {
-          api.say('两个猜想都和演示不矛盾。要分出谁对，只看现象不够了，得测数字。');
-          wk.line('猜想 2：' + GRAV.h.sym('mv') + ' 之和不变？');
-          wk.line('猜想 3：' + GRAV.h.sym('mv') + '² 之和不变？');
-          api.open();
-        }
+  function mountCands(el, api) {
+    var wrap = document.createElement('div');
+    wrap.className = 'cands';
+    var left = CANDS.length;
+    CANDS.forEach(function (c) {
+      var row = document.createElement('div');
+      row.className = 'cand';
+      row.innerHTML = '<div class="cand-t">' + c.t + '</div>';
+      var bs = document.createElement('div');
+      bs.className = 'cand-bs';
+      REASONS.forEach(function (r) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'cand-b'; b.textContent = r.t;
+        b.addEventListener('click', function () {
+          if (b.disabled) return;
+          api.me('「' + c.t.replace(/<[^>]+>/g, '') + '」：' + r.t);
+          api.say(c.say[r.k]);
+          if (r.k !== c.right) { b.disabled = true; b.classList.add('lose'); return; }
+          b.classList.add(r.k === 'keep' ? 'keep' : 'drop');
+          row.classList.add('done', r.k === 'keep' ? 'kept' : 'dropped');
+          Array.prototype.forEach.call(bs.children, function (x) { x.disabled = true; });
+          if (--left === 0) { api.win(true); api.open(); }
+        });
+        bs.appendChild(b);
       });
-      box.appendChild(b);
+      row.appendChild(bs);
+      wrap.appendChild(row);
     });
-    wrap.insertBefore(box, wrap.firstChild);
-    api.onBeat(function (bt) { wrap.hidden = bt < 4; });
     el.appendChild(wrap);
+    api.onBeat(function (bt) { wrap.classList.toggle('settled', bt > 0); });
   }
 
   GRAV.act({
     id: 2,
-    name: '提出猜想',
-    tag: '第 2 幕 · 提出猜想',
+    name: '第 1 轮',
+    tag: '第 2 幕 · 第 1 轮',
     steps: [
       {
-        title: '两只一样的钢球',
+        title: '第 1 轮：重车撞轻车，碰后弹开',
         beats: [
-          { say: '把钢球 A 拉起来放手，让它撞静止的钢球 B。两球一样重。' },
-          { say: '碰后 A 停住，B 摆起的高度和 A 放手时一样高。' },
-          { say: '摆起一样高，说明 B 碰后的速度和 A 碰前的速度一样大。' },
-          { say: '于是可以猜：碰撞前后，速度之和不变。' },
-          { say: '这对所有碰撞都成立吗？换两个不一样重的球试试。' }
+          { say: '换到气垫导轨上：小车被气垫托起，摩擦很小，光电门测出每辆车碰撞前后的速度。约定向右为正。' },
+          { say: 'A 车 0.4 kg 以 0.60 m/s 撞上静止的 B 车 0.2 kg，碰撞面装着磁体，碰后弹开。按猜想 1，碰后两车的速度之和应该是多少？' },
+          { say: '看碰撞。下面是两车的 v–t 图，碰撞前后各有一段平台，速度从平台上读：A ' + RD.d3(R.a) + ' m/s，B ' + RD.d3(R.b) + ' m/s。' },
+          { say: RD.say(R, 'v') + '。猜想 1 出局。' },
+          { say: '再看现象：轻的 B 跑得比 A 原来还快（0.794 > 0.600），重的 A 只慢下来一部分。质量也要算进去。' }
         ],
-        button: '换一对球',
+        gateAt: 1,
+        button: '质量怎么算进去',
         play: true,
+        playAt: 2,
         tall: true,
-        draw: function (ctx, w, h, t, C) { pend(ctx, w, h, t, C, 1, 'B'); },
+        draw: RD.scene(R, '碰撞面装磁体：碰后弹开', 1, false),
         mount: function (el, api) {
-          var wk = GRAV.ui.work(el), shown = false;
-          api.onBeat(function (bt) {
-            if (bt >= 3 && !shown) { wk.line('猜想 1：' + GRAV.h.sym('v') + ' 之和不变？'); shown = true; }
-          });
+          var box = document.createElement('div');
+          el.appendChild(box);
+          GRAV.ui.choice(box, {
+            options: [
+              { html: '0.60 m/s', correct: true, say: '对。猜想 1 说速度之和不变，碰前是 0.60 + 0 = 0.60。看看实际怎样。' },
+              { html: '比 0.60 m/s 大', say: '猜想 1 说速度之和不变。按它推，碰后应该还是碰前的 0.60。' },
+              { html: '比 0.60 m/s 小', say: '猜想 1 说速度之和不变。按它推，碰后应该还是碰前的 0.60。' }
+            ],
+            hints: ['碰前两车的速度之和是多少？', 'A 0.60 m/s，B 静止：和是 0.60 m/s。', '猜想 1 说它不变，所以碰后也该是 0.60 m/s。'],
+            onCorrect: function () { api.win(false); }
+          }, api);
+          RD.tables(el, api, R, 2, [[3, 'v']]);
+          api.onBeat(function (bt) { box.hidden = bt !== 1; });
         }
       },
       {
-        title: '重球撞轻球',
+        title: '质量怎么算进去？',
         beats: [
-          { say: '换成钢球 A 撞一个轻得多的塑料球 B。A 的质量是 B 的 3 倍。' },
-          { say: '碰后 B 摆得比 A 放手时还高，A 也没停住，还在往前摆。' },
-          { say: '按速度算：碰前只有 A 在动，速度记作 v；碰后 A 约 0.5v，B 约 1.5v。速度之和变成了 2v，猜想 1 不成立。' },
-          { say: '可见质量也要算进去：重的球速度变得少，轻的球速度变得多。' },
-          { say: '下面四种组合，哪些值得留下来检验？逐个点一下。' }
+          { say: '下面四种组合，逐个判断：留下来检验，还是直接淘汰？淘汰的话，理由是什么？' },
+          { say: '留下 mv 和 mv²。mv² 这个组合眼熟：动能就是 ½mv²。' },
+          { say: '两个都和现象对得上。光看现象分不出，得用数据算一算。' }
         ],
-        gateAt: 4,
-        button: '去测数字',
+        gateAt: 0,
+        button: '用数据算',
+        tall: true,
+        draw: RD.scene(R, null, null, false),
+        mount: mountCands
+      },
+      {
+        title: '用第 1 轮的数据算一算',
+        beats: [
+          { say: '把 mv 和 mv² 也算出来。下面的柱子画出 A、B 和它们的和，虚线是碰前的和。' },
+          { say: 'mv 之和：0.240 → 0.238。这算不算变了？' },
+          { say: '实验总有摩擦和测量误差，数字不会完全相等。我们约定：前后只差几个百分点，算没变；差几十个百分点，才算变了。0.240 → 0.238 只差 0.8%，没变。' },
+          { say: RD.say(R, 'mv2') + '，也没变。' },
+          { say: 'mv 和 mv² 都过关了，这一轮分不出谁对。得找一种碰撞，让它们一个变、一个不变。' }
+        ],
+        gateAt: 1,
+        button: '你来设计',
         play: true,
         tall: true,
-        draw: function (ctx, w, h, t, C) { pend(ctx, w, h, t, C, 3, 'B（塑料）'); },
+        draw: RD.scene(R, null, null, true),
         mount: function (el, api) {
-          var wk = GRAV.ui.work(el), shown = false;
-          var v = after(3);
-          api.onBeat(function (bt) {
-            if (bt >= 2 && !shown) {
-              shown = true;
-              wk.line('碰前 ' + GRAV.h.sym('v') + ' 之和 = ' + GRAV.h.sym('v'));
-              wk.line('碰后 = ' + v.a.toFixed(1) + GRAV.h.sym('v') + ' + ' + v.b.toFixed(1) + GRAV.h.sym('v') + ' = ' + (v.a + v.b).toFixed(0) + GRAV.h.sym('v'), '猜想 1 不成立');
-            }
-          });
-          chips(el, api);
+          var box = document.createElement('div');
+          box.className = 'q-gap';
+          GRAV.ui.choice(box, {
+            options: [
+              { html: '变了，数字不一样', say: '数字是不一样，可实验总有误差。只差 0.8%，要看作没变。' },
+              { html: '可以看作没变', correct: true, say: '对。只差 0.8%，在实验误差之内。' },
+              { html: '无法判断', say: '能判断：只差 0.8%，在实验误差之内。' }
+            ],
+            hints: ['算一算差了百分之几。', '(0.240 − 0.238) ÷ 0.240 ≈ 0.8%。', '只差 0.8%，可以看作没变。'],
+            onCorrect: function () { api.win(false); }
+          }, api);
+          RD.tables(el, api, R, 0, [[0, 'v'], [2, 'mv'], [3, 'mv2']]);
+          el.appendChild(box);
+          api.onBeat(function (bt) { box.hidden = bt !== 1; });
         }
       }
     ]

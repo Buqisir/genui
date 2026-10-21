@@ -102,7 +102,7 @@ button { font-family: inherit; }
 }
 
 /* 讲解记录：读过的 15px steel，当前一句 17px ink；学生的话是靠右的白色气泡 */
-.log { display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.log { display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 2px; }
 .log .item { line-height: 1.7; overflow-wrap: anywhere; }
 .log .item.say { font-size: var(--fs-md); color: var(--c-steel); }
 .log .item.say.cur { font-size: var(--fs-lg); color: var(--c-ink); }
@@ -274,6 +274,8 @@ button { font-family: inherit; }
   body { padding-bottom: 80px; }
   .top { padding: 0 12px; gap: 8px; height: 56px; }
   .progress { gap: 4px; }
+  .seg { min-width: 8px; }
+  .tools .txt-btn { padding: 6px 4px; }
   .stage { flex-direction: column; align-items: stretch; }
   .caption { width: auto; position: static; max-height: none; padding: 8px 20px 16px; }
   .status { display: none; }
@@ -298,3 +300,67 @@ button { font-family: inherit; }
 
 /* 只有作答区的步骤：选项不要拉满整行 */
 .work.single .opts, .work.single .choice-foot { max-width: 520px; }
+
+/* ---------- 结论区：左栏底部常驻（相当于板书）；手机上收进顶栏按钮，新结论弹提示 ---------- */
+.notes { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--c-hairline); flex: 0 0 auto; }
+.notes-h { font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); margin-bottom: 8px; }
+.notes ol, .notes-sheet ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: n; }
+.note { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); line-height: 1.6; color: var(--c-ink); }
+.note-tag { flex: 0 0 auto; font: 500 var(--fs-xs)/18px 'Noto Sans SC', sans-serif; padding: 0 6px; border-radius: 4px; background: var(--c-card); color: var(--c-steel); box-shadow: 0 0 0 1px var(--c-hairline); }
+.note.hyp { color: var(--c-graphite); }
+.note.out .note-t { color: var(--c-steel); text-decoration: line-through; }
+.note.ok .note-tag { color: var(--c-field); box-shadow: 0 0 0 1px color-mix(in srgb, var(--c-field) 40%, transparent); }
+.note.fact .note-t::before { content: '·'; margin-right: 6px; color: var(--c-steel); }
+.note.masked .note-t { color: var(--c-graphite); }
+.note.fresh { animation: wkIn .4s ease both; }
+.note.fresh .note-t { font-weight: 500; }
+.notes-empty { margin: 0; font-size: var(--fs-sm); color: var(--c-steel); }
+.notes-btn { display: none; }
+.notes-sheet {
+  position: fixed; top: 56px; right: 12px; left: 12px; z-index: 20; max-height: 70vh; overflow: auto;
+  background: var(--c-card); border: 1px solid var(--c-hairline); border-radius: 16px; padding: 16px; box-shadow: var(--board-shadow);
+}
+.toast {
+  position: fixed; left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 30; display: flex; gap: 8px; align-items: baseline;
+  padding: 12px 16px; border-radius: 12px; background: var(--c-ink); color: var(--c-page); font-size: var(--fs-sm); line-height: 1.6;
+  animation: wkIn .3s ease both;
+}
+.toast .note-tag { background: transparent; color: inherit; box-shadow: 0 0 0 1px currentColor; opacity: .7; }
+@media (min-width: 761px) { .notes-sheet, .toast { display: none !important; } }
+@media (max-width: 760px) {
+  .notes { display: none; }
+  .notes-btn { display: inline-block; }
+}
+
+/* ---------- 动量课删减版新增：预测锁定、候选判断、例题分段、作业 ---------- */
+.opt.on:not(.win) .mark { color: var(--c-steel); font-size: var(--fs-xs); }
+.q-gap { margin-top: 24px; }
+.cands { display: flex; flex-direction: column; gap: 16px; }
+.cand { padding-bottom: 16px; border-bottom: 1px solid var(--c-hairline); }
+.cand:last-child { border-bottom: 0; padding-bottom: 0; }
+.cand-t { font: var(--fs-lg) 'Source Serif 4', serif; font-style: italic; color: var(--c-ink); margin-bottom: 8px; }
+.cand-bs { display: flex; flex-wrap: wrap; gap: 8px; }
+.cand-b {
+  height: 36px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--c-hairline); background: var(--c-card);
+  color: var(--c-ink); font: var(--fs-sm) 'Noto Sans SC', sans-serif; cursor: pointer;
+}
+.cand-b:hover:not(:disabled) { border-color: var(--c-steel); }
+.cand-b:disabled { cursor: default; }
+.cand-b.lose { color: var(--c-steel); text-decoration: line-through; }
+.cand-b.keep { border-color: var(--c-field); color: var(--c-field); }
+.cand-b.drop { border-color: var(--c-ink); }
+.cand.done .cand-b:not(.keep):not(.drop) { display: none; }
+.cand.dropped .cand-t { color: var(--c-steel); text-decoration: line-through; }
+.ex-sec { margin-bottom: 24px; }
+.ex-l { font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); margin-bottom: 8px; }
+.ex-sec .stem { margin-bottom: 0; }
+.ex-sec .wk { margin-top: 0; }
+.hw { display: flex; flex-direction: column; max-width: 640px; }
+.hw-i { padding: 16px 0; border-top: 1px solid var(--c-hairline); }
+.hw-t { font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); margin-bottom: 4px; }
+.hw-q { font-size: var(--fs-lg); line-height: 1.7; }
+.hw-a { margin-top: 8px; font-size: var(--fs-md); color: var(--c-graphite); }
+.hw-a summary { cursor: pointer; color: var(--c-steel); font-size: var(--fs-sm); }
+.hw-a div { margin-top: 4px; }
+.finish-credit { margin-top: 24px; font-size: var(--fs-xs); color: var(--c-steel); }
+.opt:disabled:not(.on):not(.win):not(.reveal):not(.lose) { color: var(--c-steel); }

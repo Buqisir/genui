@@ -19,6 +19,13 @@
     acts.push(def);
   };
 
+  // ---------- 结论区 ----------
+  // 每条：{ id, html, at: [幕号, 第几步, 第几句] 出现；hyp: true 先以猜想（？）出现；
+  //        out: [...] 到这里出局；ok: { at: [...], html } 到这里成立并改写；mask: 回忆时盖住关键词的写法 }
+  // 显示与否只看当前位置，前进、后退、跳转都一致。
+  var notes = [];
+  GRAV.board = function (list) { notes = list || []; };
+
   // ---------- 格式化 ----------
   var SUP = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
   function sup(s) {
@@ -328,7 +335,7 @@
           b.classList.remove('reveal');
           b.classList.add('win');
           b.querySelector('.mark').textContent = '✓';
-          btns.forEach(function (x, j) { if (j !== i) x.disabled = true; });
+          btns.forEach(function (x) { x.disabled = true; });
           hintBtn.hidden = true;
           sayIf(o.say);
           api.win(true);
@@ -452,9 +459,59 @@
     });
     E.log.innerHTML = html;
     if (vis.length !== lastCount) {
-      E.log.scrollTop = E.log.scrollHeight;
       lastCount = vis.length;
+      // 结论区可能随后变高、把讲解区挤矮，所以等这一轮排版完再滚到底
+      requestAnimationFrame(function () { E.log.scrollTop = E.log.scrollHeight; });
+      E.log.scrollTop = E.log.scrollHeight;
     }
+  }
+
+  // 当前位置是否已到 at（[幕号, 第几步, 第几句]）
+  function reached(at) {
+    if (!at) return false;
+    if (finished) return true;
+    var idx = -1;
+    for (var i = 0; i < acts.length; i++) if (acts[i].id === at[0]) idx = i;
+    if (idx < 0) return false;
+    if (ai !== idx) return ai > idx;
+    if (si !== at[1] - 1) return si > at[1] - 1;
+    return bi >= (at[2] || 0);
+  }
+  function sameStep(at) {
+    return at && !finished && acts[ai] && acts[ai].id === at[0] && si === at[1] - 1;
+  }
+  var maskIds = [], lastNotes = -1, toastTimer = null;
+  function noteState(n) {
+    if (!reached(n.at)) return null;
+    if (n.out && reached(n.out)) return { cls: 'out', html: n.html, tag: '出局', fresh: sameStep(n.out) };
+    if (n.ok && reached(n.ok.at)) return { cls: 'ok', html: n.ok.html, tag: '成立', fresh: sameStep(n.ok.at) };
+    return { cls: n.hyp ? 'hyp' : 'fact', html: n.hyp ? n.html.replace(/？?$/, '？') : n.html, tag: n.hyp ? '猜想' : '', fresh: sameStep(n.at) };
+  }
+  function renderBoard() {
+    if (!E.notes) return;
+    var html = '', count = 0, newest = null;
+    notes.forEach(function (n) {
+      var s = noteState(n);
+      if (!s) return;
+      count++;
+      if (maskIds.indexOf(n.id) >= 0 && n.mask) s = { cls: 'fact masked', html: n.mask, tag: '', fresh: false };
+      if (s.fresh) newest = s;
+      html += '<li class="note ' + s.cls + (s.fresh ? ' fresh' : '') + '">' +
+        (s.tag ? '<span class="note-tag">' + s.tag + '</span>' : '') + '<span class="note-t">' + s.html + '</span></li>';
+    });
+    var body = count ? '<ol>' + html + '</ol>' : '<p class="notes-empty">得出的结论会记在这里。</p>';
+    E.notesList.innerHTML = body;
+    E.notesSheet.innerHTML = '<div class="notes-h">结论区</div>' + body;
+    E.btnNotes.textContent = '结论 ' + count;
+    E.btnNotes.hidden = !notes.length;
+    // 手机上看不到常驻的结论区：有新结论时弹一条提示
+    if (lastNotes >= 0 && count > lastNotes && newest && window.innerWidth <= 760) {
+      E.toast.innerHTML = '<span class="note-tag">结论区</span>' + newest.html;
+      E.toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { E.toast.hidden = true; }, 2600);
+    }
+    lastNotes = count;
   }
 
   function renderStatus() {
@@ -489,6 +546,7 @@
     renderToc();
     renderLog();
     renderStatus();
+    renderBoard();
     E.board.classList.toggle('finished', finished);
     E.board.classList.toggle('won', !finished && won);
     drawFn = null;
@@ -560,6 +618,8 @@
         for (var i = 0; i < acts.length; i++) if (acts[i].id === id) { go(i, 0, 0); return; }
       },
       replay: function () { if (alive()) replay(); },
+      // 回忆时盖住结论区里这些条目的关键词；传空数组揭开
+      boardMask: function (ids) { if (alive()) { maskIds = ids || []; renderBoard(); } },
       redraw: function () {}
     };
   }
@@ -582,6 +642,7 @@
     statusHTML = st.status || '';
     E.answer.innerHTML = '';
     E.answer.onclick = null;
+    maskIds = [];
     render();
     if (typeof st.mount === 'function') st.mount(E.answer, makeApi(my));
     render();
@@ -726,6 +787,11 @@
     E.toc.hidden = true;
     E.btnToc.setAttribute('aria-expanded', 'false');
   }
+  function toggleNotes() {
+    var open = E.notesSheet.hidden;
+    E.notesSheet.hidden = !open;
+    E.btnNotes.setAttribute('aria-expanded', String(open));
+  }
   function toggleToc() {
     if (E.toc.hidden) openToc(); else closeToc();
   }
@@ -783,6 +849,12 @@
     E.btnTheme.addEventListener('click', toggleTheme);
     E.btnReplay.addEventListener('click', replay);
     E.btnSlow.addEventListener('click', toggleSlow);
+    E.btnNotes.addEventListener('click', function (e) { e.stopPropagation(); toggleNotes(); });
+    document.addEventListener('click', function (e) {
+      if (E.notesSheet.hidden || E.notesSheet.contains(e.target)) return;
+      E.notesSheet.hidden = true;
+      E.btnNotes.setAttribute('aria-expanded', 'false');
+    });
     E.toc.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('.toc-item') : null;
       if (!b) return;
@@ -823,6 +895,11 @@
     E.btnBack = document.getElementById('btn-back');
     E.btnNext = document.getElementById('btn-next');
     E.btnToc = document.getElementById('btn-toc');
+    E.notes = document.getElementById('notes');
+    E.notesList = document.getElementById('notes-list');
+    E.notesSheet = document.getElementById('notes-sheet');
+    E.btnNotes = document.getElementById('btn-notes');
+    E.toast = document.getElementById('toast');
     E.btnTheme = document.getElementById('btn-theme');
     E.capPrev = document.getElementById('cap-prev');
     E.log = document.getElementById('cap-cur');
