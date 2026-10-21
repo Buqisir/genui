@@ -1,0 +1,5 @@
+/* 动量定理课的少量补充样式；字号、颜色都用 shell.css 的变量 */
+.dt .ft-col { transition: background .3s; }
+.dt.hl-ft .ft-col { background: color-mix(in srgb, var(--c-force) 10%, transparent); color: var(--c-ink); }
+.dt th, .dt td { padding-left: 8px; }
+.dt th:first-child, .dt td:first-child { padding-left: 0; }
