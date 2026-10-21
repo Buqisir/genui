@@ -157,5 +157,14 @@
     }
   });
 
+  // 完成页的一句话：按小测成绩说
+  GRAV.finishNote = function () {
+    var r = rec(), n = 0;
+    Qs.forEach(function (q, i) { if (r[i] === true) n++; });
+    var head = '你走完了动量这一课：自己设计实验，找出了碰撞里守得住的量。';
+    if (n === Qs.length) return head + '<br>小测 <span class="num">' + n + ' / ' + n + '</span> 一次全对，三个目标都拿下了。';
+    return head + '<br>小测一次答对 <span class="num">' + n + ' / ' + Qs.length + '</span>，没拿下的目标，回去再看一遍就好。';
+  };
+
   GRAV.act({ id: 8, name: '小测', tag: '第 8 幕 · 小测', steps: steps });
 })();

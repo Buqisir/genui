@@ -9,7 +9,7 @@
  *   --fs-xl 20  演算板的式子
  *   --fs-2xl 30 本步标题、结论
  *   --fs-3xl 48 定义式、成绩、完成页
- * 画布里只用 12（刻度、单位、注释）和 14（标签、读数、物体名）。
+ * 画布里只用 12（刻度、单位、注释）、14（标签、读数、物体名），题面上给的已知量用 17。
  * 间距按 4 的倍数：4 8 12 16 24 32 40。
  */
 :root {
@@ -163,7 +163,9 @@ button { font-family: inherit; }
 .board.finished .finish { display: flex; }
 .board.finished .tag, .board.finished .title, .board.finished .work { display: none; }
 .finish-big { font: 500 var(--fs-3xl)/1.2 'Noto Serif SC', serif; color: var(--c-ink); }
-.finish-sub { font-size: var(--fs-md); color: var(--c-steel); }
+.finish-sub { font-size: var(--fs-lg); line-height: 1.7; color: var(--c-graphite); max-width: 420px; }
+.finish-sub .num { color: var(--c-ink); font-weight: 500; }
+.confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
 .restart {
   margin-top: 24px; height: 44px; padding: 0 24px; border: 0; border-radius: 999px;
   background: var(--c-ink); color: var(--c-page); font-size: var(--fs-md); cursor: pointer;

@@ -609,7 +609,48 @@
     E.answer.innerHTML = '';
     E.answer.onclick = null;
     closeToc();
+    if (E.finishSub && typeof GRAV.finishNote === 'function') E.finishSub.innerHTML = GRAV.finishNote();
     render();
+    if (!noLeave) confetti();
+  }
+
+  // ---------- 完成时撒彩带：两侧往上喷，3 秒落完；设置了"减少动画"就不撒 ----------
+  function confetti() {
+    if (reduceMotion) return;
+    var cv = document.createElement('canvas');
+    cv.className = 'confetti';
+    cv.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(cv);
+    var c = cv.getContext('2d'), W = window.innerWidth, H = window.innerHeight, r = window.devicePixelRatio || 1;
+    cv.width = W * r; cv.height = H * r;
+    var P = palette(), cols = [P.vel, P.field, P.charge, P.accel, P.steel];
+    var bits = [];
+    for (var i = 0; i < 160; i++) {
+      var left = i % 2 === 0, ang = (left ? -1 : -2.14) + (Math.random() - 0.5) * 0.7, sp = H * (1.3 + Math.random() * 0.8);
+      bits.push({
+        x: left ? W * 0.08 : W * 0.92, y: H + 10, vx: Math.cos(ang) * sp * 0.7, vy: Math.sin(ang) * sp,
+        w: 6 + Math.random() * 5, h: 9 + Math.random() * 7, a: Math.random() * 6, va: (Math.random() - 0.5) * 12,
+        col: cols[i % cols.length], delay: Math.random() * 0.25
+      });
+    }
+    var t0 = 0, last = 0, DUR = 3.4;
+    function step(ts) {
+      if (!t0) { t0 = last = ts; }
+      var t = (ts - t0) / 1000, dt = Math.min(0.05, (ts - last) / 1000);
+      last = ts;
+      c.setTransform(r, 0, 0, r, 0, 0);
+      c.clearRect(0, 0, W, H);
+      c.globalAlpha = t > DUR - 0.8 ? Math.max(0, (DUR - t) / 0.8) : 1;
+      bits.forEach(function (b) {
+        if (t < b.delay) return;
+        b.vy += H * 1.3 * dt; b.vx *= 1 - 1.2 * dt; b.vy *= 1 - 0.6 * dt;
+        b.x += b.vx * dt; b.y += b.vy * dt; b.a += b.va * dt;
+        c.save(); c.translate(b.x, b.y); c.rotate(b.a); c.scale(1, Math.cos(b.a * 1.7));
+        c.fillStyle = b.col; c.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); c.restore();
+      });
+      if (t < DUR) requestAnimationFrame(step); else cv.remove();
+    }
+    requestAnimationFrame(step);
   }
 
   // 同一步内前进一句
@@ -794,6 +835,7 @@
     E.btnGo = document.getElementById('btn-go');
     E.btnRestart = document.getElementById('btn-restart');
     E.playbar = document.getElementById('playbar');
+    E.finishSub = document.querySelector('.finish-sub');
     E.btnReplay = document.getElementById('btn-replay');
     E.btnSlow = document.getElementById('btn-slow');
     E.goTip = document.createElement('div');

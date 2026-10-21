@@ -7,33 +7,54 @@
   function p(o) { return o.m * o.v; }
   function ek(o) { return 0.5 * o.m * o.v * o.v; }
 
-  // 子弹与铅球：上半是动量条（一样长），下半是动能条（差 200 倍）
-  function drawCompare(ctx, w, h, t, C, beat) {
-    var x0 = 40, x1 = w - 40, full = x1 - x0 - 120;
-    var rows = [{ o: B, name: '子弹', sub: '10 g · 800 m/s' }, { o: P, name: '铅球', sub: '2 kg · 4 m/s' }];
-    var y = h * 0.18;
-    GRAV.draw.text(ctx, '动量 p', x0, y, { size: 14, color: C.graphite });
+  // 子弹与铅球：上半是题面（两件物体和它们的 m、v，用 17 号字，是题目本身）；
+  // 下半讲到第 3 句出动量柱子（一样高），第 4 句出动能柱子（差 200 倍）。柱子出现时 0.6 秒长出来。
+  function bullet(ctx, x, y, C) {
+    ctx.save();
+    ctx.fillStyle = C.graphite;
+    ctx.beginPath();
+    ctx.moveTo(x - 30, y - 7); ctx.lineTo(x + 8, y - 7);
+    ctx.quadraticCurveTo(x + 30, y - 6, x + 34, y);
+    ctx.quadraticCurveTo(x + 30, y + 6, x + 8, y + 7);
+    ctx.lineTo(x - 30, y + 7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = MOM.rgba(C.graphite, 0.25); ctx.fillRect(x - 30, y - 7, 6, 14);
+    ctx.restore();
+  }
+  function ball(ctx, x, y, r, C) {
+    var g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+    g.addColorStop(0, MOM.rgba(C.graphite, 0.55)); g.addColorStop(1, C.graphite);
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill(); ctx.restore();
+  }
+  function panel(ctx, box, title, rows, f, max, color, unit, grow, C) {
+    GRAV.draw.text(ctx, title, box.x + box.w / 2, box.y, { size: 14, color: C.graphite, align: 'center' });
+    var base = box.y + box.h - 26, top = box.y + 40, bw = Math.min(40, box.w / 5);
+    ctx.save(); ctx.strokeStyle = C.steel; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(box.x + 8, base); ctx.lineTo(box.x + box.w - 8, base); ctx.stroke(); ctx.restore();
     rows.forEach(function (r, i) {
-      var yy = y + 30 + i * 46;
-      GRAV.draw.text(ctx, r.name, x0, yy + 5, { size: 14, color: C.ink });
-      GRAV.draw.text(ctx, r.sub, x0, yy + 22, { size: 12, color: C.steel });
-      if (beat >= 2) {
-        var L = full * p(r.o) / 8;
-        ctx.fillStyle = C.vel; MOM.rr(ctx, x0 + 110, yy - 7, L, 12, 6); ctx.fill();
-        GRAV.draw.text(ctx, p(r.o).toFixed(0) + ' kg·m/s', x0 + 110 + L - 4, yy - 12, { font: 'num', size: 12, color: C.vel, align: 'right' });
-      }
+      var cx = box.x + box.w * (i ? 0.7 : 0.3), v = f(r.o);
+      var hgt = Math.max(2, (base - top) * v / max * grow);
+      ctx.fillStyle = color; ctx.fillRect(cx - bw / 2, base - hgt, bw, hgt);
+      GRAV.draw.text(ctx, r.name, cx, base + 20, { size: 14, color: C.graphite, align: 'center' });
+      if (grow >= 1) GRAV.draw.text(ctx, v.toFixed(0) + ' ' + unit, cx, base - hgt - 8, { font: 'num', size: 14, color: color, align: 'center' });
     });
-    if (beat < 3) return;
-    var y2 = y + 150;
-    GRAV.draw.text(ctx, '动能 Eₖ', x0, y2, { size: 14, color: C.graphite });
-    var max = ek(B);
+  }
+  function drawCompare(ctx, w, h, t, C, beat, tb) {
+    var rows = [{ o: B, name: '子弹', m: '10 g', v: '800 m/s' }, { o: P, name: '铅球', m: '2 kg', v: '4 m/s' }];
+    var yI = Math.max(56, h * 0.12);
     rows.forEach(function (r, i) {
-      var yy = y2 + 30 + i * 46;
-      GRAV.draw.text(ctx, r.name, x0, yy + 5, { size: 14, color: C.ink });
-      var L = Math.max(3, full * ek(r.o) / max);
-      ctx.fillStyle = C.charge; MOM.rr(ctx, x0 + 110, yy - 7, L, 12, 6); ctx.fill();
-      GRAV.draw.text(ctx, ek(r.o).toFixed(0) + ' J', x0 + 110 + Math.max(L, 40), yy - 12, { font: 'num', size: 12, color: C.charge, align: 'right' });
+      var cx = w * (i ? 0.72 : 0.28);
+      if (i) ball(ctx, cx, yI, 26, C); else bullet(ctx, cx, yI, C);
+      GRAV.draw.text(ctx, r.name, cx, yI + 58, { size: 17, color: C.ink, align: 'center' });
+      GRAV.kit.math(ctx, [{ t: 'm', sym: true }, { t: ' = ' + r.m }], cx, yI + 88, C, { size: 17, color: C.graphite, align: 'center' });
+      GRAV.kit.math(ctx, [{ t: 'v', sym: true }, { t: ' = ' + r.v }], cx, yI + 114, C, { size: 17, color: C.graphite, align: 'center' });
     });
+    var top = yI + 160, bh = h - top - 8;
+    if (bh < 120) return;
+    ctx.save(); ctx.strokeStyle = C.hair; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(8, top - 24); ctx.lineTo(w - 8, top - 24); ctx.stroke(); ctx.restore();
+    var g = Math.min(1, tb / 0.6);
+    if (beat >= 2) panel(ctx, { x: 0, y: top, w: w / 2, h: bh }, '动量 p', rows, p, 10, C.vel, 'kg·m/s', beat === 2 ? g : 1, C);
+    if (beat >= 3) panel(ctx, { x: w / 2, y: top, w: w / 2, h: bh }, '动能 Eₖ', rows, ek, ek(B) * 1.15, C.charge, 'J', beat === 3 ? g : 1, C);
   }
 
   GRAV.act({
@@ -76,6 +97,7 @@
         draw: drawCompare,
         mount: function (el, api) {
           var box = document.createElement('div');
+          box.innerHTML = '<div class="stem">子弹和铅球，谁的动量大？</div>';
           el.appendChild(box);
           GRAV.ui.choice(box, {
             options: [
