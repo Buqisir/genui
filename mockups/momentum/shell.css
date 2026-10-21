@@ -293,3 +293,11 @@ button { font-family: inherit; }
 @media (max-width: 700px) {
   .tk { grid-template-columns: 1fr; gap: 20px; }
 }
+
+/* 第 2 轮设计实验 */
+.lab-g { margin-bottom: 16px; }
+.lab-t { font-size: 13px; color: var(--c-steel); margin-bottom: 8px; }
+.chip.pick { font: 14px 'Noto Sans SC', sans-serif; height: 40px; }
+.chip.pick.on { border-color: var(--c-ink); }
+.run { height: 44px; padding: 0 26px; border: 0; border-radius: 999px; background: var(--c-velocity); color: #fff;
+  font: 500 15px 'Noto Sans SC', sans-serif; cursor: pointer; }
