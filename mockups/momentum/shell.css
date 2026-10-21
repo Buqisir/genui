@@ -310,35 +310,47 @@ button { font-family: inherit; }
 /* 只有作答区的步骤：选项不要拉满整行 */
 .work.single .opts, .work.single .choice-foot { max-width: 520px; }
 
-/* ---------- 结论区：左栏底部常驻（相当于板书）；手机上收进顶栏按钮，新结论弹提示 ---------- */
-.notes { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--c-hairline); flex: 0 0 auto; }
-.notes-h { font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); margin-bottom: 8px; }
-.notes ol, .notes-sheet ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: n; }
-.note { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); line-height: 1.6; color: var(--c-ink); }
+/* ---------- 结论区：题板顶部的一条推理链；点一项，浮层里展开正文和下属条目 ---------- */
+.chain { position: relative; z-index: 6; margin: -8px 0 20px; }
+.ch-row { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.ch-row::-webkit-scrollbar { display: none; }
+.ch-h { flex: 0 0 auto; font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); margin-right: 4px; }
+.ch-empty { font-size: var(--fs-xs); color: var(--c-steel); }
+.ch {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 15px; cursor: pointer;
+  border: 1px solid var(--c-hairline); background: var(--c-page); color: var(--c-graphite); font: var(--fs-sm) 'Noto Sans SC', sans-serif; white-space: nowrap;
+}
+.ch:hover { border-color: var(--c-steel); }
+.ch.ok:not(.latest):not(.on) { color: var(--c-graphite); }
+.ch-pop li.ok { color: var(--c-ink); }
+.ch.latest { color: var(--c-ink); border-color: var(--c-ink); font-weight: 500; }
+.ch.on { background: var(--c-ink); color: var(--c-page); border-color: var(--c-ink); }
+.ch.out .ch-t { text-decoration: line-through; color: var(--c-steel); }
+.ch.on.out .ch-t { color: inherit; }
+.ch-n { font: var(--fs-xs) 'Inter', sans-serif; opacity: .7; }
+.ch-n::before { content: '+'; }
+.ch-arrow { flex: 0 0 auto; color: var(--c-steel); font-size: var(--fs-sm); }
 .note-tag { flex: 0 0 auto; font: 500 var(--fs-xs)/18px 'Noto Sans SC', sans-serif; padding: 0 6px; border-radius: 4px; background: var(--c-card); color: var(--c-steel); box-shadow: 0 0 0 1px var(--c-hairline); }
-.note.hyp { color: var(--c-graphite); }
-.note.out .note-t { color: var(--c-steel); text-decoration: line-through; }
-.note.ok .note-tag { color: var(--c-field); box-shadow: 0 0 0 1px color-mix(in srgb, var(--c-field) 40%, transparent); }
-.note.fact .note-t::before { content: '·'; margin-right: 6px; color: var(--c-steel); }
-.note.masked .note-t { color: var(--c-graphite); }
-.note.fresh { animation: wkIn .4s ease both; }
-.note.fresh .note-t { font-weight: 500; }
-.notes-empty { margin: 0; font-size: var(--fs-sm); color: var(--c-steel); }
-.notes-btn { display: none; }
-.notes-sheet {
-  position: fixed; top: 56px; right: 12px; left: 12px; z-index: 20; max-height: 70vh; overflow: auto;
-  background: var(--c-card); border: 1px solid var(--c-hairline); border-radius: 16px; padding: 16px; box-shadow: var(--board-shadow);
+.ok > .note-tag, .ch.ok .note-tag { color: var(--c-field); box-shadow: 0 0 0 1px color-mix(in srgb, var(--c-field) 40%, transparent); }
+.ch.on .note-tag { background: transparent; color: inherit; box-shadow: 0 0 0 1px currentColor; }
+.ch-pop {
+  position: absolute; left: 0; top: calc(100% + 6px); width: min(560px, 100%); max-height: 60vh; overflow-y: auto;
+  padding: 14px 40px 14px 16px; border-radius: 12px; background: var(--c-card); border: 1px solid var(--c-hairline); box-shadow: var(--board-shadow);
+  font-size: var(--fs-sm); line-height: 1.7; color: var(--c-ink); animation: wkIn .25s ease both;
 }
-.toast {
-  position: fixed; left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 30; display: flex; gap: 8px; align-items: baseline;
-  padding: 12px 16px; border-radius: 12px; background: var(--c-ink); color: var(--c-page); font-size: var(--fs-sm); line-height: 1.6;
-  animation: wkIn .3s ease both;
-}
-.toast .note-tag { background: transparent; color: inherit; box-shadow: 0 0 0 1px currentColor; opacity: .7; }
-@media (min-width: 761px) { .notes-sheet, .toast { display: none !important; } }
+.ch-x { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border: 0; border-radius: 14px; background: none; color: var(--c-steel); font-size: 18px; line-height: 1; cursor: pointer; }
+.ch-x:hover { color: var(--c-ink); background: var(--c-page); }
+.ch-title { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+.ch-title b, .ch-pop li b { font-weight: 500; }
+.ch-pop ol { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid var(--c-hairline); display: flex; flex-direction: column; gap: 8px; }
+.ch-pop li b { margin-right: 8px; }
+.ch-pop li .note-tag { margin-right: 6px; }
+.ch-pop li div { display: inline; color: var(--c-graphite); }
+.ch-pop li.out b { text-decoration: line-through; color: var(--c-steel); }
+.ch-pop li.latest b { color: var(--c-ink); }
 @media (max-width: 760px) {
-  .notes { display: none; }
-  .notes-btn { display: inline-block; }
+  .chain { margin: -4px 0 14px; }
+  .ch-pop li div { display: block; }
 }
 
 /* ---------- 动量课删减版新增：预测锁定、候选判断、例题分段、作业 ---------- */

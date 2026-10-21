@@ -19,9 +19,10 @@
     acts.push(def);
   };
 
-  // ---------- 结论区 ----------
+  // ---------- 结论区（题板顶部的一条推理链） ----------
   // 每条：{ id, html, at: [幕号, 第几步, 第几句] 出现；hyp: true 先以猜想（？）出现；
-  //        out: [...] 到这里出局；ok: { at: [...], html } 到这里成立并改写；mask: 回忆时盖住关键词的写法 }
+  //        out: [...] 到这里出局；ok: { at: [...], html, title } 到这里成立并改写；mask: 回忆时盖住关键词的写法；
+  //        title: 链上显示的短标题（8 字左右，可选，缺省截取正文）；under: 另一条的 id，那一条出现后，这一条收到它下面 }
   // 显示与否只看当前位置，前进、后退、跳转都一致。
   var notes = [];
   GRAV.board = function (list) { notes = list || []; };
@@ -484,7 +485,7 @@
   function sameStep(at) {
     return at && !finished && acts[ai] && acts[ai].id === at[0] && si === at[1] - 1;
   }
-  var maskIds = [], lastNotes = -1, toastTimer = null;
+  var maskIds = [];
   var returnTo = null;   // 从小测结果跳去回看时，记下回来的位置
   function noteState(n) {
     if (!reached(n.at)) return null;
@@ -492,31 +493,80 @@
     if (n.ok && reached(n.ok.at)) return { cls: 'ok', html: n.ok.html, tag: '成立', fresh: sameStep(n.ok.at) };
     return { cls: n.hyp ? 'hyp' : 'fact', html: n.hyp ? n.html.replace(/？?$/, '？') : n.html, tag: n.hyp ? '猜想' : '', fresh: sameStep(n.at) };
   }
-  function renderBoard() {
-    if (!E.notes) return;
-    var html = '', count = 0, newest = null;
+  // 链上只放最高一级，按出现先后用 → 连起来；被收编的条目不单列，角标是下面有几条。
+  // 点一项，浮层里展开正文和下属条目；这一步刚得出新结论时，浮层自动弹出一会儿。
+  var chainOpen = null, chainAuto = '', chainTimer = null;
+  function actIdx(id) { for (var i = 0; i < acts.length; i++) if (acts[i].id === id) return i; return 0; }
+  function posNum(at) { return actIdx(at[0]) * 1e6 + (at[1] - 1) * 1e3 + (at[2] || 0); }
+  function noteModel() {
+    var byId = {}, items = [], tops = [], latest = null;
     notes.forEach(function (n) {
       var s = noteState(n);
       if (!s) return;
-      count++;
-      if (maskIds.indexOf(n.id) >= 0 && n.mask) s = { cls: 'fact masked', html: n.mask, tag: '', fresh: false };
-      if (s.fresh) newest = s;
-      html += '<li class="note ' + s.cls + (s.fresh ? ' fresh' : '') + '">' +
-        (s.tag ? '<span class="note-tag">' + s.tag + '</span>' : '') + '<span class="note-t">' + s.html + '</span></li>';
+      var masked = maskIds.indexOf(n.id) >= 0 && !!n.mask;
+      var okd = n.ok && reached(n.ok.at);
+      var short = plainText(s.html);
+      var it = {
+        id: n.id, n: n, s: s, masked: masked, kids: [], pos: posNum(okd ? n.ok.at : n.at),
+        title: masked ? '回忆一下' : ((okd && n.ok.title) || n.title || (short.length > 12 ? short.slice(0, 12) + '…' : short)),
+        body: masked ? n.mask : s.html
+      };
+      items.push(it); byId[n.id] = it;
+      if (!latest || it.pos >= latest.pos) latest = it;
     });
-    var body = count ? '<ol>' + html + '</ol>' : '<p class="notes-empty">得出的结论会记在这里。</p>';
-    E.notesList.innerHTML = body;
-    E.notesSheet.innerHTML = '<div class="notes-h">结论区</div>' + body;
-    E.btnNotes.textContent = '结论 ' + count;
-    E.btnNotes.hidden = !notes.length;
-    // 手机上看不到常驻的结论区：有新结论时弹一条提示
-    if (lastNotes >= 0 && count > lastNotes && newest && window.innerWidth <= 760) {
-      E.toast.innerHTML = '<span class="note-tag">结论区</span><span>' + newest.html + '</span>';
-      E.toast.hidden = false;
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(function () { E.toast.hidden = true; }, 2600);
+    items.forEach(function (it) {
+      var p = it.n.under && byId[it.n.under];
+      if (p) p.kids.push(it); else tops.push(it);
+    });
+    return { tops: tops, latest: latest, count: items.length };
+  }
+  function noteTag(it) {
+    var t = it.masked ? '' : it.s.tag;
+    return t ? '<span class="note-tag">' + t + '</span>' : '';
+  }
+  function closeChain() {
+    clearTimeout(chainTimer);
+    if (chainOpen === null) return;
+    chainOpen = null;
+    renderBoard();
+  }
+  function renderBoard() {
+    if (!E.chain) return;
+    var m = noteModel(), latestTop = null;
+    m.tops.forEach(function (t) { if (t === m.latest || t.kids.indexOf(m.latest) >= 0) latestTop = t; });
+    E.chain.hidden = !notes.length || finished;
+    if (!m.count) { E.chain.innerHTML = '<div class="ch-row"><span class="ch-h">结论</span><span class="ch-empty">得出的结论会一条条接在这里</span></div>'; return; }
+    // 新结论出现时自动弹出它所在的那一项，5 秒后收起（学生点过就不自动收）
+    var key = m.latest.id + '@' + m.latest.pos;
+    if (m.latest.s.fresh && chainAuto !== key) {
+      chainAuto = key;
+      chainOpen = latestTop.id;
+      clearTimeout(chainTimer);
+      chainTimer = setTimeout(closeChain, 5000);
     }
-    lastNotes = count;
+    var row = m.tops.map(function (t, i) {
+      var cls = 'ch ' + t.s.cls.replace('fact masked', 'masked') + (t === latestTop ? ' latest' : '') + (chainOpen === t.id ? ' on' : '');
+      return (i ? '<span class="ch-arrow" aria-hidden="true">→</span>' : '') +
+        '<button type="button" class="' + cls + '" data-id="' + t.id + '" aria-expanded="' + (chainOpen === t.id) + '">' + noteTag(t) +
+        '<span class="ch-t">' + t.title + '</span>' + (t.kids.length ? '<span class="ch-n">' + t.kids.length + '</span>' : '') + '</button>';
+    }).join('');
+    var open = null;
+    m.tops.forEach(function (t) { if (t.id === chainOpen) open = t; });
+    var pop = '';
+    if (open) {
+      pop = '<div class="ch-pop" role="dialog"><button type="button" class="ch-x" aria-label="收起">×</button>' +
+        '<div class="ch-title">' + noteTag(open) + '<b>' + open.title + '</b></div><div class="ch-body">' + open.body + '</div>' +
+        (open.kids.length ? '<ol>' + open.kids.map(function (k) {
+          return '<li class="' + k.s.cls.replace('fact masked', 'masked') + (k === m.latest ? ' latest' : '') + '">' + noteTag(k) +
+            '<b>' + k.title + '</b><div>' + k.body + '</div></li>';
+        }).join('') + '</ol>' : '') + '</div>';
+    }
+    E.chain.innerHTML = '<div class="ch-row"><span class="ch-h">结论</span>' + row + '</div>' + pop;
+    var cur = E.chain.querySelector('.ch.latest');
+    if (cur && cur.scrollIntoView) {
+      var r = E.chain.querySelector('.ch-row');
+      r.scrollLeft = Math.max(0, cur.offsetLeft - r.clientWidth + cur.offsetWidth + 8);
+    }
   }
 
   function renderStatus() {
@@ -654,6 +704,8 @@
     E.answer.innerHTML = '';
     E.answer.onclick = null;
     maskIds = [];
+    chainOpen = null;
+    clearTimeout(chainTimer);
     render();
     if (typeof st.mount === 'function') st.mount(E.answer, makeApi(my));
     render();
@@ -799,11 +851,6 @@
     E.toc.hidden = true;
     E.btnToc.setAttribute('aria-expanded', 'false');
   }
-  function toggleNotes() {
-    var open = E.notesSheet.hidden;
-    E.notesSheet.hidden = !open;
-    E.btnNotes.setAttribute('aria-expanded', String(open));
-  }
   function toggleToc() {
     if (E.toc.hidden) openToc(); else closeToc();
   }
@@ -873,12 +920,19 @@
     E.btnTheme.addEventListener('click', toggleTheme);
     E.btnReplay.addEventListener('click', replay);
     E.btnSlow.addEventListener('click', toggleSlow);
-    E.btnNotes.addEventListener('click', function (e) { e.stopPropagation(); toggleNotes(); });
-    document.addEventListener('click', function (e) {
-      if (E.notesSheet.hidden || E.notesSheet.contains(e.target)) return;
-      E.notesSheet.hidden = true;
-      E.btnNotes.setAttribute('aria-expanded', 'false');
+    E.chain.addEventListener('click', function (e) {
+      if (e.target.closest('.ch-x')) { closeChain(); return; }
+      var b = e.target.closest('.ch');
+      if (!b) return;
+      var id = b.getAttribute('data-id');
+      clearTimeout(chainTimer);
+      chainOpen = chainOpen === id ? null : id;
+      renderBoard();
     });
+    // 捕获阶段先收起旧浮层，再让按钮处理点击：点"下一句"时新弹出的浮层不会被同一下点击关掉
+    document.addEventListener('click', function (e) {
+      if (chainOpen !== null && !E.chain.contains(e.target)) closeChain();
+    }, true);
     E.toc.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('.toc-item') : null;
       if (!b) return;
@@ -894,7 +948,7 @@
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key === 'ArrowRight') advance();
       else if (e.key === 'ArrowLeft') back();
-      else if (e.key === 'Escape') closeToc();
+      else if (e.key === 'Escape') { closeToc(); closeChain(); }
     });
     window.addEventListener('hashchange', function () {
       var t = parseHash();
@@ -919,11 +973,6 @@
     E.btnBack = document.getElementById('btn-back');
     E.btnNext = document.getElementById('btn-next');
     E.btnToc = document.getElementById('btn-toc');
-    E.notes = document.getElementById('notes');
-    E.notesList = document.getElementById('notes-list');
-    E.notesSheet = document.getElementById('notes-sheet');
-    E.btnNotes = document.getElementById('btn-notes');
-    E.toast = document.getElementById('toast');
     E.btnTheme = document.getElementById('btn-theme');
     E.capPrev = document.getElementById('cap-prev');
     E.log = document.getElementById('cap-cur');
@@ -931,6 +980,10 @@
     E.board = document.getElementById('board');
     E.tag = document.getElementById('tag');
     E.title = document.getElementById('title');
+    E.chain = document.createElement('div');
+    E.chain.className = 'chain';
+    E.chain.hidden = true;
+    E.board.insertBefore(E.chain, E.tag);
     E.work = document.getElementById('work');
     E.answer = document.getElementById('answer');
     E.btnGo = document.getElementById('btn-go');
