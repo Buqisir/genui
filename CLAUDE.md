@@ -34,6 +34,8 @@
 
 ## 仓库常用
 
+- 当前方向：`plans/direction.md`（课件库转向服务一节完整的课，含三维实验计划）。
+
 - 全套检查：`cd app && npm run verify`（构建、测试、文档检查、课件校验）。
 - 单个课件校验：`cd app && npx tsx scripts/genui.ts validate ../lessons/<文件>.md`。
 - 文档改动后重新生成：`cd app && npx tsx scripts/docs.ts build`。
