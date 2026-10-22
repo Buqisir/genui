@@ -4,7 +4,8 @@
 //        --sel 题目=".log .item.say.cur" --sel 选项=".opts" --sel 画面="#scene"
 //        [--ls 键=值]... [--click "#btn-go"]... [--track "#scene"]... [--wait 1500] [--shot 截图.png] [--out 结果.json]
 // --sel 的顺序就是学生视线的顺序，"视线路程"按这个顺序把相邻两块的最近边距加起来。
-// --click 按给的顺序依次点击（每次后等 600ms），期间记录版面跳动（layout shift）。
+// --click 按给的顺序依次点击（每次后等 --click-wait 毫秒，默认 600），期间记录版面跳动（layout shift）。
+//   页面在点击后有平滑滚动之类的过渡时，把 --click-wait 调大，等它停稳再量。
 // 注意：浏览器的版面跳动指标不算点击后 0.5 秒内的移动，所以"点了按钮画面挪位"要用 --track：
 // 记下该元素在点击前和每次点击后的位置尺寸，报告最大的位移和尺寸变化。
 import { createRequire } from 'node:module'
@@ -18,7 +19,7 @@ const require = createRequire(path.join(root, 'app/package.json'))
 const { chromium } = require('playwright')
 
 const argv = process.argv.slice(2)
-const opt = { sel: [], click: [], ls: [], track: [], vp: '1280x800', theme: 'light', wait: 1500 }
+const opt = { sel: [], click: [], ls: [], track: [], vp: '1280x800', theme: 'light', wait: 1500, 'click-wait': 600 }
 for (let i = 0; i < argv.length; i++) {
   const k = argv[i].replace(/^--/, ''), v = argv[++i]
   if (k === 'sel') { const j = v.indexOf('='); opt.sel.push([v.slice(0, j), v.slice(j + 1)]) }
@@ -57,7 +58,7 @@ async function rects() {
   }), opt.track)
 }
 const tracks = [await rects()]
-for (const c of opt.click) { await page.locator(c).first().click(); await page.waitForTimeout(600); tracks.push(await rects()) }
+for (const c of opt.click) { await page.locator(c).first().click(); await page.waitForTimeout(Number(opt['click-wait'])); tracks.push(await rects()) }
 
 const data = await page.evaluate(({ sels, W, H }) => {
   function rgb(s) { const m = s.match(/[\d.]+/g); return m ? m.map(Number) : [0, 0, 0, 0] }
