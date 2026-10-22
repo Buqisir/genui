@@ -2,9 +2,11 @@
 // 用法：
 //   node measure.mjs --url <地址> [--vp 1280x800] [--theme light|dark]
 //        --sel 题目=".log .item.say.cur" --sel 选项=".opts" --sel 画面="#scene"
-//        [--ls 键=值]... [--click "#btn-go"]... [--wait 1500] [--shot 截图.png] [--out 结果.json]
+//        [--ls 键=值]... [--click "#btn-go"]... [--track "#scene"]... [--wait 1500] [--shot 截图.png] [--out 结果.json]
 // --sel 的顺序就是学生视线的顺序，"视线路程"按这个顺序把相邻两块的最近边距加起来。
 // --click 按给的顺序依次点击（每次后等 600ms），期间记录版面跳动（layout shift）。
+// 注意：浏览器的版面跳动指标不算点击后 0.5 秒内的移动，所以"点了按钮画面挪位"要用 --track：
+// 记下该元素在点击前和每次点击后的位置尺寸，报告最大的位移和尺寸变化。
 import { createRequire } from 'node:module'
 import { existsSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -16,11 +18,12 @@ const require = createRequire(path.join(root, 'app/package.json'))
 const { chromium } = require('playwright')
 
 const argv = process.argv.slice(2)
-const opt = { sel: [], click: [], ls: [], vp: '1280x800', theme: 'light', wait: 1500 }
+const opt = { sel: [], click: [], ls: [], track: [], vp: '1280x800', theme: 'light', wait: 1500 }
 for (let i = 0; i < argv.length; i++) {
   const k = argv[i].replace(/^--/, ''), v = argv[++i]
   if (k === 'sel') { const j = v.indexOf('='); opt.sel.push([v.slice(0, j), v.slice(j + 1)]) }
   else if (k === 'click') opt.click.push(v)
+  else if (k === 'track') opt.track.push(v)
   else if (k === 'ls') { const j = v.indexOf('='); opt.ls.push([v.slice(0, j), v.slice(j + 1)]) }
   else opt[k] = v
 }
@@ -45,7 +48,16 @@ await page.addInitScript(ls => {
 await page.goto(opt.url, { waitUntil: 'networkidle' })
 await page.waitForTimeout(Number(opt.wait))
 const clsBefore = await page.evaluate(() => window.__cls)
-for (const c of opt.click) { await page.locator(c).first().click(); await page.waitForTimeout(600) }
+async function rects() {
+  return page.evaluate(sels => sels.map(css => {
+    const el = document.querySelector(css)
+    if (!el) return null
+    const r = el.getBoundingClientRect()
+    return r.width > 0 ? { x: Math.round(r.x), y: Math.round(r.y + scrollY), w: Math.round(r.width), h: Math.round(r.height) } : null
+  }), opt.track)
+}
+const tracks = [await rects()]
+for (const c of opt.click) { await page.locator(c).first().click(); await page.waitForTimeout(600); tracks.push(await rects()) }
 
 const data = await page.evaluate(({ sels, W, H }) => {
   function rgb(s) { const m = s.match(/[\d.]+/g); return m ? m.map(Number) : [0, 0, 0, 0] }
@@ -125,6 +137,17 @@ const data = await page.evaluate(({ sels, W, H }) => {
   }
 }, { sels: opt.sel, W: w, H: h })
 
+data.track = opt.track.map((css, i) => {
+  const seq = tracks.map(t => t[i])
+  const base = seq.find(Boolean)
+  let move = 0, resize = 0, appear = 0
+  for (const r of seq) {
+    if (!r || !base) { appear++; continue }
+    move = Math.max(move, Math.hypot(r.x - base.x, r.y - base.y))
+    resize = Math.max(resize, Math.abs(r.w - base.w), Math.abs(r.h - base.h))
+  }
+  return { css, seq, maxMove: Math.round(move), maxResize: Math.round(resize), missingStates: appear }
+})
 data.layoutShift = { onLoad: +clsBefore.toFixed(4), afterClicks: +(await page.evaluate(() => window.__cls) - clsBefore).toFixed(4) }
 data.viewport = { w, h, theme: opt.theme }
 data.url = opt.url
