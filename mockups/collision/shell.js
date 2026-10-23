@@ -634,6 +634,9 @@
   // ---------- G6 先选后提交（外壳层，捕获阶段拦截；对停点里所有 .opt 生效） ----------
   // 停点上点选项只是选中（.sel）；按「提交」（或回车）时，让被选中的按钮收到一次真正的 click，原逻辑照走。
   var selOpt = null, submitting = false;
+  // 防连点：提交一个选项后的 400ms 内，「提交/继续」和键盘推进都不再响应（否则双击或按住回车会连过反馈）
+  var goHoldUntil = 0;
+  function goHeld() { return Date.now() < goHoldUntil; }
   function optIn(el) { return !!el && (E.answer.contains(el) || (E.act && E.act.contains(el))); }
   function validSel() {
     if (selOpt && !(selOpt.isConnected && !selOpt.disabled && !finished && locked() && optIn(selOpt))) { selOpt.classList.remove('sel'); selOpt = null; }
@@ -658,9 +661,13 @@
     o.classList.remove('sel'); selOpt = null;
     submitting = true;
     try { o.click(); } finally { submitting = false; }
+    goHoldUntil = Date.now() + 400;
     syncGo();
   }
-  function onGo() { if (!finished && locked()) submitSel(); else advance(); }
+  function onGo() {
+    if (goHeld()) return;
+    if (!finished && locked()) submitSel(); else advance();
+  }
   function placeGo() {
     if (!E.btnGo || !E.barIn) return;
     if (newLayout()) { if (E.btnGo.parentNode !== E.barIn) E.barIn.insertBefore(E.btnGo, E.barHint); }
@@ -1722,13 +1729,15 @@
         if (t && t.closest) {
           if (t.closest('input, textarea, select, a, summary')) return;
           if (t.closest('button') && !t.closest('.opt, #btn-go')) return;
+          if (e.repeat) { e.preventDefault(); return; }   // 按住回车不重复选、不重复提交、不重复推进
           if (t.classList.contains('opt') && !finished && locked() && !t.disabled && t !== selOpt) { e.preventDefault(); t.click(); return; }
         }
         e.preventDefault();
+        if (e.repeat) return;
         if (!E.btnGo.hidden && !E.btnGo.disabled) E.btnGo.click();
         return;
       }
-      if (e.key === 'ArrowRight') advance();
+      if (e.key === 'ArrowRight') { if (!goHeld()) advance(); }   // 右箭头（翻页笔）按住可以连翻讲述，只在刚提交后让开 400ms
       else if (e.key === 'ArrowLeft') back();
       else if (e.key === 'Escape') { closeToc(); closeChain(); }
     });
