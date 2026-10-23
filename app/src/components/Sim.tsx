@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { num } from '../lesson/expr'
 import { motionPayload } from '../lesson/motion'
 import { opticsPayload } from '../lesson/optics'
 import type { Props } from '../lesson/parse'
 import { namesIn, reducedMotion, useScopeFor, useStore, valueKey } from '../lesson/store'
+import { PlayGate } from './step/playGate'
 import { loadSandboxFonts } from '../sim/fonts'
 import runtime from 'virtual:sandbox-runtime'
 import { colorOf, palette, useTheme } from '../theme'
@@ -131,6 +132,8 @@ const fmtT = (v: number, duration: number) => v.toFixed(tDigits(duration))
 export function Sim({ props, body, still = false }: { props: Props; body: string; still?: boolean }) {
   const store = useStore()
   const theme = useTheme()
+  // In a step lesson the scene waits for its sentence (gate.open) and plays once from t = 0 each time it opens or the step is re-entered.
+  const gate = useContext(PlayGate)
   const frame = useRef<HTMLIFrameElement>(null)
   const figureRef = useRef<HTMLElement>(null)
   const [ready, setReady] = useState(false)
@@ -139,7 +142,7 @@ export function Sim({ props, body, still = false }: { props: Props; body: string
   const [speed, setSpeed] = useState(1)
   const [localT, setLocalT] = useState(0)
   // Autoplay loops with a short hold at the end until the student takes the controls.
-  const [auto, setAuto] = useState(() => !still && props.autoplay !== false && !reducedMotion())
+  const [auto, setAuto] = useState(() => !still && !gate && props.autoplay !== false && !reducedMotion())
 
   const timeParam = !still && typeof props.time === 'string' ? props.time : null
   const names = (Array.isArray(props.params) ? props.params : []) as string[]
@@ -246,8 +249,18 @@ export function Sim({ props, body, still = false }: { props: Props; body: string
     lastParams.current = paramsKey
     if (still) return
     setTRef.current(0)
-    if (!reducedMotion()) setPlaying(true)
-  }, [paramsKey, still])
+    if (gate && !gate.open) setPlaying(false)
+    else if (!reducedMotion()) setPlaying(true)
+  }, [paramsKey, still]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Step lesson: hold at t = 0 until the gate opens, then play once (no looping); again when the step is re-entered.
+  const gateOpen = gate ? gate.open : null
+  const gateEpoch = gate?.epoch
+  useEffect(() => {
+    if (gateOpen === null || still) return
+    setTRef.current(0)
+    setPlaying(gateOpen && ready && !reducedMotion())
+  }, [gateOpen, gateEpoch, ready, still])
 
   useEffect(() => {
     if (!auto || !ready || still) return

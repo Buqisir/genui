@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseLesson } from '../../lesson/parse'
-import { findChoice, quizTotal, recallText, resultText, splitActs, splitParagraphs, stepTitle } from './model'
+import { findChoice, mergeDefs, quizTotal, recallText, resultText, splitActs, splitParagraphs, stepTitle } from './model'
 import { StepEngine } from './runtime'
 
 const lesson = (body: string) => splitActs(parseLesson(`---\nid: t\n---\n${body}`).blocks)
@@ -304,5 +304,73 @@ describe('StepEngine', () => {
     e.advance()
     old.say(['迟到的反馈'])
     expect(e.entries()).toEqual([])
+  })
+})
+
+describe('merged Def cards and annotations', () => {
+  const m = lesson(`<Act title="a" />
+
+<Step title="s" />
+
+<Def follow rows={[{ name: "甲", text: "t1" }, { name: "乙", text: "t2", note: "n" }]} />
+
+第一句。
+
+<Sim title="x" duration={1}>
+sim({})
+</Sim>
+
+第二句。
+
+第三句。
+
+<Def rows={[{ name: "丙", text: "t3" }]} />
+
+<Act title="小测" quiz />
+
+<Step title="q1" />
+
+<Stem text="题" />
+
+问。
+
+<Choice options={[{ text: "x", correct: true, say: "s" }, { text: "y", say: "s" }]} />
+
+<Step title="q2" />
+
+<Choice options={[{ text: "x", correct: true, say: "s" }, { text: "y", say: "s" }]} />
+
+<Step title="r" />
+
+<Result goals={[{ title: "g", items: [1], back: 1 }]} />
+`)
+
+  it('folds later Defs into the first, each row with its own sentence number', () => {
+    const comps = m.acts[0].steps[0].comps
+    expect(comps.map((c) => [c.block.name, c.at])).toEqual([
+      ['Def', 0],
+      ['Sim', 0],
+    ])
+    const rows = comps[0].block.props.rows as { name: string; at: number; follow: boolean; idx: number }[]
+    expect(rows.map((r) => [r.name, r.at, r.follow, r.idx])).toEqual([
+      ['甲', 0, true, 0],
+      ['乙', 0, true, 1],
+      ['丙', 2, false, 0],
+    ])
+  })
+
+  it('mergeDefs leaves a step without Def alone', () => {
+    const comps = m.acts[0].steps[0].comps.slice(1)
+    expect(mergeDefs(comps)).toBe(comps)
+  })
+
+  it('tells a Choice whether its step has a Stem and which quiz question it is', () => {
+    const [a, b] = m.acts[1].steps.slice(0, 2).map((s) => s.comps.find((c) => c.block.name === 'Choice')!.block.props)
+    expect([a._stem, a._quiz, a._qno]).toEqual([true, true, 1])
+    expect([b._stem, b._quiz, b._qno]).toEqual([false, true, 2])
+  })
+
+  it('tells a Result whether its step has prose', () => {
+    expect(m.acts[1].steps[2].comps[0].block.props._prose).toBe(false)
   })
 })

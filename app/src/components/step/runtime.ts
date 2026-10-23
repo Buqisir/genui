@@ -1,4 +1,4 @@
-import { createContext, useContext, useLayoutEffect, useMemo, useRef } from 'react'
+import { createContext, useContext, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 
 /**
  * The player's state and the interface step components use to talk to it.
@@ -34,6 +34,33 @@ export interface StopOptions {
   gate?: boolean
 }
 
+/** One `<Conclude>`: the props that matter for the chain. */
+export interface ConcludeEntry {
+  title: string
+  text: string
+  under?: string
+  guess?: boolean
+  settles?: string
+  result?: 'holds' | 'out'
+  blank?: string
+}
+
+/** One line of the conclusion chain, ready to draw (see `StepEngine.chain`). */
+export interface ChainItem {
+  /** The title the entry was written with: unique, and what `under` / `settles` / `mask` refer to. */
+  key: string
+  /** What is shown: the title of the entry that settled it (holds), "回忆一下" while masked. */
+  title: string
+  text: string
+  /** Indent level: 0 = on the root, 1 = under a root item, … */
+  depth: number
+  tag: '' | '猜想' | '成立' | '出局'
+  out: boolean
+  masked: boolean
+  /** The newest thing that happened on the chain. */
+  latest: boolean
+}
+
 export interface StepRuntime {
   /** The sentence the narration is at. */
   beat: number
@@ -54,6 +81,20 @@ export interface StepRuntime {
   /** Only the first answer to each quiz question counts. `choiceKey` is any string unique to the question. */
   recordQuiz(choiceKey: string, correct: boolean): void
   quizScore(): { n: number; total: number }
+  /**
+   * Add a `<Conclude>` to the chain from sentence `at` of this step on (`sort` = its line, to order entries on one sentence).
+   * The chain remembers it for the whole visit, so later steps still show it; call again with the same `id` is harmless.
+   */
+  registerConclude(id: string, at: number, entry: ConcludeEntry, sort?: number): void
+  /** A `<Fill mask>` of this step: the chain entries with these titles show their blanked version until the stop `stopId` is resolved. */
+  registerMask(stopId: string, titles: string[]): void
+  /**
+   * Small memory that survives a `replay()` (and only that): the object `init` made the first time, per `id`.
+   * Mutate it, or replace its fields, and keep React state in step with it. Dropped when a step is entered again.
+   */
+  keep<T extends object>(id: string, init: () => T): T
+  /** Play the scenes of this step from t = 0 again: every component of the step remounts (stops and `keep` memory stay). Call it last: the runtime you hold is dead afterwards. */
+  replay(): void
 }
 
 export const StepRuntimeContext = createContext<StepRuntime | null>(null)
@@ -120,6 +161,11 @@ export class StepEngine {
   private predicts = new Map<string, number>()
   private quiz = new Map<string, boolean>()
   private holdUntil = 0
+  private concludes = new Map<string, { step: number; at: number; sort: number; entry: ConcludeEntry }>()
+  private masks = new Map<string, { step: number; titles: string[]; stopKey: string }>()
+  private kept = new Map<string, object>()
+  /** The engine most recently asked for a runtime: lets `<ConcludeChain />` find it from anywhere in the layout. */
+  static latest: StepEngine | null = null
   /** Test hook: the clock. */
   now = () => Date.now()
 
@@ -153,6 +199,7 @@ export class StepEngine {
   private enter(step: number, beat: number) {
     this.pos = { phase: 'step', step, beat, epoch: this.pos.epoch + 1 }
     this.stops.clear()
+    this.kept.clear()
     this.log = []
     this.notify()
   }
@@ -174,6 +221,9 @@ export class StepEngine {
     this.predicts.clear()
     this.quiz.clear()
     this.resolvedStops.clear()
+    this.concludes.clear()
+    this.masks.clear()
+    this.kept.clear()
     this.pos = { phase: 'cover', step: 0, beat: 0, epoch: this.pos.epoch + 1 }
     this.stops.clear()
     this.log = []
@@ -342,12 +392,128 @@ export class StepEngine {
     return { n, total: this.total }
   }
 
+  // ---- replay, memory ----
+
+  /** Remount the components of the step on screen so the scenes start over; stops and `keep` memory stay. */
+  replay() {
+    if (this.pos.phase !== 'step') return
+    this.pos = { ...this.pos, epoch: this.pos.epoch + 1 }
+    this.notify()
+  }
+
+  keep<T extends object>(stepKey: string, id: string, init: () => T): T {
+    const key = `${stepKey}#${id}`
+    let v = this.kept.get(key)
+    if (!v) this.kept.set(key, (v = init()))
+    return v as T
+  }
+
+  // ---- the conclusion chain ----
+
+  registerConclude(step: number, id: string, at: number, entry: ConcludeEntry, sort = 0) {
+    const key = `${step}#${id}`
+    const old = this.concludes.get(key)
+    if (old && old.at === at && old.sort === sort && JSON.stringify(old.entry) === JSON.stringify(entry)) return
+    this.concludes.set(key, { step, at, sort, entry })
+    this.notify()
+  }
+
+  registerMask(step: number, stopId: string, titles: string[]) {
+    const key = `${step}#${stopId}`
+    const old = this.masks.get(key)
+    if (old && old.titles.join('\n') === titles.join('\n')) return
+    this.masks.set(key, { step, titles, stopKey: `${step}#${stopId}` })
+    this.notify()
+  }
+
+  /**
+   * The chain as it stands at the current sentence: the entries of earlier steps and of this step up to the
+   * sentence, so going back to an earlier step shows the chain as it was then. A `settles` entry does not get a
+   * line of its own: `holds` turns the line it settles into itself, `out` strikes that line through.
+   */
+  chain(): ChainItem[] {
+    const { phase, step, beat } = this.pos
+    if (phase === 'cover') return []
+    const rank = (c: { step: number; at: number; sort: number }) => c.step * 1e9 + c.at * 1e6 + c.sort
+    const seen = [...this.concludes.values()]
+      .filter((c) => phase === 'done' || c.step < step || (c.step === step && c.at <= beat))
+      .sort((a, b) => rank(a) - rank(b))
+    const titles = new Set(seen.filter((c) => !c.entry.settles).map((c) => c.entry.title))
+    const settlers = new Map<string, (typeof seen)[number]>()
+    for (const c of seen) if (c.entry.settles && titles.has(c.entry.settles)) settlers.set(c.entry.settles, c)
+    const absorbed = new Set(settlers.values())
+    const masked = (title: string) => {
+      if (phase === 'done') return false
+      for (const m of this.masks.values()) if (m.step <= step && m.titles.includes(title) && !this.resolvedStops.has(m.stopKey)) return true
+      return false
+    }
+    type Node = { item: ChainItem; entry: ConcludeEntry; names: string[]; rank: number; kids: Node[] }
+    const nodes: Node[] = []
+    let newest = -1
+    for (const c of seen) {
+      if (absorbed.has(c)) continue
+      const e = c.entry
+      const s = settlers.get(e.title)
+      const holds = s?.entry.result === 'holds'
+      const out = s?.entry.result === 'out'
+      const shown = holds ? s!.entry : e
+      const names = holds ? [e.title, s!.entry.title] : [e.title]
+      const hidden = names.some(masked)
+      const r = Math.max(rank(c), s ? rank(s) : -1)
+      newest = Math.max(newest, r)
+      nodes.push({
+        item: {
+          key: e.title,
+          title: hidden ? '回忆一下' : shown.title,
+          text: hidden ? ((holds ? s!.entry.blank : undefined) ?? e.blank ?? '……') : shown.text,
+          depth: 0,
+          tag: hidden ? '' : holds ? '成立' : out ? '出局' : e.guess ? '猜想' : '',
+          out: !hidden && out,
+          masked: hidden,
+          latest: false,
+        },
+        entry: e,
+        names,
+        rank: r,
+        kids: [],
+      })
+    }
+    const byName = new Map<string, Node>()
+    for (const n of nodes) for (const name of n.names) byName.set(name, n)
+    const parentOf = (n: Node): Node | undefined => {
+      const p = n.entry.under ? byName.get(n.entry.under) : undefined
+      if (!p || p === n) return undefined
+      // a loop of unders: the entry that closes it goes back to the root
+      for (let q: Node | undefined = p, i = 0; q && i <= nodes.length; i++) {
+        if (q === n) return undefined
+        q = q.entry.under ? byName.get(q.entry.under) : undefined
+      }
+      return p
+    }
+    const roots: Node[] = []
+    for (const n of nodes) {
+      const p = parentOf(n)
+      if (p) p.kids.push(n)
+      else roots.push(n)
+    }
+    const out: ChainItem[] = []
+    const walk = (n: Node, depth: number) => {
+      n.item.depth = depth
+      n.item.latest = n.rank === newest
+      out.push(n.item)
+      n.kids.forEach((k) => walk(k, depth + 1))
+    }
+    roots.forEach((n) => walk(n, 0))
+    return out
+  }
+
   /**
    * What a component of the step entered at `epoch` sees (add `beat` to get a `StepRuntime`). Built once per
    * step visit so `registerStop` keeps its identity; calls from a step that is no longer on screen do nothing.
    */
   runtimeFor(epoch: number, stepKey: string): Omit<StepRuntime, 'beat'> {
     const live = () => this.pos.epoch === epoch
+    StepEngine.latest = this
     return {
       stepKey,
       epoch,
@@ -359,6 +525,18 @@ export class StepEngine {
       getPredict: (n) => this.getPredict(n),
       recordQuiz: (k, c) => this.recordQuiz(k, c),
       quizScore: () => this.quizScore(),
+      registerConclude: (id, at, entry, sort) => live() && this.registerConclude(this.pos.step, id, at, entry, sort),
+      registerMask: (stopId, titles) => live() && this.registerMask(this.pos.step, stopId, titles),
+      keep: (id, init) => this.keep(stepKey, id, init),
+      replay: () => live() && this.replay(),
     }
   }
+}
+
+/** The conclusion chain at the current sentence, kept up to date. Works anywhere inside the step lesson, also outside the runtime provider. */
+export function useChain(): ChainItem[] {
+  const engine = StepEngine.latest
+  const sub = useMemo(() => engine?.subscribe ?? (() => () => {}), [engine])
+  const version = useSyncExternalStore(sub, engine?.getVersion ?? (() => 0))
+  return useMemo(() => engine?.chain() ?? [], [engine, version])
 }

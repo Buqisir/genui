@@ -2,16 +2,23 @@
 
 .sl {
   --B0: clamp(16px, 1.2vw, 19px);
-  --B: var(--B0);
+  /* --k: layoutFit.ts sets it below 1 when a step does not fit (last resort, spec 3.1); T does not shrink */
+  --k: 1;
+  --B: calc(var(--B0) * var(--k));
   --S: max(13px, calc(var(--B) * 0.82));
   --T: calc(var(--B0) * 1.5);
+  --E: calc(var(--B) * 1.3);
   --D: calc(var(--B0) * 2.6);
+  /* gaps inside the columns; data-dn 1 and 2 (set by layoutFit.ts) tighten them */
+  --lg: 24px;
+  --rg: 16px;
   --s1: 4px;
   --s2: 8px;
   --s3: 12px;
   --s4: 16px;
   --s5: 24px;
   --s6: 40px;
+  --s7: 64px;
   --r1: 6px;
   --r2: 14px;
   --r3: 28px;
@@ -21,7 +28,7 @@
   grid-template-columns: var(--col-cap) minmax(0, 1fr);
   grid-template-rows: 56px minmax(0, 1fr);
   column-gap: var(--s4);
-  min-height: min(760px, calc(100vh - 140px));
+  height: clamp(600px, calc(100vh - 156px), 880px);
   font-size: var(--B);
   line-height: 1.65;
   color: var(--c-ink);
@@ -29,6 +36,14 @@
 .sl[data-phase='cover'],
 .sl[data-phase='done'] {
   grid-template-columns: minmax(0, 1fr);
+}
+.sl[data-dn='1'] {
+  --lg: 16px;
+  --rg: 12px;
+}
+.sl[data-dn='2'] {
+  --lg: 12px;
+  --rg: 8px;
 }
 
 /* ---------- 顶栏 ---------- */
@@ -117,18 +132,47 @@
   padding: var(--s2) var(--s3);
 }
 
-/* ---------- 板 ---------- */
+/* 结论链的弹层：落在右上，不盖左栏的画面（也不盖幕标签和标题） */
+@media (min-width: 1024px) {
+  .sl-chain .il-pop {
+    left: auto;
+    right: 0;
+    width: min(380px, 100%);
+  }
+}
+
+/* 讲述栏的占位层：只在手机上用（讲述栏在板上面，高度不能随句子变，否则板会在页面里被推下去） */
+.sl-narr-ghost {
+  display: none;
+}
+.sl-narr-live {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+/* ---------- 板（规格 3.1）：结论链 32 / 幕标签 / 标题 / 主区 / 动作条 ---------- */
 .sl-board {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: var(--s5);
+  padding: 28px clamp(40px, 6.5%, 96px) 0;
   background: var(--c-card);
   border: 1px solid var(--c-hairline);
   border-radius: var(--r3);
 }
+.sl-chain {
+  flex: none;
+  position: relative;
+  z-index: 6;
+  height: 32px;
+  margin: 0 0 var(--s3);
+}
 .sl-head {
-  min-height: calc(var(--S) * 1.5 + var(--T) * 1.3 + var(--s2));
+  flex: none;
+  min-height: calc(var(--S) * 1.5 + var(--T) * 1.3 + var(--s1));
 }
 .sl-act {
   font-size: var(--S);
@@ -143,37 +187,112 @@
   line-height: 1.3;
   color: var(--c-ink);
 }
+/* 主区：标题下 s6 到动作条上 s5。整组（.sl-work）在里面水平居中、竖向偏上（layoutFit.ts 算 --gtop） */
 .sl-main {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
-  padding: var(--s5) 0;
+  margin: var(--s6) 0 calc(var(--s5) * 2 + 48px);
 }
-.sl-cols {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  gap: var(--s6);
-  align-items: start;
+.sl[data-dn='1'] .sl-main {
+  margin-top: calc(var(--s6) - var(--s2));
 }
-.sl-cols.single {
-  grid-template-columns: minmax(0, 1fr);
-  max-width: 720px;
-  margin: 0 auto;
+.sl[data-dn='2'] .sl-main {
+  margin-top: var(--s5);
 }
-.sl-col {
+.sl-work {
   display: flex;
   flex-direction: column;
-  gap: var(--s4);
+  align-items: center;
+  width: 100%;
+  padding-top: var(--gtop, 0px);
+}
+.sl-silent {
+  display: contents;
+}
+/* 整栏的东西：结论分数、作业网格、补全结论卡（Fill 里自己分两半，可以用 --lw / --rc / --cg） */
+.sl-span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rg);
+  width: 100%;
   min-width: 0;
+}
+.sl-work[data-layout='result'] .sl-span {
+  max-width: calc(var(--B) * 32);
+}
+.sl-work[data-layout='grid'] .sl-span {
+  max-width: 960px;
+}
+/* 作业：单栏里排两列网格（规格 3.3 grid）。只认组件的根元素和它的子项，不认内部类名 */
+.sl-work[data-layout='grid'] .sl-comp-Homework > * {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--s6);
+  max-width: none;
+}
+.sl-work[data-layout='grid'] .sl-comp-Homework > * > :nth-child(2) {
+  border-top: 0;
+  padding-top: 0;
+}
+.sl-cols {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  column-gap: var(--cg, 64px);
+  width: 100%;
+}
+.sl-span + .sl-cols {
+  margin-top: var(--s5);
+}
+/* 左栏宽 --lw、右栏宽 --rc；矮的一栏用 --ltop / --rtop 对齐到高的一栏中心 */
+.sl-left {
+  flex: 0 0 var(--lw, auto);
+  width: var(--lw, auto);
+  min-width: 0;
+  padding-top: var(--ltop, 0px);
+}
+.sl-right {
+  flex: 0 0 var(--rc, auto);
+  width: var(--rc, auto);
+  min-width: 0;
+  margin-top: var(--rtop, 0px);
+}
+.sl-colin {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sl-left .sl-colin {
+  gap: var(--lg);
+}
+.sl-right .sl-colin {
+  gap: var(--rg);
 }
 .sl-comp {
   min-width: 0;
 }
+.sl-comp:empty {
+  display: none;
+}
+.sl-comp-Stem {
+  order: -1;
+}
+.sl-scene {
+  width: 100%;
+}
 
-/* ---------- 动作条 ---------- */
+/* ---------- 动作条：板底居中，离板底 s5 ---------- */
 .sl-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--s5);
   display: flex;
   justify-content: center;
-  padding-top: var(--s3);
+  pointer-events: none;
+}
+.sl-bar > * {
+  pointer-events: auto;
 }
 .sl-go {
   height: 48px;
@@ -282,39 +401,102 @@
   color: var(--c-graphite);
 }
 
-/* ---------- 手机：单栏，讲述栏在板上面，动作条贴底 ---------- */
-@media (max-width: 760px) {
+/* ---------- 手机和窄屏（< 1024）：单栏，从上往下 标签标题、题干、画面、问句、选项；结论链在内容下面；动作条贴底 ---------- */
+@media (max-width: 1023px) {
   .sl {
     --B0: 16px;
     --T: 22px;
+    --lg: 16px;
+    --rg: 16px;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 56px auto minmax(0, 1fr);
-    min-height: calc(100vh - 100px);
+    height: auto;
+    min-height: 0; /* the board hugs its content; no blank band between the last card and the button */
   }
   .sl[data-phase='cover'],
   .sl[data-phase='done'] {
     grid-template-rows: 56px minmax(0, 1fr);
   }
   .sl-narr {
+    position: relative;
     padding: var(--s2) 0 var(--s3);
+  }
+  .sl-narr-ghost {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .sl-ghost-stack {
+    display: grid;
+  }
+  .sl-ghost-stack > * {
+    grid-area: 1 / 1;
+  }
+  .sl-narr-ghost .sl-item.me {
+    align-self: flex-start;
+  }
+  .sl-narr:not(.open) .sl-narr-live {
+    position: absolute;
+    top: var(--s2);
+    left: 0;
+    right: 0;
+  }
+  .sl-narr.open .sl-narr-ghost {
+    display: none;
   }
   .sl-board {
     padding: var(--s4);
     border-radius: var(--r2);
   }
-  .sl-cols {
-    grid-template-columns: minmax(0, 1fr);
+  .sl-main {
+    flex: 0 0 auto;
+    margin: var(--s4) 0 0;
+  }
+  .sl-work {
+    align-items: stretch;
     gap: var(--s4);
+    padding-top: 0;
+  }
+  .sl-cols,
+  .sl-col,
+  .sl-colin,
+  .sl-span {
+    display: contents;
+  }
+  .sl-work > *,
+  .sl-comp {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .sl-span > .sl-comp {
+    order: -2;
+  }
+  .sl-comp-Stem {
+    order: -1;
+  }
+  .sl-right .sl-comp {
+    order: 1;
+  }
+  /* 结论链：手机上也在板最上一行（有 <Conclude> 的课每步都留这一行，第一条结论来时页面不动） */
+  .sl-chain {
+    margin: 0 0 var(--s3);
+  }
+  .sl-chain:not(.has) {
+    display: none;
   }
   .sl-bar {
+    order: 3;
     position: sticky;
     bottom: 0;
     z-index: 5;
-    margin: 0 calc(var(--s4) * -1) calc(var(--s4) * -1);
+    margin: var(--s4) calc(var(--s4) * -1) calc(var(--s4) * -1);
     padding: var(--s3) var(--s4);
     background: var(--c-card);
     border-top: 1px solid var(--c-hairline);
     border-radius: 0 0 var(--r2) var(--r2);
+    pointer-events: auto;
   }
   .sl-go {
     width: 100%;

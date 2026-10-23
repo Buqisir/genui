@@ -1,0 +1,472 @@
+/* 分步课的填空（Fill）、实验（Lab）和结论链（ConcludeChain）。令牌 B / S / s1–s6 / r1–r2 来自 step.css 的 .sl，颜色只用 styles.css 的 --c-*，亮色、夜光自动切换。 */
+
+/* Conclude 本身不画东西：占位的格子也不占版面 */
+.sl-comp-Conclude {
+  display: none;
+}
+
+/* ---------- 选项（板面规格 5.10）：字母 + hairline 竖线 + 正文 + 右侧标记 ---------- */
+.il-group-t {
+  font-size: var(--S, 14px);
+  line-height: 1.5;
+  color: var(--c-graphite);
+  margin-bottom: var(--s2, 8px);
+}
+.il-opts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3, 12px);
+  counter-reset: il-opt;
+}
+.il-opt {
+  counter-increment: il-opt;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: calc(var(--B, 16px) * 2.2 + 2 * var(--s3, 12px));
+  padding: 0;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2, 14px);
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: inherit;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.il-opt::before {
+  content: counter(il-opt, upper-alpha);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  margin: var(--s3, 12px) 0;
+  border-right: 1px solid var(--c-hairline);
+  font-size: var(--S, 14px);
+  font-weight: 500;
+  color: var(--c-graphite);
+}
+.il-opt-t {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  padding: var(--s3, 12px) calc(24px + var(--s3, 12px) + var(--s2, 8px)) var(--s3, 12px) var(--s3, 12px);
+}
+.il-opt-mark {
+  position: absolute;
+  right: var(--s3, 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  text-align: center;
+  line-height: 1;
+  color: var(--c-ink);
+}
+.il-opt:hover:not(:disabled):not(.sel) {
+  border-color: var(--c-steel);
+}
+.il-opt:disabled {
+  cursor: default;
+}
+.il-opt.sel,
+.il-opt.sel:hover {
+  border-color: var(--c-ink);
+  box-shadow: inset 0 0 0 1px var(--c-ink);
+  background: linear-gradient(90deg, var(--c-raised) 0 36px, var(--c-card) 36px);
+}
+.il-opt.sel::before {
+  color: var(--c-ink);
+}
+.il-opt.lose {
+  background: var(--c-raised);
+  color: var(--c-graphite);
+}
+.il-opt.lose .il-opt-t {
+  text-decoration: line-through;
+}
+.il-opt.lose .il-opt-mark {
+  color: var(--c-graphite);
+}
+
+.il-txt-btn {
+  margin-top: var(--s2, 8px);
+  padding: var(--s1, 4px) 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--B, 16px);
+  color: var(--c-graphite);
+  cursor: pointer;
+}
+.il-txt-btn:hover {
+  color: var(--c-ink);
+}
+
+/* ---------- 填空（5.13） ---------- */
+.il-fill {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4, 16px);
+  min-width: 0;
+}
+.il-card {
+  background: var(--c-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2, 14px);
+  overflow: hidden;
+}
+.il-row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  border-top: 1px solid var(--c-hairline);
+}
+.il-row:first-child {
+  border-top: 0;
+}
+.il-row-name {
+  padding: var(--s3, 12px) var(--s4, 16px);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--c-ink);
+}
+.il-row-body {
+  padding: var(--s3, 12px) var(--s4, 16px) var(--s3, 12px) 0;
+  line-height: 1.8;
+  color: var(--c-ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.il-row-note {
+  font-size: var(--S, 14px);
+  line-height: 1.5;
+  color: var(--c-graphite);
+}
+.il-blank {
+  display: inline-block;
+  min-width: 3em;
+  padding: 0 2px;
+  border-bottom: 2px solid var(--c-steel);
+  border-radius: 2px;
+  text-align: center;
+  color: var(--c-ink);
+}
+.il-blank.cur {
+  border-bottom-color: var(--c-ink);
+  background: var(--c-raised);
+}
+.il-blank.done {
+  font-weight: 600;
+  border-bottom-color: var(--c-graphite);
+}
+.il-ans {
+  font-size: var(--S, 14px);
+  line-height: 1.5;
+  color: var(--c-graphite);
+}
+.il-ans + .il-ans {
+  margin-top: calc(var(--s1, 4px) * -2);
+}
+
+/* ---------- 实验（Lab） ---------- */
+.il-lab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4, 16px);
+  min-width: 0;
+}
+.il-lab-t {
+  font-size: var(--S, 14px);
+  font-weight: 500;
+  color: var(--c-graphite);
+  margin-bottom: var(--s2, 8px);
+}
+.il-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--s2, 8px);
+}
+.il-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2, 8px);
+  min-height: 48px;
+  padding: var(--s2, 8px) var(--s3, 12px);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2, 14px);
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.il-chip:hover:not(.on) {
+  border-color: var(--c-steel);
+}
+.il-chip.on {
+  border-color: var(--c-ink);
+  box-shadow: inset 0 0 0 1px var(--c-ink);
+}
+.il-chip-ok {
+  font-size: var(--S, 14px);
+  color: var(--c-graphite);
+}
+.il-run {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2, 8px);
+  height: 48px;
+  padding: 0 var(--s5, 24px);
+  border: 0;
+  border-radius: var(--r2, 14px);
+  background: var(--c-ink);
+  color: var(--c-card);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.il-run:disabled {
+  background: var(--c-raised);
+  color: var(--c-graphite);
+  box-shadow: inset 0 0 0 1px var(--c-hairline);
+  cursor: default;
+}
+.il-table-wrap {
+  max-width: 720px;
+  overflow-x: auto;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r1, 6px);
+}
+.il-dt {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.il-dt th {
+  padding: var(--s2, 8px) var(--s3, 12px);
+  background: var(--c-raised);
+  border-bottom: 1px solid var(--c-hairline);
+  font-size: var(--S, 14px);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--c-graphite);
+  text-align: right;
+}
+.il-dt td {
+  padding: 0 var(--s3, 12px);
+  height: calc(var(--B, 16px) * 2);
+  line-height: 1.35;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--c-ink);
+  font-family: var(--font-readout);
+  font-variant-numeric: tabular-nums;
+}
+.il-dt tr + tr td {
+  border-top: 1px solid var(--c-hairline);
+}
+.il-dt th:first-child,
+.il-dt td:first-child {
+  text-align: left;
+}
+.il-dt td:first-child {
+  font-family: inherit;
+  color: var(--c-graphite);
+}
+.il-dt tr.in td {
+  animation: il-in 0.3s ease both;
+}
+@keyframes il-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .il-dt tr.in td {
+    animation: none;
+  }
+}
+.il-count {
+  font-size: var(--S, 14px);
+  color: var(--c-graphite);
+}
+
+/* ---------- 结论链（5.4）：一行，高 32，放不下只留最新几项，前面折成"…+n" ---------- */
+.il-chain {
+  position: relative;
+  height: 32px;
+  min-width: 0;
+  font-size: var(--S, 14px);
+  line-height: 1.5;
+}
+.il-chain-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  overflow: hidden;
+}
+.il-chain-h,
+.il-more {
+  flex: 0 0 auto;
+  font-weight: 500;
+  color: var(--c-graphite);
+}
+.il-chain-h {
+  margin-right: var(--s1, 4px);
+}
+.il-slot {
+  flex: 0 0 auto;
+  display: inline-flex;
+  min-width: 0;
+}
+.il-slot.folded {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+.il-ch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--s3, 12px);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r1, 6px);
+  background: var(--c-card);
+  color: var(--c-graphite);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.il-ch:hover {
+  border-color: var(--c-steel);
+}
+.il-ch.latest {
+  color: var(--c-ink);
+  border: 1.5px solid var(--c-ink);
+  font-weight: 500;
+}
+.il-ch.guess,
+.il-ch.masked {
+  border-style: dashed;
+}
+.il-ch.holds {
+  color: var(--c-ink);
+}
+.il-ch.out .il-ch-t {
+  text-decoration: line-through;
+  color: var(--c-graphite);
+}
+.il-ch.on {
+  background: var(--c-ink);
+  color: var(--c-card);
+  border-color: var(--c-ink);
+}
+.il-ch.on .il-ch-t,
+.il-ch.on .il-ch-n {
+  color: inherit;
+}
+.il-ch-n {
+  color: var(--c-graphite);
+}
+.il-tag {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: var(--r1, 6px);
+  background: var(--c-card);
+  box-shadow: 0 0 0 1px var(--c-hairline);
+  font-size: var(--S, 14px);
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--c-graphite);
+}
+.il-ch.holds .il-tag {
+  color: var(--c-ink);
+  box-shadow: 0 0 0 1px var(--c-ink);
+}
+.il-ch.on .il-tag {
+  background: transparent;
+  color: inherit;
+  box-shadow: 0 0 0 1px currentColor;
+}
+.il-pop {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  top: calc(100% + 6px);
+  width: min(560px, 100%);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: var(--s3, 12px) 40px var(--s3, 12px) var(--s4, 16px);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2, 14px);
+  background: var(--c-card);
+  box-shadow: var(--card-shadow, none);
+  color: var(--c-ink);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.il-pop-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2, 8px);
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+.il-pop ol {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--c-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2, 8px);
+}
+.il-pop li b {
+  font-weight: 600;
+  margin: 0 var(--s2, 8px) 0 0;
+}
+.il-pop li .il-tag {
+  margin-right: 6px;
+}
+.il-pop li div {
+  display: inline;
+  color: var(--c-graphite);
+}
+.il-pop li.out b {
+  text-decoration: line-through;
+  color: var(--c-graphite);
+}
+.il-pop-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r2, 14px);
+  background: none;
+  color: var(--c-graphite);
+  font-size: var(--B, 16px);
+  line-height: 1;
+  cursor: pointer;
+}
+.il-pop-x:hover {
+  color: var(--c-ink);
+  background: var(--c-raised);
+}
+
+/* 手机上结论链在内容下面、动作条上面：浮层往上开，不盖住按钮 */
+@media (max-width: 760px) {
+  .il-pop {
+    top: auto;
+    bottom: calc(100% + 6px);
+  }
+}

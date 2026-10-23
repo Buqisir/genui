@@ -1,0 +1,382 @@
+/* 分步课的文字类组件：Stem、Choice、Work、Def、Result、Homework。令牌（B/S/T、s1–s6、r1–r3）来自 step.css 的 .sl，颜色只用 styles.css 的 --c-*。 */
+
+.sl {
+  --E: calc(var(--B) * 1.3);
+}
+@media (max-width: 760px) {
+  .sl {
+    --E: calc(var(--B) * 1.1875);
+  }
+}
+
+.tx-md > :first-child {
+  margin-top: 0;
+}
+.tx-md > :last-child,
+.tx-md p {
+  margin-bottom: 0;
+}
+.tx-md p {
+  margin-top: 0;
+}
+.tx-md p + p {
+  margin-top: var(--s2);
+}
+
+.tx-label {
+  margin-bottom: var(--s2);
+  font-family: var(--font-sans);
+  font-size: var(--S);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--c-graphite);
+}
+
+/* ---------- 卡片：题干、定义卡共用 ---------- */
+.tx-card {
+  background: var(--c-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2);
+  padding: var(--s4) var(--s5);
+  font-size: var(--B);
+  line-height: 1.65;
+  color: var(--c-ink);
+  min-width: 0;
+}
+.tx-stem .tx-ask {
+  font-weight: 600;
+}
+.tx-stem .tx-md + .tx-md {
+  margin-top: var(--s2);
+}
+
+/* ---------- 选择题 ---------- */
+.tx-choice {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tx-choice > .tx-ask {
+  margin-bottom: var(--s4);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--c-ink);
+  text-wrap: pretty;
+}
+.tx-opts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.tx-opt {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: calc(var(--B) * 2.2 + 2 * var(--s3));
+  padding: 0;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2);
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: 400 var(--B) / 1.5 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.tx-let {
+  flex: 0 0 auto;
+  width: 36px;
+  margin: var(--s3) 0;
+  display: grid;
+  place-items: center;
+  font: 500 var(--S) var(--font-sans);
+  color: var(--c-graphite);
+  border-right: 1px solid var(--c-hairline);
+}
+.tx-opt-t {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  padding: var(--s3) calc(24px + var(--s3) + var(--s2)) var(--s3) var(--s3);
+}
+/* 右侧标记位固定 24px，只放 ✓ / ✕；"已锁定"、"答案"压在右上边框上 */
+.tx-mark {
+  position: absolute;
+  right: var(--s3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  text-align: center;
+  color: var(--c-ink);
+  font-size: var(--B);
+  line-height: 1;
+}
+.tx-opt:hover:not(.off) {
+  border-color: var(--c-steel);
+}
+.tx-opt.off {
+  cursor: default;
+  color: var(--c-graphite);
+}
+.tx-opt.sel,
+.tx-opt.sel:hover {
+  border-color: var(--c-ink);
+  box-shadow: inset 0 0 0 1px var(--c-ink);
+  background: linear-gradient(90deg, var(--c-raised) 0 36px, var(--c-card) 36px);
+}
+.tx-opt.sel .tx-let {
+  color: var(--c-ink);
+}
+.tx-opt.on {
+  border-color: var(--c-ink);
+  box-shadow: inset 0 0 0 0.5px var(--c-ink);
+  color: var(--c-ink);
+}
+.tx-opt.on .tx-mark,
+.tx-opt.reveal .tx-mark {
+  top: 0;
+  width: auto;
+  padding: 0 6px;
+  background: var(--c-card);
+  color: var(--c-graphite);
+  font-size: var(--S);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.tx-opt.win {
+  border-color: var(--c-ink);
+  box-shadow: inset 0 0 0 1px var(--c-ink);
+  color: var(--c-ink);
+}
+.tx-opt.win .tx-opt-t {
+  -webkit-text-stroke: 0.5px currentColor; /* 加粗用描边，不改字宽，选项不重新折行 */
+}
+.tx-opt.lose {
+  background: var(--c-raised);
+  color: var(--c-graphite);
+}
+.tx-opt.lose .tx-opt-t {
+  text-decoration: line-through;
+}
+.tx-opt.lose .tx-mark {
+  color: var(--c-graphite);
+}
+.tx-opt.reveal {
+  outline: 2px dashed var(--c-ink);
+  outline-offset: -2px;
+  color: var(--c-ink);
+}
+.tx-choice-foot {
+  margin-top: var(--s2);
+}
+.tx-txt-btn {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-graphite);
+  font: 400 var(--S) var(--font-sans);
+  cursor: pointer;
+}
+.tx-txt-btn:hover {
+  color: var(--c-ink);
+}
+
+/* ---------- 演算 ---------- */
+.tx-work {
+  min-width: 0;
+}
+.tx-wk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-left: var(--s4);
+  border-left: 2px solid var(--c-hairline);
+  min-width: 0;
+}
+.tx-wk-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--s3);
+  min-width: 0;
+}
+.tx-wk-eq,
+.tx-bk-eq {
+  font: 400 var(--E) / 1.5 var(--font-symbol), 'Noto Serif SC', serif;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tx-wk-eq {
+  color: var(--c-graphite);
+}
+.tx-wk-line.last .tx-wk-eq {
+  color: var(--c-ink);
+}
+.tx-note {
+  margin-left: auto;
+  font: 400 var(--S) var(--font-sans);
+  color: var(--c-graphite);
+}
+.tx-bks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+}
+.tx-bk {
+  background: var(--c-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2);
+  padding: var(--s4) var(--s5);
+  min-width: 0;
+}
+.tx-bk-t {
+  margin-bottom: var(--s2);
+  font: 600 var(--B) / 1.5 var(--font-sans);
+  color: var(--c-ink);
+}
+.tx-bk-l {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--s4);
+}
+.tx-bk-eq {
+  color: var(--c-ink);
+  line-height: 1.6;
+}
+.tx-bk-s {
+  margin-top: var(--s1);
+  font: 400 var(--S) / 1.5 var(--font-sans);
+  color: var(--c-graphite);
+}
+.tx-bk.res {
+  background: var(--c-raised);
+  border-left: 3px solid var(--c-ink);
+  border-radius: var(--r1) var(--r2) var(--r2) var(--r1);
+}
+@keyframes tx-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tx-wk-line.on,
+.tx-bk.on {
+  animation: tx-in 0.3s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tx-wk-line.on,
+  .tx-bk.on {
+    animation: none;
+  }
+}
+
+/* ---------- 定义卡 ---------- */
+.tx-def {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.tx-def-row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--c-hairline);
+  color: var(--c-ink);
+}
+.tx-def-row:first-child {
+  border-top: 0;
+}
+.tx-def-name {
+  white-space: nowrap;
+  font-weight: 600;
+}
+.tx-def-note {
+  margin-top: var(--s1);
+  font-size: var(--S);
+  line-height: 1.5;
+  color: var(--c-graphite);
+}
+/* 跟读：还没讲到的行用 steel（唯一允许低于 4.5:1 的地方），讲到哪条哪条变 ink，版面不动 */
+.tx-def-row.dim,
+.tx-def-row.dim .tx-def-note {
+  color: var(--c-steel);
+}
+
+/* ---------- 小测结果 ---------- */
+.tx-score-big {
+  font: 600 var(--D) / 1.2 var(--font-display);
+  color: var(--c-ink);
+  font-variant-numeric: tabular-nums;
+}
+.tx-score-rows {
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin-top: var(--s5);
+}
+.tx-score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--c-hairline);
+  font-size: var(--B);
+  color: var(--c-graphite);
+}
+.tx-score-row.wrong .tx-back {
+  color: var(--c-ink);
+}
+.tx-score-ok {
+  color: var(--c-ink);
+}
+
+/* ---------- 作业 ---------- */
+.tx-hw {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+}
+.tx-hw-i {
+  padding: var(--s4) 0;
+  border-top: 1px solid var(--c-hairline);
+}
+.tx-hw-i:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.tx-hw-t {
+  margin-bottom: var(--s1);
+  font: 500 var(--S) var(--font-sans);
+  color: var(--c-graphite);
+}
+.tx-hw-q {
+  font-size: var(--B);
+  line-height: 1.7;
+}
+.tx-hw-a {
+  margin-top: var(--s2);
+  font-size: var(--B);
+  color: var(--c-graphite);
+}
+.tx-hw-a summary {
+  cursor: pointer;
+  min-height: 32px;
+  font-size: var(--S);
+  color: var(--c-graphite);
+}
+.tx-hw-a[open] summary {
+  color: var(--c-ink);
+}
+.tx-hw-a .tx-md {
+  margin-top: var(--s1);
+}

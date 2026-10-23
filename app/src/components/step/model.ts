@@ -93,7 +93,67 @@ export function splitActs(blocks: Block[]): StepLessonModel {
       step.comps.push({ block: b, at: Math.max(step.sentences.length - 1, 0) })
     }
   }
+  let qno = 0
+  for (const a of acts) {
+    for (const s of a.steps) {
+      s.comps = annotate(mergeDefs(s.comps), s, a.quiz, () => ++qno)
+    }
+  }
   return { opening, acts }
+}
+
+type Comp = StepModel['comps'][number]
+
+/** One row of a merged `<Def>` card: its own text plus when it appears and how it lights up. */
+export interface DefRow {
+  name?: unknown
+  text?: unknown
+  note?: unknown
+  /** The sentence the row (its `<Def>`) appears at. */
+  at: number
+  /** The row's `<Def>` has `follow`: the row is grey until sentence `at + idx`. */
+  follow: boolean
+  /** Position of the row inside its own `<Def>`. */
+  idx: number
+}
+
+/**
+ * Several `<Def>`s in one step are one card: the first `<Def>` gets the rows of the later ones (each row carries
+ * its own `at`, `follow` and `idx`), and the later `<Def>`s are dropped. A single `<Def>` also gets annotated rows.
+ */
+export function mergeDefs(comps: Comp[]): Comp[] {
+  const rowsOf = (c: Comp): DefRow[] =>
+    (Array.isArray(c.block.props.rows) ? (c.block.props.rows as unknown[]) : [])
+      .filter((r): r is Record<string, unknown> => !!r && typeof r === 'object')
+      .map((r, idx) => ({ name: r.name, text: r.text, note: r.note, at: c.at, follow: c.block.props.follow === true, idx }))
+  const defs = comps.filter((c) => c.block.name === 'Def')
+  if (!defs.length) return comps
+  const rows = defs.flatMap(rowsOf)
+  return comps.flatMap((c) => {
+    if (c.block.name !== 'Def') return [c]
+    if (c !== defs[0]) return []
+    return [{ ...c, block: { ...c.block, props: { ...c.block.props, rows } } }]
+  })
+}
+
+/**
+ * Facts a component cannot see from its own block, added as `_`-props: a `<Choice>` knows whether its step has a
+ * `<Stem>` (`_stem`), and in a quiz act that it is question `_qno` (`_quiz`); a `<Result>` knows whether its step has prose (`_prose`).
+ */
+function annotate(comps: Comp[], step: StepModel, quiz: boolean, nextQno: () => number): Comp[] {
+  const hasStem = comps.some((c) => c.block.name === 'Stem')
+  return comps.map((c) => {
+    if (c.block.name === 'Choice') {
+      const extra: Record<string, unknown> = { _stem: hasStem }
+      if (quiz) {
+        extra._quiz = true
+        extra._qno = nextQno()
+      }
+      return { ...c, block: { ...c.block, props: { ...c.block.props, ...extra } } }
+    }
+    if (c.block.name === 'Result') return { ...c, block: { ...c.block, props: { ...c.block.props, _prose: step.sentences.length > 0 } } }
+    return c
+  })
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '')

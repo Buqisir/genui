@@ -4,6 +4,7 @@ import { useStore } from '../lesson/store'
 import { boxed, Markdown } from './LessonView'
 import {
   beatCount,
+  choiceOptions,
   findChoice,
   quizTotal,
   recallText,
@@ -13,13 +14,14 @@ import {
   type ComponentBlock,
   type StepModel,
 } from './step/model'
+import { detectLayout, placeComps, SCENE_NAMES, SIZABLE_SCENES, type LayoutKind } from './step/layout'
+import { useDesktop, useLayoutFit } from './step/layoutFit'
+import { ConcludeChain } from './step/parts/ConcludeChain'
 import { PlayGate } from './step/playGate'
 import { STEP_COMPONENTS, STEP_ONLY_NAMES, StepPlaceholder } from './step/registry'
 import { StepEngine, StepRuntimeContext, type StepRuntime } from './step/runtime'
 import './step/step.css'
 
-/** Canvas-like components and the problem card go in the left column, everything else in the right. */
-const LEFT = new Set(['Sim', 'Figure', 'Collision', 'Stem', 'Circuit', 'ForceDiagram', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes'])
 /** Declarations only: nothing to draw. */
 const SILENT = new Set(['Define'])
 
@@ -29,8 +31,10 @@ const chevron = (dir: 'left' | 'right') => (
   </svg>
 )
 
-function renderComp(block: ComponentBlock, at: number): ReactNode {
+function renderComp(block: ComponentBlock, at: number, canvasH?: number): ReactNode {
   if (SILENT.has(block.name) || (block.name === 'Param' && block.props.hidden)) return null
+  // the layout owns the canvas height on desktop (board spec 3.3: canvas size follows the layout)
+  if (canvasH !== undefined) block = { ...block, props: { ...block.props, height: canvasH } }
   const Comp = STEP_COMPONENTS[block.name]
   if (Comp) return <Comp block={block} at={at} />
   if (STEP_ONLY_NAMES.has(block.name)) return <StepPlaceholder block={block} at={at} />
@@ -46,7 +50,34 @@ function lastLine(text: string) {
 
 type Item = { type: 'say' | 'me'; text: string }
 
-function Narration({ items }: { items: Item[] }) {
+/**
+ * Every line the narration of a step can say at its tallest: sentences, option feedback, recalls, result lines.
+ * On a phone the narration sits above the board, so its height must not change from sentence to sentence
+ * or the board would move down the page; Narration reserves the tallest of these (see `.sl-narr-ghost`).
+ */
+function ghostTexts(step: StepModel, blocks: Block[]): string[] {
+  const out: string[] = []
+  const walk = (v: unknown) => {
+    if (typeof v === 'string') out.push(v)
+    else if (Array.isArray(v)) v.forEach(walk)
+    else if (v && typeof v === 'object') Object.values(v).forEach(walk)
+  }
+  for (const s of step.sentences) {
+    if (s.kind === 'text') out.push(s.text)
+    else {
+      const choice = findChoice(blocks, s.choice)
+      out.push(recallText(choice, undefined))
+      choiceOptions(choice).forEach((_, i) => out.push(recallText(choice, i)))
+    }
+  }
+  for (const c of step.comps) {
+    walk(c.block.props.say)
+    for (const o of choiceOptions(c.block)) walk(o.say)
+  }
+  return out.filter((t) => t.trim())
+}
+
+function Narration({ items, ghost }: { items: Item[]; ghost: string[] }) {
   const [open, setOpen] = useState(false)
   let lastSay = -1
   let prevSay = -1
@@ -98,8 +129,19 @@ function Narration({ items }: { items: Item[] }) {
     )
   }
   return (
-    <aside className="sl-narr" aria-label="讲述" aria-live="polite" data-testid="narration">
-      {body}
+    <aside className={`sl-narr${open && prevSay >= 0 ? ' open' : ''}`} aria-label="讲述" aria-live="polite" data-testid="narration">
+      <div className="sl-narr-ghost" aria-hidden="true">
+        <div className="sl-item prev">&nbsp;</div>
+        <div className="sl-item me">&nbsp;</div>
+        <div className="sl-ghost-stack">
+          {ghost.map((t, i) => (
+            <div key={i} className="sl-item cur">
+              <Markdown text={t} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="sl-narr-live">{body}</div>
     </aside>
   )
 }
@@ -165,6 +207,28 @@ export function StepLesson({ blocks, title }: { blocks: Block[]; title?: string 
   const main = engine.mainButton()
   const score = engine.quizScore()
 
+  // Layout of this step: which of the nine, and which component goes to which area.
+  const plan = useMemo(() => {
+    if (!cur) return null
+    const kind: LayoutKind = detectLayout(cur.step)
+    const zoned = placeComps(
+      cur.step.comps.map((c, i) => ({ ...c, i })),
+      kind,
+    )
+    // the first resizable canvas on the left is the one the layout sizes
+    const scene = zoned.left.find((c) => SIZABLE_SCENES.has(c.block.name))?.i
+    return { kind, zoned, scene }
+  }, [cur])
+  const desktop = useDesktop()
+  // a lesson with <Conclude> keeps the chain row on every step (so the page does not move when the first entry arrives)
+  const hasChain = useMemo(() => blocks.some((b) => b.kind === 'component' && b.name === 'Conclude'), [blocks])
+  const mainEl = useRef<HTMLDivElement>(null)
+  const workEl = useRef<HTMLDivElement>(null)
+  const { canvasH } = useLayoutFit(
+    { root: rootRef, main: mainEl, work: workEl },
+    { desktop, active: phase === 'step' && !!plan, kind: plan?.kind ?? 'pic', stepKey: `${idx}:${epoch}` },
+  )
+
   let content: ReactNode
   let narration: ReactNode = null
   let head: ReactNode = null
@@ -199,30 +263,45 @@ export function StepLesson({ blocks, title }: { blocks: Block[]; title?: string 
         <h2 className="sl-title">{stepTitle(act, si)}</h2>
       </div>
     )
-    narration = <Narration items={narrationItems(step, blocks, engine, beat)} />
-    const place = (side: 'left' | 'right') =>
-      step.comps
-        .map((c, i) => ({ ...c, i }))
-        .filter((c) => LEFT.has(c.block.name) === (side === 'left'))
-        .map((c) => (
+    narration = <Narration items={narrationItems(step, blocks, engine, beat)} ghost={ghostTexts(step, blocks)} />
+    const { kind, zoned, scene } = plan!
+    const place = (list: typeof zoned.left) =>
+      list.map((c) => {
+        const sized = desktop && c.i === scene
+        const cls = `sl-comp sl-comp-${c.block.name}${SCENE_NAMES.has(c.block.name) ? ' sl-canvas' : ''}${sized ? ' sl-scene' : ''}`
+        return (
           // not yet reached: keep the room, show nothing, so the page does not jump
-          <div key={`${epoch}:${c.i}`} className={`sl-comp sl-comp-${c.block.name}`} style={c.at > beat ? { visibility: 'hidden' } : undefined} data-at={c.at}>
-            {renderComp(c.block, c.at)}
+          <div key={`${epoch}:${c.i}`} className={cls} style={c.at > beat && c.block.name !== 'Conclude' ? { visibility: 'hidden' } : undefined} data-at={c.at} data-h={sized ? canvasH : undefined}>
+            {renderComp(c.block, c.at, sized ? canvasH : undefined)}
           </div>
-        ))
-    const left = place('left')
-    const right = place('right')
+        )
+      })
+    const hasCols = zoned.left.length > 0 || zoned.right.length > 0
     content = (
-      <div className={`sl-cols${left.length && right.length ? '' : ' single'}`}>
-        {left.length > 0 && <div className="sl-col sl-left">{left}</div>}
-        {right.length > 0 && <div className="sl-col sl-right">{right}</div>}
+      <div className="sl-work" ref={workEl} data-layout={kind} data-solo={zoned.left.length === 0 ? '' : undefined} data-testid="work">
+        {zoned.none.length > 0 && <div className="sl-silent">{place(zoned.none)}</div>}
+        {zoned.span.length > 0 && <div className="sl-span">{place(zoned.span)}</div>}
+        {hasCols && (
+          <div className="sl-cols">
+            {zoned.left.length > 0 && (
+              <div className="sl-col sl-left">
+                <div className="sl-colin">{place(zoned.left)}</div>
+              </div>
+            )}
+            {zoned.right.length > 0 && (
+              <div className="sl-col sl-right">
+                <div className="sl-colin">{place(zoned.right)}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     )
   }
 
   const total = flat.length
   return (
-    <div className="sl" data-phase={phase} data-frame={cur?.step.frame} ref={rootRef}>
+    <div className="sl" data-phase={phase} data-frame={cur?.step.frame} data-layout={plan?.kind} ref={rootRef}>
       <header className="sl-top">
         <button type="button" className="sl-icon" aria-label="上一句" disabled={phase === 'cover'} onClick={() => engine.back()}>
           {chevron('left')}
@@ -239,11 +318,19 @@ export function StepLesson({ blocks, title }: { blocks: Block[]; title?: string 
         </button>
       </header>
       {narration}
-      <section className="sl-board">
-        {head}
+      <section className="sl-board" data-layout={plan?.kind}>
         <StepRuntimeContext.Provider value={phase === 'step' ? rt : null}>
           <PlayGate.Provider value={gate}>
-            <div className="sl-main">{content}</div>
+            {/* 5.4 conclusion chain: the top row of the board (on a phone it sits under the content, see step.css) */}
+            {phase === 'step' && (
+              <div className={`sl-chain${hasChain ? ' has' : ''}`}>
+                <ConcludeChain />
+              </div>
+            )}
+            {head}
+            <div className="sl-main" ref={mainEl}>
+              {content}
+            </div>
           </PlayGate.Provider>
         </StepRuntimeContext.Provider>
         <div className="sl-bar">
