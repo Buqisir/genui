@@ -144,3 +144,133 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 1. 组件清单和属性表：`Act`、`Step`、`Stem`、`Choice`（含 `predict`）、`Work`（含分块）、`Def`、`Fill`、`Conclude`（结论链条目）、`Lab`（实验门）、`Quiz`、`Homework`，以及 `Step` 上的可选 `frame`。
 2. 一份课件里出现 `<Act>` 时整页切成分步课；不写的课件版面不变（同 `<Segment>`）。
 3. 第 4 节逐步迁移对照表。
+
+---
+
+# 组件清单与属性表（v0.1，2026-10-23，待用户审）
+
+以下按方案 A 写。代码现状的依据：`app/src/lesson/parse.ts`、`app/src/components/LessonView.tsx` 的 `splitSegments`、`app/src/lesson/store.tsx`、`app/src/lesson/validate.ts`（行号见本节末）。
+
+## 一、整页怎么切
+
+1. 课件里出现 `<Act>` 就整页换成分步课版面（同 `<Segment>` 的开关做法：`blocks.some(Act)`）。不写 `<Act>` 的课件一切照旧。
+2. `<Act>` 和 `<Segment>` 不能出现在同一份课件里（校验报 `mixed-structure`）。
+3. 第一个 `<Act>` 之前的内容是开场：参数声明、共用的 `<Define>`，以及开场白（显示在第一步之前的封面页）。
+4. 一个 `<Act>` 到下一个 `<Act>` 之前是一幕；一个 `<Step>` 到下一个 `<Step>` 或 `<Act>` 之前是一步。`<Act>` 后面必须紧跟 `<Step>`（中间只能是空行），否则报 `act-without-step`。
+
+## 二、一步里面
+
+| 规矩 | 说明 |
+|---|---|
+| 句 | 步里的正文按空行拆，每段一句。现在解析器把连续正文合成一个 markdown 块，播放器在步内按空行再拆。一句 ≤ 60 字（警告）。 |
+| 出现时间 | 组件写在第 k 句（从 0 数）后面，就从第 k 句起出现在板上；写在第一句之前的从第 0 句起就在。 |
+| 停点 | `<Choice>`、`<Fill>`、`<Lab>` 是停点：从它所在的那一句往下讲，要先答对、锁定预测或做满实验。停点后面必须还有一句（`stop-at-end` 错误）。 |
+| 反馈 | 选项的 `say` 在讲述栏作为当前句说出来，板上只变状态（板面规格总规矩 7）。 |
+| 画面跟句子 | 课件开场声明 `<Param name="beat" hidden value={0} />`，播放器把当前句号写进它，`<Sim>` / `<Figure>` 的 `params` 里写上 `beat` 就能读。做法和 `<Segment revealParam>` 一样：参数系统不用改。进入每一步时归 0。 |
+| 开播 | `<Step play={k}>`：这一步的 `<Sim>` 停在 t = 0，讲到第 k 句才从头播一次；不写 `play` 时进入就播。 |
+
+## 三、组件
+
+全是新组件，属性必填与否按 CLAUDE.md 的兼容规则：新组件自己的属性可以必填。
+
+### `<Act />` 幕
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| title | string | 是 | 幕名，幕标签显示成"第 N 幕 · 幕名"，N 自动数 |
+| quiz | boolean |  | 小测幕：本幕里每个 `<Choice>` 的第一次作答计入成绩 |
+
+### `<Step />` 步
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| title | string | 是 | 步标题，≤ 18 字（小测幕自动加"小测 N / M："，不计字数） |
+| play | number |  | 第几句开播（见上） |
+| frame | enum |  | 强制版式：`result grid fill example quiz lab derive def pic`；不写时按板面规格 3.3 自动判定 |
+
+### `<Stem />` 题干卡
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| text | string | 是 | 题干，已知条件 |
+| ask | string |  | 问句，接在题干最后，600 字重（G7）；≤ 40 字 |
+| label | string |  | 小标题，如"情境 · 自编" |
+
+校验：例题、小测里的 `<Stem>` 没写 `ask` 时警告 `stem-without-ask`（第 4 节 #a5s1、#a7s2/3/6/7 迁移时补上）。
+
+### `<Choice />` 选择题（停点）
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| options | array | 是 | 2–4 项，每项 `{ text, correct?, say }`；`text` ≤ 24 字；`say` 是选了这一项时讲述栏说的话 |
+| ask | string |  | 没有 `<Stem>` 的步里，选项上方的问句 |
+| hints | array |  | 三级提示（不写就没有"提示"按钮；写了必须正好 3 条） |
+| predict | boolean |  | 预测题：没有正确项，选了就锁定，不判对错 |
+
+规则：非预测题正好一个 `correct`；预测题不能有 `correct`。交互照板面规格 G5、G6（先选后提交、提交后 400ms 防连点）。
+
+### `<Work />` 演算
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| lines | array |  | ≤ 3 行的算式列，每行 `{ eq, note? }`，一句出一行 |
+| blocks | array |  | ≥ 4 行的推导分块，每块 `{ title, lines, note? }`，一屏 ≤ 4 块，最后一块是结论框 |
+
+`lines` 和 `blocks` 二选一，必须有一个；`lines` 超过 3 行报 `work-needs-blocks`。
+
+### `<Def />` 定义卡、总结
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| rows | array | 是 | 每行 `{ name, text, note? }` |
+| follow | boolean |  | 跟读：一开始全部排好、未讲到的 steel，从它出现的那句起每讲一句亮一行 |
+
+### `<Fill />` 补全（停点）
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| rows | array | 是 | 同 `<Def>`；`text` 里的空格写成 `{答案|干扰1|干扰2}`，第一项是答案 |
+| say | array |  | 每个空一组反馈，和选项一一对应：`[["对……", "……", "……"], …]` |
+
+一次只问一个空；答对后卡里填上，选项收成一行。
+
+### `<Lab />` 实验（停点）
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| runs | array | 是 | 可选的实验条件，每项 `{ label, set }`，`set` 是要设的参数（同 `<Preset>`） |
+| columns | array | 是 | 数据表的列，每列 `{ label, expr }`，每做一次按当时参数求值记一行 |
+| need | number |  | 要做满几种不同条件才放行，默认 = `runs` 的个数 |
+
+点一个条件 → 设参数 → `<Sim>` 从头播 → 记一行。
+
+### `<Conclude />` 结论链条目
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| title | string | 是 | 链上的短标题 |
+| text | string | 是 | 浮层里的正文 |
+| under | string |  | 挂在哪一条下面（写那一条的 title） |
+| guess | boolean |  | 这是猜想，之后由另一条用 `settles` 判定 |
+| settles | string |  | 判定哪一条猜想（写它的 title） |
+| result | enum |  | `holds`（成立）或 `out`（出局），和 `settles` 一起用 |
+
+写在第几句后面就在第几句加进链里。
+
+### `<Result />` 小测结果
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| goals | array | 是 | 每个目标 `{ title, items, back }`：`items` 是小测题号，`back` 是答错时"回第 N 幕再看" |
+
+### `<Homework />` 作业
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| items | array | 是 | 每题 `{ tag, q, a }`；`tag` 如"必做 1 · L1"；`a` 折叠，点开看 |
+
+## 四、和板面规格的对应
+
+板面规格 3.3 的自动判定，从原型的 CSS 类换成组件：`.score` → `<Result>`，`.hw` → `<Homework>`，`.fill` → `<Fill>`，`.stem` → `<Stem>`，`.run`/`table.dt` → `<Lab>`，`.bks` → `<Work blocks>`，`.def` → `<Def>`。第六节的自动检查挂到对应组件上：标题（Step）、讲述每句（句）、问句（Stem.ask、Choice.ask）、选项（Choice）、提示（Choice.hints）、演算（Work）。
+
+原型里的 `button`、`gateAt`、`layout: 'answer'`、`tall`、`onBeat` 都不进库：按钮字由外壳定，停点由组件位置定，版式自动判定。
+
+## 五、这一版先不做的
+
+- 预测题之后按学生选的那项说不同的话（第 4 节 #a1s1）。v0.1 只在锁定时说该项的 `say`，后面的句子对谁都一样；迁移时把原型里分支的话并进 `say`。
+- 补丁按"整步"替换：现在补丁只按块定位，`<Step>` 会被索引成 `Step:标题`，只能替换那一行；整步替换以后再加。
+
+## 六、进库要改的地方（据调研）
+
+- 新组件：`app/src/lesson/components.ts` 的 `COMPONENTS` 加定义 → `validate.ts` 的 `checkComponent` 加 case → `LessonView.tsx` 渲染（另起 `StepLesson`，参照 `SegmentedLesson`）→ `docs/cards/` 各一张卡并挂进 `docs/manifest.yaml` → `npx tsx scripts/docs.ts build` → `npm run lock:components` → `npm run prompts:update`。
+- 跨块规则（`stop-at-end`、`act-without-step`、`mixed-structure`）写在 `validateLesson` 里遍历 `lesson.blocks`；新错误码先加进 `ISSUE_CODES`。
+- `beat`：校验时如果 `<Sim>`/`<Figure>` 的 `params` 用了 `beat`，要求它是 `hidden` 的 `<Param>`。
