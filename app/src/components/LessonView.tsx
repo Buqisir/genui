@@ -9,6 +9,7 @@ import { ThemeContext, type ThemeName } from '../theme'
 import { Answer, ParamControl, Preset, QuestionList, Readout, Status } from './controls'
 import { Bars, Dial, Ledger } from './charts'
 import { Circuit } from './Circuit'
+import { Collision } from './Collision'
 import { EnergyLevels } from './EnergyLevels'
 import { ForceDiagram } from './ForceDiagram'
 import { GasBox } from './GasBox'
@@ -21,6 +22,7 @@ import { TickerTape } from './TickerTape'
 import { Wiring } from './Wiring'
 import { FlowBoard } from './FlowBoard'
 import { Rich } from './rich'
+import { StepLesson } from './StepLesson'
 
 type ComponentBlock = Extract<Block, { kind: 'component' }>
 
@@ -92,6 +94,8 @@ function renderComponent(b: ComponentBlock): ReactNode {
       return <GasBox props={props} />
     case 'GasTube':
       return <GasTube props={props} />
+    case 'Collision':
+      return <Collision props={props} />
     default:
       return <div className="block-error">未知组件：{name}</div>
   }
@@ -103,7 +107,7 @@ export const boxed = (b: ComponentBlock, key: number | string) => (
   </Boundary>
 )
 
-const SCENES = new Set(['Sim', 'Figure', 'Circuit', 'ForceDiagram', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes'])
+const SCENES = new Set(['Sim', 'Figure', 'Circuit', 'ForceDiagram', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes', 'Collision'])
 export const MAIN = new Set([...SCENES, 'Plot', 'Bars', 'Ledger', 'Dial'])
 const SIDE = new Set(['Question', 'Param', 'Preset', 'Status', 'Readout', 'Answer'])
 
@@ -721,7 +725,9 @@ export function LessonView({ source }: { source: string }) {
   const sourceHash = useMemo(() => fnv1a(source), [source])
   const [theme, setTheme] = useState<ThemeName>(meta.theme === 'night' ? 'night' : 'light')
   // A segmented lesson keeps the problem in view: students check the givens while they read each segment.
-  const segmented = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment'), [lesson])
+  // A lesson with <Act> is a step lesson: its own player takes the whole page (an <Act> and a <Segment> never share a lesson).
+  const stepped = lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Act')
+  const segmented = useMemo(() => !stepped && lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment'), [lesson, stepped])
   // On a phone the full text would push the figure off the first screen; the givens line stands in for it.
   // When every segment quotes its own sentences, the full text starts folded on any screen.
   const quoted = useMemo(() => lesson.blocks.some((b) => b.kind === 'component' && b.name === 'Segment' && typeof b.props.quote === 'string'), [lesson])
@@ -833,9 +839,11 @@ export function LessonView({ source }: { source: string }) {
             </div>
           )}
 
+          {stepped && <StepLesson blocks={lesson.blocks} title={typeof meta.title === 'string' ? meta.title : undefined} />}
+
           {segmented && <SegmentedLesson blocks={lesson.blocks} />}
 
-          {!segmented && (main.length > 0 || side.length > 0) && (
+          {!segmented && !stepped && (main.length > 0 || side.length > 0) && (
             <div className="lab">
               <div className="lab-main">
                 {main.map((b, i) => (
@@ -884,7 +892,7 @@ export function LessonView({ source }: { source: string }) {
             </div>
           )}
 
-          {!segmented && markdown.length > 0 && (
+          {!segmented && !stepped && markdown.length > 0 && (
             <section className="solution" id="solution">
               <h2 className="solution-title">分析与解答</h2>
               {markdown.map((b, i) => (

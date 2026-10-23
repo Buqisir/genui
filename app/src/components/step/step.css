@@ -1,0 +1,322 @@
+/* 分步课播放器。字号三档 B / S / T 和间距走令牌，见 plans/lesson-board-spec.md 第二节；颜色用 styles.css 的 --c-*（亮色、夜光自动切换）。 */
+
+.sl {
+  --B0: clamp(16px, 1.2vw, 19px);
+  --B: var(--B0);
+  --S: max(13px, calc(var(--B) * 0.82));
+  --T: calc(var(--B0) * 1.5);
+  --D: calc(var(--B0) * 2.6);
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 40px;
+  --r1: 6px;
+  --r2: 14px;
+  --r3: 28px;
+  --col-cap: clamp(280px, 24vw, 340px);
+
+  display: grid;
+  grid-template-columns: var(--col-cap) minmax(0, 1fr);
+  grid-template-rows: 56px minmax(0, 1fr);
+  column-gap: var(--s4);
+  min-height: min(760px, calc(100vh - 140px));
+  font-size: var(--B);
+  line-height: 1.65;
+  color: var(--c-ink);
+}
+.sl[data-phase='cover'],
+.sl[data-phase='done'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ---------- 顶栏 ---------- */
+.sl-top {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  height: 56px;
+}
+.sl-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2);
+  background: var(--c-card);
+  color: var(--c-ink);
+}
+.sl-icon:disabled {
+  color: var(--c-steel);
+  cursor: default;
+}
+.sl-progress {
+  font-size: var(--S);
+  color: var(--c-graphite);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 讲述栏 ---------- */
+.sl-narr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+  padding: var(--s4) var(--s2);
+  overflow-wrap: anywhere;
+}
+.sl-item {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+}
+.sl-item p {
+  margin: 0 0 var(--s2);
+}
+.sl-item p:last-child {
+  margin-bottom: 0;
+}
+.sl-item.cur {
+  font-size: var(--B);
+  color: var(--c-ink);
+}
+.sl-item.prev,
+.sl-fold {
+  font-size: var(--S);
+  line-height: 1.5;
+  color: var(--c-graphite);
+  cursor: pointer;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sl-item.prev.ph {
+  cursor: default;
+}
+.sl-item.say {
+  font-size: var(--S);
+  color: var(--c-graphite);
+  line-height: 1.5;
+}
+.sl-item.me {
+  align-self: flex-start;
+  max-width: 100%;
+  font-size: var(--S);
+  color: var(--c-graphite);
+  background: var(--c-raised);
+  border-radius: var(--r2);
+  padding: var(--s2) var(--s3);
+}
+
+/* ---------- 板 ---------- */
+.sl-board {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--s5);
+  background: var(--c-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r3);
+}
+.sl-head {
+  min-height: calc(var(--S) * 1.5 + var(--T) * 1.3 + var(--s2));
+}
+.sl-act {
+  font-size: var(--S);
+  color: var(--c-graphite);
+  line-height: 1.5;
+}
+.sl-title {
+  margin: var(--s1) 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--T);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--c-ink);
+}
+.sl-main {
+  flex: 1;
+  min-height: 0;
+  padding: var(--s5) 0;
+}
+.sl-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: var(--s6);
+  align-items: start;
+}
+.sl-cols.single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 720px;
+  margin: 0 auto;
+}
+.sl-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+}
+.sl-comp {
+  min-width: 0;
+}
+
+/* ---------- 动作条 ---------- */
+.sl-bar {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--s3);
+}
+.sl-go {
+  height: 48px;
+  min-width: 200px;
+  padding: 0 var(--s5);
+  border: 0;
+  border-radius: var(--r2);
+  background: var(--c-ink);
+  color: var(--c-card);
+  font-size: var(--B);
+  font-weight: 600;
+}
+.sl-go:disabled {
+  background: var(--c-raised);
+  color: var(--c-graphite);
+  box-shadow: inset 0 0 0 1px var(--c-hairline);
+  cursor: default;
+}
+
+/* ---------- 封面、完成页 ---------- */
+.sl-cover,
+.sl-done {
+  max-width: 640px;
+  margin: var(--s6) auto 0;
+}
+.sl-cover h2 {
+  font-size: var(--T);
+  margin: 0 0 var(--s4);
+}
+.sl-prose p {
+  margin: 0 0 var(--s3);
+}
+.sl-done {
+  text-align: center;
+}
+.sl-done-big {
+  font-size: var(--D);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.sl-done-sub {
+  margin-top: var(--s3);
+  color: var(--c-graphite);
+}
+
+/* ---------- 占位框（还没写的分步组件） ---------- */
+.sl-ph {
+  border: 1px dashed var(--c-steel);
+  border-radius: var(--r2);
+  padding: var(--s3) var(--s4);
+  background: var(--c-card);
+}
+.sl-ph-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  font-size: var(--S);
+  color: var(--c-graphite);
+}
+.sl-ph-head b {
+  color: var(--c-ink);
+}
+.sl-ph-props {
+  font-size: var(--S);
+  color: var(--c-graphite);
+  overflow-wrap: anywhere;
+}
+.sl-ph-body {
+  margin-top: var(--s3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  align-items: flex-start;
+}
+.sl-ph-opts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  align-self: stretch;
+}
+.sl-ph .opt {
+  text-align: left;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r2);
+  background: var(--c-card);
+  color: var(--c-ink);
+}
+.sl-ph .opt.sel {
+  border: 2px solid var(--c-ink);
+  padding: calc(var(--s2) - 1px) calc(var(--s3) - 1px);
+  background: var(--c-raised);
+}
+.sl-ph .opt:disabled {
+  cursor: default;
+}
+.sl-ph-sim {
+  padding: var(--s1) var(--s3);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r1);
+  background: var(--c-raised);
+  font-size: var(--S);
+}
+.sl-ph-done {
+  font-size: var(--S);
+  color: var(--c-graphite);
+}
+
+/* ---------- 手机：单栏，讲述栏在板上面，动作条贴底 ---------- */
+@media (max-width: 760px) {
+  .sl {
+    --B0: 16px;
+    --T: 22px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 56px auto minmax(0, 1fr);
+    min-height: calc(100vh - 100px);
+  }
+  .sl[data-phase='cover'],
+  .sl[data-phase='done'] {
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+  .sl-narr {
+    padding: var(--s2) 0 var(--s3);
+  }
+  .sl-board {
+    padding: var(--s4);
+    border-radius: var(--r2);
+  }
+  .sl-cols {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s4);
+  }
+  .sl-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 calc(var(--s4) * -1) calc(var(--s4) * -1);
+    padding: var(--s3) var(--s4);
+    background: var(--c-card);
+    border-top: 1px solid var(--c-hairline);
+    border-radius: 0 0 var(--r2) var(--r2);
+  }
+  .sl-go {
+    width: 100%;
+  }
+}

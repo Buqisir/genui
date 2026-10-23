@@ -268,7 +268,7 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 | massText | array |  | 质量标注，默认按 `m` 写"0.4 kg"；题目只说"质量都是 m"时写 `["m", "m"]` |
 | label | string |  | 左上角说明；不写且写了 `surface` 时自动写"碰撞面：橡皮，碰后弹开" |
 | bars | boolean 或 expr |  | 画不画柱子，默认 true；如 `"beat >= 3"` |
-| digits | object |  | 小数位 `{ v, p, k }`，默认 `{ v: 2, p: 3, k: 3 }` |
+| digits | object |  | 小数位 `{ v, p, k }`；默认速度恰为整百分位时两位、否则三位（0.60、0.198），动量和动能三位 |
 | still | boolean |  | 只画碰前一帧，不播（小测的碰前示意图） |
 | height | number |  | 画布高度（像素） |
 

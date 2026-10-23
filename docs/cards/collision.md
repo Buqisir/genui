@@ -47,7 +47,7 @@ demo: true
 | massText | array |  | 质量标注，默认按 m 写 |
 | label | string |  | 左上角说明 |
 | bars | boolean 或 expr |  | 画不画柱子，默认 true |
-| digits | object |  | 小数位 {v, p, k}，默认 {v:2, p:3, k:3} |
+| digits | object |  | 小数位 {v, p, k}；默认速度恰为整百分位时两位、否则三位（0.60、0.198），动量和动能三位 |
 | still | boolean |  | 只画碰前一帧，不播 |
 | height | number |  | 画布高度（像素） |
 <!-- /props -->

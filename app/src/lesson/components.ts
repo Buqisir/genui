@@ -378,7 +378,7 @@ export const COMPONENTS: Record<string, Record<string, PropSpec>> = {
     massText: { kind: 'array', doc: '质量标注，默认按 m 写' },
     label: { kind: 'string', doc: '左上角说明' },
     bars: { kind: ['boolean', 'expr'], doc: '画不画柱子，默认 true' },
-    digits: { kind: 'object', doc: '小数位 {v, p, k}，默认 {v:2, p:3, k:3}' },
+    digits: { kind: 'object', doc: '小数位 {v, p, k}；默认速度恰为整百分位时两位、否则三位（0.60、0.198），动量和动能三位' },
     still: { kind: 'boolean', doc: '只画碰前一帧，不播' },
     height: { kind: 'number', doc: '画布高度（像素）' },
   },
