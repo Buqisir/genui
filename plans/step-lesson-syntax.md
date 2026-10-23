@@ -264,6 +264,8 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 
 原型里的 `button`、`gateAt`、`layout: 'answer'`、`tall`、`onBeat` 都不进库：按钮字由外壳定，停点由组件位置定，版式自动判定。
 
+> 迁移第 4 节时发现要改的地方（新增 `<Collision>`、`<Recall>`，`Lab`/`Fill`/`Result` 等加属性，删掉 `stop-at-end`）见 `plans/collision-migration.md` 第二节，用户审过后并进 v0.2。
+
 ## 五、这一版先不做的
 
 - 预测题之后按学生选的那项说不同的话（第 4 节 #a1s1）。v0.1 只在锁定时说该项的 `say`，后面的句子对谁都一样；迁移时把原型里分支的话并进 `say`。
