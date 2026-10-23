@@ -23,7 +23,7 @@
       ctx.setLineDash([2, 3]); ctx.strokeStyle = C.steel; ctx.beginPath(); ctx.moveTo(sx0 - 10, y - ch - 6); ctx.lineTo(xb + 10, y - ch - 6); ctx.stroke();
     }
     ctx.restore();
-    if (!go) GRAV.draw.text(ctx, '细线', cx, y - ch - 14, { size: 12, color: C.steel, align: 'center' });
+    if (!go) GRAV.draw.text(ctx, '细线', cx, y - ch - 14, { size: 13, color: C.graphite, align: 'center' });
     var sc = 90, ay = y + 30;
     if (go && tt > 0.15) {
       MOM.vArrow(ctx, xa + cw * 0.56, ay, vA, sc, C, '0.30 m/s');
@@ -32,7 +32,7 @@
       MOM.vArrow(ctx, xa + cw * 0.56, ay, 0, sc, C);
       MOM.vArrow(ctx, xb + cw * 0.45, ay, 0, sc, C);
     }
-    GRAV.draw.text(ctx, '向右为正', x1, 16, { size: 12, color: C.steel, align: 'right' });
+    GRAV.draw.text(ctx, '向右为正', x1, 16, { size: 13, color: C.graphite, align: 'right' });
     if (go && tt > 0.15) {
       var ty = y + 80;
       GRAV.draw.text(ctx, '动量：0 → −0.12 + 0.12 = 0', x0 + 8, ty, { font: 'num', size: 14, color: C.ink });
@@ -57,44 +57,63 @@
         mount: function (el, api) {
           var q = document.createElement('div');
           el.appendChild(q);
-          var b1 = document.createElement('div'), b2 = document.createElement('div');
-          b1.innerHTML = '<div class="stem">弹性碰撞：碰撞前后 ___ 不变。</div>';
-          b2.innerHTML = '<div class="stem">碰后粘在一起的碰撞叫 ___ 碰撞，动能损失 ___。</div>';
-          b2.className = 'q-gap';
-          b2.hidden = true;
-          q.appendChild(b1); q.appendChild(b2);
+          var BL = '\u3000\u3000\u3000';
+          var sum = document.createElement('div');
+          sum.className = 'def fill';
+          sum.innerHTML =
+            '<div class="row"><b>弹性</b><span>碰撞前后 <span class="blank cur">' + BL + '</span> 不变；一样重时交换速度</span></div>' +
+            '<div class="row"><b>非弹性</b><span>总动能减少，碰后可以分开</span></div>' +
+            '<div class="row"><b>完全非弹性</b><span>碰后粘在一起，动能减少 <span class="blank">' + BL + '</span>，一般不是全部</span></div>' +
+            '<div class="row"><b>三种都</b><span>动量守恒</span></div>';
+          Array.prototype.forEach.call(sum.querySelectorAll('.row b'), function (b) { b.style.width = '80px'; });
+          el.appendChild(sum);
+          var blanks = sum.querySelectorAll('.blank');
+          // 一组选项：上方 q-echo「第 N 空」；答对后选项收成一行 ans-line
+          function group(n, hidden) {
+            var g = document.createElement('div');
+            g.hidden = !!hidden;
+            g.innerHTML = '<p class="q-echo">第 ' + n + ' 空</p>';
+            var host = document.createElement('div');
+            g.appendChild(host);
+            q.appendChild(g);
+            return { g: g, host: host, echo: g.firstChild };
+          }
+          function fill(n, grp, word, next) {
+            var bl = blanks[n - 1];
+            bl.classList.remove('cur');
+            bl.classList.add('done');
+            bl.textContent = word;
+            if (next) next.classList.add('cur');
+            grp.echo.hidden = true;
+            grp.host.setAttribute('data-keep', '0');
+            grp.host.hidden = true;
+            var ln = document.createElement('div');
+            ln.className = 'ans-line';
+            ln.textContent = '第 ' + n + ' 空：' + word + ' ✓';
+            grp.g.appendChild(ln);
+          }
+          var g1 = group(1, false), g2 = group(2, true);
           var api1 = Object.assign({}, api, { open: function () {}, win: function () {} });
-          GRAV.ui.choice(b1, {
+          GRAV.ui.choice(g1.host, {
             options: [
               { html: '总动能', correct: true, say: '对。磁体那次，总动能几乎没变。' },
               { html: '每个物体的动能', say: '每个物体的动能会变：A 把动能给了 B。不变的是总动能。' },
               { html: '每个物体的速度', say: '速度都变了：一样重时还交换了速度。' }
             ],
             hints: ['想想磁体那次的动能柱子。', 'A 的柱子降、B 的柱子升，和不变。', '总动能不变。'],
-            onCorrect: function () { b2.hidden = false; }
+            onCorrect: function () { fill(1, g1, '总动能', blanks[1]); g2.g.hidden = false; }
           }, api1);
-          GRAV.ui.choice(b2, {
+          GRAV.ui.choice(g2.host, {
             options: [
-              { html: '完全非弹性，最多', correct: true, say: '对。最多，但一般不是全部：总动量不为 0，两物体还要一起动。' },
-              { html: '完全非弹性，全部', say: '想想粘扣那次：两车还以 0.40 m/s 一起走，动能还剩 0.047 J。' },
-              { html: '弹性，为零', say: '粘扣那次动能少了 35%，不是弹性碰撞。' }
+              { html: '最多', correct: true, say: '对。最多，但一般不是全部：总动量不为 0，两物体还要一起动。' },
+              { html: '全部', say: '想想粘扣那次：两车还以 0.40 m/s 一起走，动能还剩 0.047 J。' },
+              { html: '为零', say: '为零就是动能全没了，可粘扣那次两车还以 0.40 m/s 一起走。' }
             ],
-            hints: ['想想粘扣那次。', '动能少了 35%，两车还一起走。', '完全非弹性，损失最多。'],
-            onCorrect: function () { api.boardMask([]); }
+            hints: ['想想粘扣那次。', '动能少了 35%，两车还一起走。', '粘在一起，动能损失最多，但不是全部。'],
+            onCorrect: function () { fill(2, g2, '最多', null); api.boardMask([]); }
           }, api);
-          var sum = document.createElement('div');
-          sum.className = 'def';
-          sum.innerHTML =
-            '<div class="row"><b>弹性</b><span>总动能不变；一样重时交换速度</span></div>' +
-            '<div class="row"><b>非弹性</b><span>总动能减少，碰后可以分开</span></div>' +
-            '<div class="row"><b>完全非弹性</b><span>碰后粘在一起，动能减少最多，一般不是全部</span></div>' +
-            '<div class="row"><b>三种都</b><span>动量守恒</span></div>';
-          Array.prototype.forEach.call(sum.querySelectorAll('.row b'), function (b) { b.style.width = '80px'; });
-          el.appendChild(sum);
           api.boardMask(['bounce', 'stick']);
           api.onBeat(function (bt) {
-            q.hidden = bt > 0;
-            sum.hidden = bt < 1;
             if (bt > 0) api.boardMask([]);
           });
         }

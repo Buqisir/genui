@@ -18,8 +18,8 @@
     ctx.beginPath(); ctx.arc(ax, y, R, 0, Math.PI * 2); ctx.fillStyle = C.graphite; ctx.fill();
     ctx.beginPath(); ctx.arc(bx, y + R - r, r, 0, Math.PI * 2); ctx.fillStyle = C.card; ctx.fill(); ctx.strokeStyle = C.graphite; ctx.lineWidth = 1; ctx.stroke();
     ctx.restore();
-    GRAV.draw.text(ctx, '铅球', ax, y - R - 8, { size: 12, color: C.graphite, align: 'center' });
-    GRAV.draw.text(ctx, '乒乓球', bx, y + R - 2 * r - 8, { size: 12, color: C.graphite, align: 'center' });
+    GRAV.draw.text(ctx, '铅球', ax, y - R - 8, { size: 13, color: C.graphite, align: 'center' });
+    GRAV.draw.text(ctx, '乒乓球', bx, y + R - 2 * r - 8, { size: 13, color: C.graphite, align: 'center' });
     var sc = 46, ay = y + R + 22;
     if (!run.after) MOM.vArrow(ctx, ax, ay, 1, sc, C, 'v');
     else {
@@ -35,9 +35,9 @@
       ctx.restore();
       MOM.vArrow(ctx, wx - 30 - sc * 1.2, wy - 20, 1, sc, C, '撞墙前 v');
       MOM.vArrow(ctx, wx - 30, wy - 44, -1, sc, C, '弹回 ≈ v');
-      GRAV.draw.text(ctx, '墙：质量极大的 ' + 'm₂', x0, wy + 40, { size: 12, color: C.steel });
+      GRAV.draw.text(ctx, '墙：质量极大的 ' + 'm₂', x0, wy + 40, { size: 13, color: C.graphite });
     }
-    GRAV.draw.text(ctx, '弹性正碰，被碰的静止', x0, 16, { size: 12, color: C.steel });
+    GRAV.draw.text(ctx, '弹性正碰，被碰的静止', x0, 16, { size: 13, color: C.graphite });
   }
 
   GRAV.act({
@@ -58,7 +58,7 @@
         gateAt: 3,
         button: '质量差得很多呢',
         mount: function (el, api) {
-          var wk = GRAV.ui.work(el), shown = 0;
+          var bk = GRAV.ui.blocks(el), shown = 0;
           var box = document.createElement('div');
           box.className = 'q-gap';
           el.appendChild(box);
@@ -73,10 +73,10 @@
           }, api);
           var tb = document.createElement('table');
           tb.className = 'dt dt-gap';
-          tb.innerHTML = '<tr><th>第 1 节的数据</th><th>公式 ' + v1p + '，' + v2p + '</th><th>实测</th></tr>' +
-            '<tr><td>一样重 0.2 / 0.2 kg</td><td>0，0.60</td><td>0.000，0.594</td></tr>' +
-            '<tr><td>重撞轻 0.4 / 0.2 kg</td><td>0.20，0.80</td><td>0.198，0.794</td></tr>' +
-            '<tr><td>轻撞重 0.2 / 0.4 kg</td><td>−0.20，0.40</td><td>−0.197，0.396</td></tr>';
+          tb.innerHTML = '<tr><th>' + m1 + ' / ' + m2 + '（kg）</th><th>公式 ' + v1p + '，' + v2p + '</th><th>实测</th></tr>' +
+            '<tr><td>0.2 / 0.2</td><td>0，0.60</td><td>0.000，0.594</td></tr>' +
+            '<tr><td>0.4 / 0.2</td><td>0.20，0.80</td><td>0.198，0.794</td></tr>' +
+            '<tr><td>0.2 / 0.4</td><td>−0.20，0.40</td><td>−0.197，0.396</td></tr>';
           el.appendChild(tb);
           var unit = document.createElement('div');
           unit.className = 'score-sub';
@@ -84,19 +84,22 @@
           el.appendChild(unit);
           api.onBeat(function (bt) {
             if (bt >= 0 && shown < 1) {
-              wk.line(m1 + v1 + ' = ' + m1 + v1p + ' + ' + m2 + v2p, '动量守恒');
-              wk.line('½' + m1 + v1 + '² = ½' + m1 + v1p + '² + ½' + m2 + v2p + '²', '动能不变');
+              bk.block('两条规律', [
+                [m1 + v1 + ' = ' + m1 + v1p + ' + ' + m2 + v2p, '动量守恒'],
+                ['½' + m1 + v1 + '² = ½' + m1 + v1p + '² + ½' + m2 + v2p + '²', '动能不变']
+              ]);
               shown = 1;
             }
             if (bt >= 1 && shown < 2) {
-              wk.line(m1 + '(' + v1 + ' − ' + v1p + ') = ' + m2 + v2p);
-              wk.line(m1 + '(' + v1 + '² − ' + v1p + '²) = ' + m2 + v2p + '²');
-              wk.line(v1 + ' + ' + v1p + ' = ' + v2p, '下式除以上式');
+              bk.block('移项，下式除以上式', [
+                m1 + '(' + v1 + ' − ' + v1p + ') = ' + m2 + v2p,
+                m1 + '(' + v1 + '² − ' + v1p + '²) = ' + m2 + v2p + '²',
+                v1 + ' + ' + v1p + ' = ' + v2p
+              ]);
               shown = 2;
             }
             if (bt >= 2 && shown < 3) {
-              wk.line(COL.F1);
-              wk.line(COL.F2);
+              bk.result('代回动量式', [COL.F1, COL.F2]);
               shown = 3;
             }
             box.hidden = bt !== 3;

@@ -49,13 +49,14 @@
     ctx.setLineDash([3, 3]); ctx.strokeStyle = C.graphite;
     ctx.beginPath(); ctx.moveTo(xl, Y(pre)); ctx.lineTo(xr, Y(pre)); ctx.stroke();
     ctx.restore();
-    txt(ctx, '碰前', xl, Y(pre) - 5, { size: 12, color: C.steel });
+    txt(ctx, '碰前', xl, Y(pre) - 5, { size: 13, color: C.graphite });
     ['A', 'B', '和'].forEach(function (lab, i) {
       var x = box.x + gap + i * (bw + gap), v = now[i], y1 = Y(v);
-      ctx.fillStyle = i === 2 ? C.ink : rgba(C.steel, 0.75);
+      var gold = o.gold && GRAV.tw && GRAV.tw();   // 微调：动能柱用能量金
+      ctx.fillStyle = gold ? (i === 2 ? C.charge : rgba(C.charge, 0.42)) : i === 2 ? C.ink : rgba(C.steel, 0.75);
       ctx.fillRect(x, Math.min(zero, y1), bw, Math.max(1, Math.abs(y1 - zero)));
-      txt(ctx, o.names ? (o.names[i] || lab) : lab, x + bw / 2, box.y + box.h - 4, { size: 12, color: i === 2 ? C.ink : C.graphite, align: 'center' });
-      if (i === 2) txt(ctx, f(v, o.dp), x + bw / 2, Math.min(zero, y1) - 6, { font: 'num', size: 12, color: C.ink, align: 'center' });
+      txt(ctx, o.names ? (o.names[i] || lab) : lab, x + bw / 2, box.y + box.h - 4, { size: 13, color: i === 2 ? C.ink : C.graphite, align: 'center' });
+      if (i === 2) txt(ctx, f(v, o.dp), x + bw / 2, Math.min(zero, y1) - 6, { font: 'num', size: 13, color: C.ink, align: 'center' });
     });
     txt(ctx, o.title, box.x + box.w / 2, box.y + 14, { size: 14, color: C.graphite, align: 'center' });
   }
@@ -97,13 +98,15 @@
       var ay = y + 28, sc = (narrow ? 50 : 70) * 0.8 / vmax, dp = o.dp == null ? 2 : o.dp;
       var arrow = function (cx, yy, v) {
         var x = v > 0 ? Math.min(cx, x1 - 4 - v * sc) : Math.max(cx, x0 + 4 - v * sc);
-        MOM.vArrow(ctx, x, yy, v, sc, C, f(v, dp) + ' m/s');
+        // 微调：实测值照实写三位（0.197），整百分位的仍写两位
+        var d2 = GRAV.tw && GRAV.tw() && o.dp == null && Math.abs(Math.round(v * 100) - v * 100) > 1e-6 ? 3 : dp;
+        MOM.vArrow(ctx, x, yy, v, sc, C, f(v, d2) + ' m/s');
       };
       var stuck = r.side === 'velcro' && s.after;
       arrow(xA + wA / 2, ay, s.vA);
       if (!stuck) arrow(xB + wB / 2, ay + 24, s.vB);
-      txt(ctx, '向右为正', x1, 16, { size: 12, color: C.steel, align: 'right' });
-      if (label) txt(ctx, label, x0, 16, { size: 12, color: C.steel });
+      txt(ctx, '向右为正', x1, 16, { size: 13, color: C.graphite, align: 'right' });
+      if (label) txt(ctx, label, x0, 16, { size: 13, color: C.graphite });
       if (!showBars) return;
       var pNow = [r.mA * s.vA, r.mB * s.vB], kNow = [0.5 * r.mA * s.vA * s.vA, 0.5 * r.mB * s.vB * s.vB];
       pNow.push(pNow[0] + pNow[1]); kNow.push(kNow[0] + kNow[1]);
@@ -116,7 +119,7 @@
       var bx = narrow ? x0 : x0 + 20;
       var bn = { names: names.concat(['和']) };
       bars(ctx, { x: bx, y: top, w: gw - 10, h: bh }, pNow, Rp, nf, pre[0], C, Object.assign({ title: '动量（kg·m/s）', dp: o.pdp == null ? 3 : o.pdp }, bn));
-      bars(ctx, { x: bx + gw + 10, y: top, w: gw - 10, h: bh }, kNow, Rk, nf, pre[1], C, Object.assign({ title: '动能（J）', dp: o.kdp == null ? 3 : o.kdp }, bn));
+      bars(ctx, { x: bx + gw + 10, y: top, w: gw - 10, h: bh }, kNow, Rk, nf, pre[1], C, Object.assign({ title: '动能（J）', dp: o.kdp == null ? 3 : o.kdp, gold: true }, bn));
     };
   };
 

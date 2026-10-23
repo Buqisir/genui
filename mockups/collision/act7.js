@@ -107,8 +107,56 @@
     return GRAV.state.quiz;
   }
 
+  // 碰前示意图（静态）：kind 'cart' 滑块/小车，'ball' 球；每个物体 {name, m（质量文字）, v（m/s，向右为正）, r（球半径）}
+  var PRE = {
+    2: { kind: 'ball', o: [{ name: '母球', m: 'm', v: 2, r: 30 }, { name: '目标球', m: 'm', v: 0, r: 30 }] },
+    3: { kind: 'cart', o: [{ m: '1 kg', v: 6, w: 84 }, { m: '2 kg', v: 0, w: 104 }] },
+    4: { kind: 'cart', o: [{ name: 'A', m: '2 kg', v: 3, w: 104 }, { name: 'B', m: '1 kg', v: 0, w: 84 }] },
+    5: { kind: 'ball', o: [{ m: '0.1 kg', v: 5, r: 30 }, { m: '0.4 kg', v: 0, r: 44 }] },
+    6: { kind: 'cart', o: [{ name: 'A', m: 'm', v: 2, w: 92 }, { name: 'B', m: 'm', v: -1, w: 92 }] }
+  };
+  function ball(ctx, x, y, r, C, o) {
+    var rgba = MOM.rgba;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y + r * 0.08, r, 0, Math.PI * 2); ctx.fillStyle = rgba(C.graphite, 0.12); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    var g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+    g.addColorStop(0, C.card); g.addColorStop(1, C.bar);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = C.graphite; ctx.stroke();
+    ctx.restore();
+    GRAV.draw.text(ctx, o.m, x, y + 5, { font: 'num', size: 14, color: C.ink, align: 'center' });
+    if (o.name) GRAV.draw.text(ctx, o.name, x, y - r - 10, { font: 'sym', size: 14, color: C.graphite, align: 'center' });
+  }
+  function preDraw(cfg) {
+    return function (ctx, w, h, t, C) {
+      var os = cfg.o, n = os.length, vmax = 0, i;
+      os.forEach(function (o) { vmax = Math.max(vmax, Math.abs(o.v)); });
+      var sc = Math.min(130, w * 0.2) / vmax;
+      var ball_ = cfg.kind === 'ball', rmax = 0;
+      os.forEach(function (o) { rmax = Math.max(rmax, o.r || 0); });
+      var y = ball_ ? h * 0.4 : h * 0.42;
+      var cx = [w * 0.26, w * 0.7];
+      if (ball_) {
+        ctx.save(); ctx.strokeStyle = MOM.rgba(C.graphite, 0.35); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(8, y + rmax + 10); ctx.lineTo(w - 8, y + rmax + 10); ctx.stroke(); ctx.restore();
+      } else {
+        MOM.track(ctx, 8, w - 8, y, C);
+      }
+      var ay = y + (ball_ ? rmax + 38 : 38);
+      for (i = 0; i < n; i++) {
+        var o = os[i];
+        if (ball_) ball(ctx, cx[i], y, o.r, C, o);
+        else MOM.cart(ctx, cx[i] - o.w / 2, y, o.w, 36, C, { name: o.name, label: o.m, heavy: o.m === '2 kg' });
+        MOM.vArrow(ctx, cx[i], ay, o.v, sc, C, Math.abs(o.v) + ' m/s');
+      }
+      GRAV.draw.text(ctx, '碰前 · 向右为正', w - 8, 16, { size: 13, color: C.graphite, align: 'right' });
+    };
+  }
+
   var steps = Qs.map(function (q, i) {
-    return {
+    var pre = PRE[i];
+    var step = {
       title: '小测 ' + (i + 1) + ' / ' + Qs.length + '：' + q.title,
       layout: 'answer',
       beats: [{ say: '第 ' + (i + 1) + ' 题。' }],
@@ -128,6 +176,8 @@
         }, api);
       }
     };
+    if (pre) { delete step.layout; step.tall = true; step.draw = preDraw(pre); }
+    return step;
   });
 
   steps.push({

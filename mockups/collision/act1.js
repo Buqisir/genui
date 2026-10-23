@@ -12,7 +12,7 @@
     ];
     rows.forEach(function (R) {
       MOM.sheet(ctx, x0, w - x0, R.y, C, 0, r * 2.2);
-      txt(ctx, R.title, x0 + 8, R.y - r * 2.2 - 8, { size: 12, color: C.steel });
+      txt(ctx, R.title, x0 + 8, R.y - r * 2.2 - 8, { size: 13, color: C.graphite });
       var cx = narrow ? w * 0.3 : w * 0.28;
       if (R.stick) {
         MOM.stone(ctx, cx, R.y, r, C, 'A');

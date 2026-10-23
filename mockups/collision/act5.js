@@ -32,7 +32,7 @@
           { say: '先看一道完整的例题，题目在右边。' },
           { say: '策略：要用哪两条规律？为什么？' },
           { say: '解答：取 A 原来的运动方向为正，直接代弹性碰撞的公式。' },
-          { say: '讨论：先用两条守恒检验答案。再看是否合理：重的继续向前、变慢；轻的比 A 原来还快，但不到 2 倍，和上一幕的极限一致。' }
+          { say: '讨论：核对一下，动量 12 = 6 + 6，动能 24 J = 6 J + 18 J，两条都守住了。再看是否合理：重的继续向前、变慢；轻的比 A 原来还快，但不到 2 倍，和上一幕的极限一致。' }
         ],
         gateAt: 1,
         button: '自己做一道',
@@ -56,19 +56,13 @@
             onCorrect: function () { api.win(false); }
           }, api);
           var s3 = section(el, '解答'), w3 = GRAV.ui.work(s3);
-          var s4 = section(el, '讨论'), w4 = GRAV.ui.work(s4);
           var shown = 0;
           api.onBeat(function (bt) {
-            s2.hidden = bt < 1; s3.hidden = bt < 2; s4.hidden = bt < 3;
+            s2.hidden = bt < 1; s3.hidden = bt < 2;
             if (bt >= 2 && shown < 1) {
               w3.line(S('v') + '₁′ = (3 − 1)/(3 + 1) × 4 = 2 m/s');
               w3.line(S('v') + '₂′ = 2 × 3/(3 + 1) × 4 = 6 m/s');
               shown = 1;
-            }
-            if (bt >= 3 && shown < 2) {
-              w4.line('动量：3 × 4 = 3 × 2 + 1 × 6 = 12 kg·m/s');
-              w4.line('动能：24 J = 6 J + 18 J');
-              shown = 2;
             }
           });
         }

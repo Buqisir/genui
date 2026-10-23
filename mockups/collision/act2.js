@@ -59,7 +59,7 @@
         ctx.restore();
       } else zigzag(ctx, ax, ax + Math.min(d, rest), cy, s * 0.22, C);
       GRAV.draw.text(ctx, D[kd.k].name, cx, cy - s / 2 - 14, { size: 14, color: C.graphite, align: 'center' });
-      if (tt > T0 + TC * 0.5) GRAV.draw.text(ctx, narrow ? kd.short : kd.note, cx, cy + s / 2 + 18, { size: 12, color: C.steel, align: 'center' });
+      if (tt > T0 + TC * 0.5) GRAV.draw.text(ctx, narrow ? kd.short : kd.note, cx, cy + s / 2 + 18, { size: 13, color: C.graphite, align: 'center' });
     });
     // 动能–时间
     var top = cy + s / 2 + 44, box = { x: 8, y: top, w: Math.min(w - 16, 620), h: h - top - 8 };
@@ -72,13 +72,13 @@
     ctx.setLineDash([3, 3]); ctx.strokeStyle = C.hair;
     [0.072, KMIN].forEach(function (k) { ctx.beginPath(); ctx.moveTo(L, Y(k)); ctx.lineTo(R, Y(k)); ctx.stroke(); });
     ctx.restore();
-    GRAV.draw.text(ctx, '动能（J）', box.x, box.y + 10, { size: 12, color: C.steel });
-    GRAV.draw.text(ctx, '接触（慢放）', (X_(T0) + X_(T0 + TC)) / 2, T - 8, { size: 12, color: C.steel, align: 'center' });
-    GRAV.draw.text(ctx, '时间', R + 8, B + 4, { size: 12, color: C.steel });
+    GRAV.draw.text(ctx, '动能（J）', box.x, box.y + 10, { size: 13, color: C.graphite });
+    GRAV.draw.text(ctx, '接触（慢放）', (X_(T0) + X_(T0 + TC)) / 2, T - 8, { size: 13, color: C.graphite, align: 'center' });
+    GRAV.draw.text(ctx, '时间', R + 8, B + 4, { size: 13, color: C.graphite });
     [[0, '0'], [KMIN, '0.048'], [0.072, '0.072']].forEach(function (p) {
-      GRAV.draw.text(ctx, p[1], L - 6, Y(p[0]) + 4, { font: 'num', size: 12, color: C.steel, align: 'right' });
+      GRAV.draw.text(ctx, p[1], L - 6, Y(p[0]) + 4, { font: 'num', size: 13, color: C.graphite, align: 'right' });
     });
-    if (tt > T0 + TC * 0.5) GRAV.draw.text(ctx, '挤得最紧', X_(T0 + TC * 0.5), Y(KMIN) + 18, { size: 12, color: C.steel, align: 'center' });
+    if (tt > T0 + TC * 0.5) GRAV.draw.text(ctx, '挤得最紧', X_(T0 + TC * 0.5), Y(KMIN) + 18, { size: 13, color: C.graphite, align: 'center' });
     KINDS.forEach(function (kd) {
       ctx.save(); ctx.strokeStyle = C.charge; ctx.lineWidth = 2; ctx.setLineDash(kd.dash); ctx.beginPath();
       for (var s2 = 0, first = true; s2 <= tt + 1e-9; s2 += (T0 + TC + T2) / 200) {
@@ -93,7 +93,7 @@
         var y = Y(COL.ke(D[kd.k], true)) + 4;
         ys.forEach(function (y0) { if (Math.abs(y - y0) < 15) y = y0 + 15; });
         ys.push(y);
-        GRAV.draw.text(ctx, D[kd.k].name + ' ' + f(COL.ke(D[kd.k], true), 3), R + 8, y, { size: 12, color: C.graphite });
+        GRAV.draw.text(ctx, D[kd.k].name + ' ' + f(COL.ke(D[kd.k], true), 3), R + 8, y, { size: 13, color: C.graphite });
       });
     }
   }
