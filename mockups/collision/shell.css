@@ -7,7 +7,7 @@
   --B0: clamp(16px, 1.2vw, 19px);
   --Sm: .82; --Tm: 1.5; --Em: 1.3; --Dm: 2.6;
   --B: var(--B0);
-  --S: max(12.5px, calc(var(--B) * var(--Sm)));
+  --S: max(13px, calc(var(--B) * var(--Sm)));
   --T: calc(var(--B0) * var(--Tm));
   --E: calc(var(--B) * var(--Em));
   --D: calc(var(--B0) * var(--Dm));
@@ -47,10 +47,10 @@
 @media (max-width: 760px) {
   :root { --B0: 16px; --Sm: .8125; --Tm: 1.375; --Em: 1.1875; --Dm: 2.5; }
 }
-/* 小屏允许整体缩放、比例不变：内容放不下时 JS 给 .stage 设 --k < 1，讲述栏和板上的 B、S、E、D 一起缩（S 下限 12.5），T 不缩 */
+/* 小屏允许整体缩放、比例不变：内容放不下时 JS 给 .stage 设 --k < 1，讲述栏和板上的 B、S、E、D 一起缩（S 下限 13），T 不缩 */
 .stage, .fprobe {
   --B: calc(var(--B0) * var(--k, 1));
-  --S: max(12.5px, calc(var(--B) * var(--Sm)));
+  --S: max(13px, calc(var(--B) * var(--Sm)));
   --E: calc(var(--B) * var(--Em) * var(--ke, 1));
   --D: calc(var(--B0) * var(--Dm) * var(--k, 1));
 }

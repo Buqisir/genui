@@ -179,6 +179,36 @@
     syncEchoIn(E.act);
   }
 
+  // 预演前后存还原 GRAV.state：存引用，普通对象/数组另存一份内容克隆（失败就只存引用）。
+  // 还原时对象要原地恢复、保持身份：挂载时可能已经拿着 GRAV.state.quiz 这类对象的引用，浅拷贝恢复不回来被改过的内容。
+  function snapState() {
+    var snap = {};
+    Object.keys(GRAV.state).forEach(function (k) {
+      var v = GRAV.state[k], e = { ref: v, hasCopy: false, copy: null };
+      if (v && typeof v === 'object' && (Array.isArray(v) || Object.getPrototypeOf(v) === Object.prototype)) {
+        try { e.copy = structuredClone(v); e.hasCopy = true; } catch (err) { e.hasCopy = false; }
+      }
+      snap[k] = e;
+    });
+    return snap;
+  }
+  function restoreState(snap) {
+    Object.keys(GRAV.state).forEach(function (k) { if (!(k in snap)) delete GRAV.state[k]; });
+    Object.keys(snap).forEach(function (k) {
+      var e = snap[k], ref = e.ref;
+      if (e.hasCopy && ref && typeof ref === 'object') {
+        if (Array.isArray(ref)) {
+          ref.length = 0;
+          for (var i = 0; i < e.copy.length; i++) ref[i] = e.copy[i];
+        } else {
+          Object.keys(ref).forEach(function (p) { delete ref[p]; });
+          Object.keys(e.copy).forEach(function (p) { ref[p] = e.copy[p]; });
+        }
+      }
+      GRAV.state[k] = ref;
+    });
+  }
+
   // ---------- 整板推导（电脑，html.tw.near）：这一步里版面一点都不动 ----------
   // 演算每拍多几行、右栏到停点才出选项、答对后才出表，所以进入这一步时先"预演"：
   // 在页面外的隐藏容器里用同样的样式把这一步挂载一遍，每一拍都走完（含选项、答对后的表），
@@ -204,8 +234,7 @@
     work.appendChild(ans);
     box.appendChild(work);
     document.body.appendChild(box);
-    var snap = {};
-    Object.keys(GRAV.state).forEach(function (k) { snap[k] = GRAV.state[k]; });
+    var snap = snapState();
     var res = null;
     try {
       var hk = [];
@@ -237,8 +266,7 @@
       res = null;
     }
     box.remove();
-    Object.keys(GRAV.state).forEach(function (k) { if (!(k in snap)) delete GRAV.state[k]; });
-    Object.keys(snap).forEach(function (k) { GRAV.state[k] = snap[k]; });
+    restoreState(snap);
     return res;
   }
   function planF(st) {
@@ -457,8 +485,7 @@
     sc.style.cssText = 'flex:none;width:' + wd.lw + 'px;';
     ans.style.cssText = 'flex:none;width:' + wd.rc + 'px;';
     document.body.appendChild(box);
-    var snap = {};
-    Object.keys(GRAV.state).forEach(function (k2) { snap[k2] = GRAV.state[k2]; });
+    var snap = snapState();
     var res = null;
     try {
       var hk = [], noop = function () {};
@@ -526,8 +553,7 @@
       res = null;
     }
     box.remove();
-    Object.keys(GRAV.state).forEach(function (k2) { if (!(k2 in snap)) delete GRAV.state[k2]; });
-    Object.keys(snap).forEach(function (k2) { GRAV.state[k2] = snap[k2]; });
+    restoreState(snap);
     return res;
   }
   var L_VARS = ['--lw', '--rc', '--cg', '--gh', '--rh', '--ch', '--ltop', '--rtop', '--gtop'];
@@ -1297,6 +1323,8 @@
       var foot = E.btnGo.parentNode;
       document.body.style.paddingBottom = shown && window.innerWidth <= 760 ? (foot.offsetHeight + 16) + 'px' : '';
     }
+    // 手机：选项已挪进行动位，行动位的显示刚更新过，按钮要再判一次（上面那次 syncGo 时行动位还 hidden，会误判成没有选项）
+    if (!finished) syncGo();
     if (nearOn()) fitStop();
     // 回看时的"回到小测结果"：走到那一步或点了它就消失
     if (returnTo && !finished && ai === returnTo.ai && si === returnTo.si) returnTo = null;
