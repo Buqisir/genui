@@ -1,0 +1,388 @@
+/* 画布课件 · 播放器外壳样式（动量课）。颜色、字号、间距全部走变量。 */
+
+/*
+ * 字号只用这 7 档，每档只管一类东西：
+ *   --fs-xs 12  标签、表头、刻度说明
+ *   --fs-sm 14  界面小字：顶栏、提示、次要说明
+ *   --fs-md 15  正文：讲解记录、表格、题干、按钮
+ *   --fs-lg 17  当前这一句讲解、选项、小标题
+ *   --fs-xl 20  演算板的式子
+ *   --fs-2xl 30 本步标题、结论
+ *   --fs-3xl 48 定义式、成绩、完成页
+ * 画布里只用 12（刻度、单位、注释）、14（标签、读数、物体名），题面上给的已知量用 17。
+ * 间距按 4 的倍数：4 8 12 16 24 32 40。
+ */
+:root {
+  --fs-xs: 12px; --fs-sm: 14px; --fs-md: 15px; --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 30px; --fs-3xl: 48px;
+  --col-cap: clamp(280px, 26vw, 340px);
+  --col-ans: 340px;
+
+  --c-page: #f4f4f1; --c-side: #ebebe7; --c-card: #ffffff; --c-hairline: #e4e5e7;
+  --c-steel: #8d939b; --c-graphite: #5d636c; --c-ink: #1f2329; --c-accel: #a62c77;
+  --c-velocity: #1f4fd8; --c-field: #0e9c85; --c-bar: #e4e4e0;
+  --c-force: #e23d28; --c-charge: #c98a00;
+  --board-shadow: 0 1px 2px rgba(31, 35, 41, .04), 0 12px 40px rgba(31, 35, 41, .06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --c-page: #0b0b0c; --c-side: #1b1c20; --c-card: #141518; --c-hairline: #26272c;
+    --c-steel: #75767b; --c-graphite: #a2a29f; --c-ink: #f2f2f0; --c-accel: #e07ab8;
+    --c-velocity: #6e9bff; --c-field: #6ff0c8; --c-bar: #2a2b30;
+    --c-force: #ff6b52; --c-charge: #ffc53d;
+    --board-shadow: inset 0 0 0 1px #202125;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --c-page: #0b0b0c; --c-side: #1b1c20; --c-card: #141518; --c-hairline: #26272c;
+  --c-steel: #75767b; --c-graphite: #a2a29f; --c-ink: #f2f2f0; --c-accel: #e07ab8;
+  --c-velocity: #6e9bff; --c-field: #6ff0c8; --c-bar: #2a2b30;
+  --c-force: #ff6b52; --c-charge: #ffc53d;
+  --board-shadow: inset 0 0 0 1px #202125;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; min-height: 100vh; background: var(--c-page); color: var(--c-ink);
+  font: var(--fs-md)/1.6 'Noto Sans SC', 'Inter', sans-serif; -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; }
+.sym { font-family: 'Source Serif 4', serif; font-style: italic; font-size: 1.08em; }
+.num { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+.acc { color: var(--c-accel); }
+.u { color: var(--c-steel); }
+.ok { color: var(--c-field); }
+.no { color: var(--c-steel); }
+
+/* ---------- 顶栏 ---------- */
+.top { height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 24px; position: relative; z-index: 5; }
+.icon-btn, .arrow-btn {
+  width: 36px; height: 36px; flex: 0 0 auto; border: 0; background: transparent; padding: 0;
+  color: var(--c-graphite); border-radius: 10px; display: grid; place-items: center; cursor: pointer;
+}
+.icon-btn:hover, .arrow-btn:hover:not(:disabled) { background: var(--c-side); }
+.arrow-btn { font-size: var(--fs-xl); line-height: 1; }
+.arrow-btn:disabled { color: var(--c-bar); cursor: default; }
+.txt-btn {
+  border: 0; background: transparent; color: var(--c-graphite); font-size: var(--fs-sm);
+  padding: 6px 8px; border-radius: 8px; cursor: pointer;
+}
+.txt-btn:hover { background: var(--c-side); }
+.progress { flex: 1; min-width: 0; max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 6px; }
+/* 每段是一个按钮：可点的高度 24px，看得见的条 6px */
+.seg { height: 24px; border: 0; padding: 0; background: transparent; cursor: pointer; display: flex; align-items: center; flex: 0.6 0 auto; min-width: 20px; }
+.seg .bar { width: 100%; height: 6px; border-radius: 3px; background: var(--c-bar); position: relative; overflow: hidden; transition: height .15s; }
+.seg.done { flex: 1 1 0; }
+.seg.done .bar { background: var(--c-ink); }
+.seg.cur { flex: 3.2 1 0; min-width: 0; }
+.seg:hover .bar, .seg:focus-visible .bar { height: 10px; }
+.seg .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--c-ink); border-radius: 3px; transition: width .3s; }
+.tools { display: flex; align-items: center; gap: 4px; }
+
+/* ---------- 目录面板 ---------- */
+.toc {
+  position: fixed; top: 64px; right: 24px; width: 240px; max-width: calc(100vw - 32px); z-index: 20;
+  background: var(--c-card); border: 1px solid var(--c-hairline); border-radius: 16px; padding: 8px;
+  box-shadow: var(--board-shadow); display: flex; flex-direction: column;
+}
+.toc-item {
+  display: flex; align-items: center; gap: 12px; border: 0; background: transparent; color: var(--c-graphite);
+  font-size: var(--fs-md); text-align: left; padding: 8px 12px; border-radius: 10px; cursor: pointer;
+}
+.toc-item:hover { background: var(--c-side); }
+.toc-item .num { width: 16px; font-size: var(--fs-xs); color: var(--c-steel); }
+.toc-item.on { color: var(--c-ink); font-weight: 500; }
+
+/* ---------- 舞台：左栏讲解 + 板子，同一层底色，板子是唯一的卡片 ---------- */
+.stage { display: flex; align-items: flex-start; }
+
+.caption {
+  width: var(--col-cap); flex: 0 0 auto; min-width: 0;
+  position: sticky; top: 0; max-height: calc(100vh - 64px);
+  display: flex; flex-direction: column; padding: 24px 32px 32px 32px;
+}
+
+/* 讲解记录：读过的 15px steel，当前一句 17px ink；学生的话是靠右的白色气泡 */
+.log { display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 2px; }
+.log .item { line-height: 1.7; overflow-wrap: anywhere; }
+.log .item.say { font-size: var(--fs-md); color: var(--c-steel); }
+.log .item.say.cur { font-size: var(--fs-lg); color: var(--c-ink); }
+.log .item.me {
+  align-self: flex-end; max-width: 88%; padding: 8px 14px; border-radius: 14px 14px 4px 14px;
+  font-size: var(--fs-md); color: var(--c-ink); background: var(--c-card); box-shadow: 0 0 0 1px var(--c-hairline);
+}
+.status { margin-top: 16px; font-size: var(--fs-sm); color: var(--c-steel); }
+.status:empty { display: none; }
+
+/* 推进按钮跟着讲解走：读完这一句，就在它下面点 */
+.foot { margin-top: 24px; flex: 0 0 auto; }
+.go {
+  height: 44px; min-width: 132px; padding: 0 22px; border: 0; border-radius: 999px;
+  background: var(--c-ink); color: var(--c-page); font: 500 var(--fs-md) 'Noto Sans SC', sans-serif;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+}
+.go::after { content: '→'; font-family: 'Inter', sans-serif; }
+.go:disabled { background: var(--c-bar); color: var(--c-steel); cursor: default; }
+.go:disabled::after { content: none; }
+.go-tip { margin-top: 12px; font-size: var(--fs-sm); color: var(--c-steel); }
+.return-btn {
+  display: flex; align-items: center; height: 36px; margin-bottom: 12px; padding: 0 14px; border-radius: 999px;
+  border: 1.5px solid var(--c-ink); background: var(--c-card); color: var(--c-ink); font: 500 var(--fs-sm) 'Noto Sans SC', sans-serif; cursor: pointer;
+}
+
+.board {
+  flex: 1; min-width: 0; margin: 0 24px 24px 0; padding: 32px 40px 40px;
+  min-height: calc(100vh - 88px);
+  background: var(--c-card); border-radius: 20px; display: flex; flex-direction: column;
+  box-shadow: var(--board-shadow);
+}
+
+.tag { font: 500 var(--fs-xs)/1 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); }
+.title { font: 500 var(--fs-2xl)/1.35 'Noto Serif SC', serif; margin: 12px 0 0; color: var(--c-ink); text-wrap: balance; }
+
+.work { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) var(--col-ans); gap: 40px; margin-top: 32px; }
+.scene-col { min-width: 0; display: flex; flex-direction: column; }
+.canvas-wrap { position: relative; height: clamp(440px, calc(100vh - 300px), 560px); }
+.canvas-wrap canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+.answer { min-width: 0; }
+.work.single { grid-template-columns: minmax(0, 720px); }
+.work.single .scene-col { display: none; }
+.work.wide { grid-template-columns: minmax(0, 1fr); }
+.work.wide .answer { display: none; }
+
+/* 播放控制：画面下方一行小字按钮，只在有动画的步骤出现 */
+.playbar { display: flex; gap: 4px; margin-top: 8px; }
+.pb {
+  height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent;
+  color: var(--c-graphite); font-size: var(--fs-sm); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.pb:hover { background: var(--c-side); }
+.pb[aria-pressed='true'] { background: var(--c-side); color: var(--c-ink); }
+.pb svg { flex: 0 0 auto; }
+
+/* ---------- 完成页 ---------- */
+.finish {
+  display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center; min-height: 480px;
+}
+.board.finished .finish { display: flex; }
+.board.finished .tag, .board.finished .title, .board.finished .work { display: none; }
+.finish-big { font: 500 var(--fs-3xl)/1.2 'Noto Serif SC', serif; color: var(--c-ink); }
+.finish-sub { font-size: var(--fs-lg); line-height: 1.7; color: var(--c-graphite); max-width: 420px; }
+.finish-sub .num { color: var(--c-ink); font-weight: 500; }
+.confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+.restart {
+  margin-top: 24px; height: 44px; padding: 0 24px; border: 0; border-radius: 999px;
+  background: var(--c-ink); color: var(--c-page); font-size: var(--fs-md); cursor: pointer;
+}
+
+/* ---------- 选择题 ---------- */
+.opts { display: flex; flex-direction: column; gap: 8px; }
+.opt {
+  width: 100%; min-height: 52px; border: 1.5px solid var(--c-hairline); border-radius: 12px;
+  background: var(--c-card); color: var(--c-ink); font-size: var(--fs-lg); line-height: 1.4; text-align: left;
+  padding: 12px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.opt:hover:not(:disabled) { border-color: var(--c-steel); }
+.opt:disabled { cursor: default; }
+.opt .opt-html { min-width: 0; }
+.opt .mark { flex: 0 0 auto; color: var(--c-field); }
+.opt.on { border-color: var(--c-ink); }
+.opt.reveal { border-color: var(--c-field); }
+.opt.lose { color: var(--c-steel); }
+.opt.lose .opt-html { text-decoration: line-through; }
+.opt.win { border-color: var(--c-field); color: var(--c-field); }
+.choice-foot { margin-top: 8px; }
+.hint-btn { color: var(--c-steel); padding-left: 0; }
+.hint-btn:hover { background: transparent; color: var(--c-ink); }
+
+/* ---------- 演算板 GRAV.ui.work：一行一行出现，左侧一条细竖线 ---------- */
+.wk {
+  display: flex; flex-direction: column; gap: 8px; margin-top: 24px;
+  padding-left: 16px; border-left: 2px solid var(--c-hairline); min-width: 0;
+}
+.wk-line { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; row-gap: 0; animation: wkIn .3s ease both; }
+.wk-eq { font-size: var(--fs-xl); line-height: 1.5; color: var(--c-steel); min-width: 0; overflow-wrap: anywhere; }
+.wk-line.last .wk-eq { color: var(--c-ink); }
+.wk-note { margin-left: auto; font-size: var(--fs-xs); color: var(--c-steel); }
+@keyframes wkIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---------- 结论、大字（通用） ---------- */
+.big { font: 500 var(--fs-2xl)/1.4 'Noto Serif SC', serif; color: var(--c-ink); }
+.stem { font-size: var(--fs-lg); line-height: 1.7; color: var(--c-ink); margin-bottom: 24px; }
+
+/* ---------- 数据表、结论标记 ---------- */
+.dt { width: 100%; border-collapse: collapse; font-size: var(--fs-md); }
+.dt + .dt, .dt-gap { margin-top: 32px; }
+.dt th {
+  font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; color: var(--c-steel); text-align: right;
+  padding: 0 0 8px; border-bottom: 1px solid var(--c-hairline);
+}
+.dt th:first-child, .dt td:first-child { text-align: left; }
+.dt td { padding: 8px 0; text-align: right; color: var(--c-ink); font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+.dt tr:nth-child(2) td { padding-top: 12px; }
+.dt td:first-child { font-family: 'Noto Sans SC', sans-serif; color: var(--c-graphite); }
+.dt tr.in { animation: wkIn .3s ease both; }
+.vd { display: inline-block; min-width: 44px; font: 500 var(--fs-xs)/20px 'Noto Sans SC', sans-serif; padding: 0 8px; border-radius: 999px; text-align: center; }
+.vd.keep { color: var(--c-field); background: color-mix(in srgb, var(--c-field) 12%, transparent); }
+.vd.drop { color: var(--c-steel); background: var(--c-side); }
+.rule { font-size: var(--fs-md); line-height: 1.8; color: var(--c-graphite); }
+.rule b { font-weight: 500; color: var(--c-ink); }
+
+/* ---------- 定义 ---------- */
+.def { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+.def .big { font-size: var(--fs-3xl); line-height: 1.2; margin-bottom: 16px; }
+.def .row { display: flex; gap: 24px; font-size: var(--fs-lg); color: var(--c-ink); padding-top: 16px; border-top: 1px solid var(--c-hairline); }
+.def .row b { width: 48px; flex: 0 0 auto; font-weight: 400; font-size: var(--fs-md); color: var(--c-steel); padding-top: 1px; }
+
+/* ---------- 候选块（第 2 幕）与设计实验的选项（第 3 幕） ---------- */
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.chip {
+  height: 52px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--c-hairline); background: var(--c-card);
+  color: var(--c-ink); font: var(--fs-lg) 'Source Serif 4', serif; cursor: pointer; text-align: left;
+}
+.chip:hover:not(:disabled) { border-color: var(--c-steel); }
+.chip.keep { border-color: var(--c-field); color: var(--c-field); cursor: default; }
+.chip.drop { color: var(--c-steel); text-decoration: line-through; cursor: default; }
+.lab-g { margin-bottom: 24px; }
+.lab-t { font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .04em; color: var(--c-steel); margin-bottom: 8px; }
+.chips.one { grid-template-columns: minmax(0, 1fr); }
+.chip.pick { font: var(--fs-md) 'Noto Sans SC', sans-serif; height: 44px; display: flex; align-items: center; justify-content: space-between; }
+.chip.pick .u { font-family: 'Inter', sans-serif; font-size: var(--fs-sm); }
+.chip.pick.on { border-color: var(--c-ink); }
+.run {
+  height: 44px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--c-ink); color: var(--c-page);
+  font: 500 var(--fs-md) 'Noto Sans SC', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+
+/* ---------- 工具箱 ---------- */
+.tk { display: grid; grid-template-columns: 1fr 1fr; gap: 32px 40px; max-width: 760px; }
+.tk h3 { margin: 0 0 8px; font: 500 var(--fs-lg) 'Noto Sans SC', sans-serif; color: var(--c-ink); }
+.tk p { margin: 0; font-size: var(--fs-md); line-height: 1.8; color: var(--c-graphite); }
+.tk p b { font-weight: 500; color: var(--c-ink); }
+.tk .lead { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; padding-bottom: 24px; border-bottom: 1px solid var(--c-hairline); }
+.tk .lead span:last-child { font-size: var(--fs-md); color: var(--c-graphite); }
+.tk .warn { grid-column: 1 / -1; }
+.tk .warn ul { margin: 0; padding-left: 18px; font-size: var(--fs-md); line-height: 2; color: var(--c-graphite); }
+
+/* ---------- 小测 ---------- */
+.score { font: 500 var(--fs-3xl)/1.2 'Noto Serif SC', serif; color: var(--c-ink); }
+.score-sub { font-size: var(--fs-md); color: var(--c-steel); margin-top: 4px; }
+.score-rows { margin-top: 32px; display: flex; flex-direction: column; max-width: 480px; }
+.score-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: var(--fs-md); color: var(--c-graphite);
+  padding: 12px 0; border-top: 1px solid var(--c-hairline); }
+.score-row .txt-btn { padding-right: 0; }
+
+/* ---------- 手机宽度（≤ 760px）：讲解在上，板子在下，推进按钮固定在底部 ---------- */
+@media (max-width: 760px) {
+  :root { --fs-2xl: 24px; --fs-3xl: 40px; }
+  body { padding-bottom: 80px; }
+  .top { padding: 0 12px; gap: 8px; height: 56px; }
+  .progress { gap: 4px; }
+  .seg { min-width: 8px; }
+  .tools .txt-btn { padding: 6px 4px; }
+  .stage { flex-direction: column; align-items: stretch; }
+  .caption { width: auto; position: static; max-height: none; padding: 8px 20px 16px; }
+  .status { display: none; }
+  /* 左栏只显示最后两句（气泡也算一句） */
+  .log { overflow: visible; gap: 12px; }
+  .log .item:not(:nth-last-child(-n+2)) { display: none; }
+  .foot {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; margin: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: var(--c-page); border-top: 1px solid var(--c-hairline);
+  }
+  .go { width: 100%; height: 48px; }
+  .return-btn { width: 100%; justify-content: center; margin-bottom: 8px; }
+  .go-tip { display: none; }
+  .board { margin: 0 12px 16px; padding: 24px 16px; min-height: 0; border-radius: 16px; }
+  .work, .work.single { grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
+  /* 手机上简单的情景用矮画布，带图表的步骤（step.tall）用高画布 */
+  .canvas-wrap { height: 300px; }
+  .work.tall .canvas-wrap { height: 460px; }
+  .tk { grid-template-columns: 1fr; gap: 24px; }
+  .toc { right: 12px; top: 56px; }
+}
+
+/* 只有作答区的步骤：选项不要拉满整行 */
+.work.single .opts, .work.single .choice-foot { max-width: 520px; }
+
+/* ---------- 结论区：题板顶部的一条推理链；点一项，浮层里展开正文和下属条目 ---------- */
+.chain { position: relative; z-index: 6; margin: -8px 0 20px; }
+.ch-row { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.ch-row::-webkit-scrollbar { display: none; }
+.ch-h { flex: 0 0 auto; font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); margin-right: 4px; }
+.ch-empty { font-size: var(--fs-xs); color: var(--c-steel); }
+.ch {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 15px; cursor: pointer;
+  border: 1px solid var(--c-hairline); background: var(--c-page); color: var(--c-graphite); font: var(--fs-sm) 'Noto Sans SC', sans-serif; white-space: nowrap;
+}
+.ch:hover { border-color: var(--c-steel); }
+.ch.ok:not(.latest):not(.on) { color: var(--c-graphite); }
+.ch-pop li.ok { color: var(--c-ink); }
+.ch.latest { color: var(--c-ink); border-color: var(--c-ink); font-weight: 500; }
+.ch.on { background: var(--c-ink); color: var(--c-page); border-color: var(--c-ink); }
+.ch.out .ch-t { text-decoration: line-through; color: var(--c-steel); }
+.ch.on.out .ch-t { color: inherit; }
+.ch-n { font: var(--fs-xs) 'Inter', sans-serif; opacity: .7; }
+.ch-n::before { content: '+'; }
+.ch-arrow { flex: 0 0 auto; color: var(--c-steel); font-size: var(--fs-sm); }
+.note-tag { flex: 0 0 auto; font: 500 var(--fs-xs)/18px 'Noto Sans SC', sans-serif; padding: 0 6px; border-radius: 4px; background: var(--c-card); color: var(--c-steel); box-shadow: 0 0 0 1px var(--c-hairline); }
+.ok > .note-tag, .ch.ok .note-tag { color: var(--c-field); box-shadow: 0 0 0 1px color-mix(in srgb, var(--c-field) 40%, transparent); }
+.ch.on .note-tag { background: transparent; color: inherit; box-shadow: 0 0 0 1px currentColor; }
+.ch-pop {
+  position: absolute; left: 0; top: calc(100% + 6px); width: min(560px, 100%); max-height: 60vh; overflow-y: auto;
+  padding: 14px 40px 14px 16px; border-radius: 12px; background: var(--c-card); border: 1px solid var(--c-hairline); box-shadow: var(--board-shadow);
+  font-size: var(--fs-sm); line-height: 1.7; color: var(--c-ink); animation: wkIn .25s ease both;
+}
+.ch-x { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border: 0; border-radius: 14px; background: none; color: var(--c-steel); font-size: 18px; line-height: 1; cursor: pointer; }
+.ch-x:hover { color: var(--c-ink); background: var(--c-page); }
+.ch-title { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+.ch-title b, .ch-pop li b { font-weight: 500; }
+.ch-pop ol { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid var(--c-hairline); display: flex; flex-direction: column; gap: 8px; }
+.ch-pop li b { margin-right: 8px; }
+.ch-pop li .note-tag { margin-right: 6px; }
+.ch-pop li div { display: inline; color: var(--c-graphite); }
+.ch-pop li.out b { text-decoration: line-through; color: var(--c-steel); }
+.ch-pop li.latest b { color: var(--c-ink); }
+@media (max-width: 760px) {
+  .chain { margin: -4px 0 14px; }
+  .ch-pop li div { display: block; }
+}
+
+/* ---------- 动量课删减版新增：预测锁定、候选判断、例题分段、作业 ---------- */
+.opt.on:not(.win) .mark { color: var(--c-steel); font-size: var(--fs-xs); }
+.q-gap { margin-top: 24px; }
+.cands { display: flex; flex-direction: column; gap: 16px; }
+.cand { padding-bottom: 16px; border-bottom: 1px solid var(--c-hairline); }
+.cand:last-child { border-bottom: 0; padding-bottom: 0; }
+.cand-t { font: var(--fs-lg) 'Source Serif 4', serif; font-style: italic; color: var(--c-ink); margin-bottom: 8px; }
+.cand-bs { display: flex; flex-wrap: wrap; gap: 8px; }
+.cand-b {
+  height: 36px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--c-hairline); background: var(--c-card);
+  color: var(--c-ink); font: var(--fs-sm) 'Noto Sans SC', sans-serif; cursor: pointer;
+}
+.cand-b:hover:not(:disabled) { border-color: var(--c-steel); }
+.cand-b:disabled { cursor: default; }
+.cand-b.lose { color: var(--c-steel); text-decoration: line-through; }
+.cand-b.keep { border-color: var(--c-field); color: var(--c-field); }
+.cand-b.drop { border-color: var(--c-ink); }
+.cand.done .cand-b:not(.keep):not(.drop) { display: none; }
+.cand.dropped .cand-t { color: var(--c-steel); text-decoration: line-through; }
+.ex-sec { margin-bottom: 24px; }
+.ex-l { font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); margin-bottom: 8px; }
+.ex-sec .stem { margin-bottom: 0; }
+.ex-sec .wk { margin-top: 0; }
+.hw { display: flex; flex-direction: column; max-width: 640px; }
+.hw-i { padding: 16px 0; border-top: 1px solid var(--c-hairline); }
+.hw-t { font: 500 var(--fs-xs) 'Noto Sans SC', sans-serif; letter-spacing: .08em; color: var(--c-steel); margin-bottom: 4px; }
+.hw-q { font-size: var(--fs-lg); line-height: 1.7; }
+.hw-a { margin-top: 8px; font-size: var(--fs-md); color: var(--c-graphite); }
+.hw-a summary { cursor: pointer; color: var(--c-steel); font-size: var(--fs-sm); }
+.hw-a div { margin-top: 4px; }
+.finish-credit { margin-top: 24px; font-size: var(--fs-xs); color: var(--c-steel); }
+.opt:disabled:not(.on):not(.win):not(.reveal):not(.lose) { color: var(--c-steel); }
+@media (max-width: 760px) { body:has(.return-btn:not([hidden])) { padding-bottom: 136px; } }

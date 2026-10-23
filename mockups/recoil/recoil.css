@@ -1,0 +1,8 @@
+/* 第 5 节：五节课的问题链 */
+.chain-map { display: flex; flex-direction: column; gap: 6px; max-width: 560px; }
+.cm-i { padding: 12px 16px; border-radius: 12px; border: 1px solid var(--c-hairline); background: var(--c-page); }
+.cm-n { font-size: var(--fs-xs); color: var(--c-steel); letter-spacing: .04em; }
+.cm-q { font-size: var(--fs-md); color: var(--c-ink); margin-top: 2px; }
+.cm-a { font-size: var(--fs-sm); color: var(--c-graphite); margin-top: 2px; }
+.cm-next { border-style: dashed; }
+.cm-arrow { text-align: center; color: var(--c-steel); font-size: var(--fs-sm); line-height: 1; }

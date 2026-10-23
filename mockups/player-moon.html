@@ -1,0 +1,562 @@
+<title>月亮来作证</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@400;500&family=Source+Serif+4:ital,wght@0,400;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c-page: #ffffff; --c-side: #f7f7f5; --c-card: #ffffff; --c-hairline: #e1e4e8;
+    --c-steel: #9aa0a8; --c-graphite: #5d636c; --c-ink: #1f2329; --c-accel: #a62c77;
+    --c-velocity: #1f4fd8; --c-field: #0e9c85; --c-bar: #e2e2df;
+    --board-shadow: 0 0 40px rgba(51, 51, 51, .06);
+    --won-shadow: 0 0 40px rgba(51, 51, 51, .06), inset 0 0 0 1.5px #0e9c85;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --c-page: #0a0a0b; --c-side: #0f1013; --c-card: #0f1013; --c-hairline: #24252a;
+      --c-steel: #6b6c70; --c-graphite: #9a9a98; --c-ink: #f2f2f0; --c-accel: #e07ab8;
+      --c-velocity: #6e9bff; --c-field: #6ff0c8; --c-bar: #2a2b30;
+      --board-shadow: inset 0 0 0 1px #24252a; --won-shadow: inset 0 0 0 1.5px #6ff0c8;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --c-page: #0a0a0b; --c-side: #0f1013; --c-card: #0f1013; --c-hairline: #24252a;
+    --c-steel: #6b6c70; --c-graphite: #9a9a98; --c-ink: #f2f2f0; --c-accel: #e07ab8;
+    --c-velocity: #6e9bff; --c-field: #6ff0c8; --c-bar: #2a2b30;
+    --board-shadow: inset 0 0 0 1px #24252a; --won-shadow: inset 0 0 0 1.5px #6ff0c8;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--c-page); color: var(--c-ink);
+    font-family: 'Noto Sans SC', 'Inter', sans-serif; -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; }
+  .sym { font-family: 'Source Serif 4', serif; font-style: italic; }
+  .num { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+  .acc { color: var(--c-accel); }
+  .u { color: var(--c-steel); font-size: .9em; }
+  .ok { color: var(--c-field); }
+  .no { color: var(--c-steel); }
+
+  /* ---------- 顶栏 ---------- */
+  .top {
+    height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 20px;
+    background: var(--c-page);
+  }
+  .icon-btn, .arrow-btn {
+    width: 36px; height: 36px; flex: 0 0 auto; border: 0; background: transparent;
+    color: var(--c-graphite); border-radius: 10px; display: grid; place-items: center; cursor: pointer;
+  }
+  .icon-btn:hover, .arrow-btn:hover:not(:disabled) { background: var(--c-side); }
+  .arrow-btn { font-size: 22px; line-height: 1; }
+  .arrow-btn:disabled { color: var(--c-bar); cursor: default; }
+  .txt-btn {
+    border: 0; background: transparent; color: var(--c-graphite); font-size: 13px;
+    padding: 6px 8px; border-radius: 8px; cursor: pointer;
+  }
+  .txt-btn:hover { background: var(--c-side); }
+  .progress { flex: 1; max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 6px; }
+  .seg { height: 8px; border-radius: 4px; background: var(--c-bar); position: relative; overflow: hidden; flex: 0.6 0 auto; min-width: 20px; }
+  .seg.done { flex: 1 1 0; background: var(--c-ink); }
+  .seg.cur { flex: 3.2 1 0; min-width: 0; }
+  .seg .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--c-ink); border-radius: 4px; }
+  .tools { display: flex; align-items: center; gap: 4px; }
+
+  /* ---------- 舞台 ---------- */
+  .stage { display: flex; min-height: calc(100vh - 64px); }
+
+  .caption {
+    width: 30%; max-width: 400px; flex: 0 0 auto; background: var(--c-side);
+    display: flex; flex-direction: column; padding: 56px 40px 36px;
+  }
+  .prev { font-size: 15px; line-height: 1.6; color: var(--c-steel); margin-bottom: 12px; }
+  .cur { font-size: 18px; line-height: 1.6; color: var(--c-ink); }
+  .status { margin-top: 16px; font-size: 13px; color: var(--c-steel); }
+  .status .ok { color: var(--c-field); }
+
+  .board {
+    flex: 1; min-width: 0; margin: 24px 24px 24px 0; padding: 30px 40px 24px;
+    background: var(--c-card); border-radius: 24px; display: flex; flex-direction: column;
+    box-shadow: var(--board-shadow);
+    transition: box-shadow .3s;
+  }
+  .board.won { box-shadow: var(--won-shadow); }
+
+  .tag {
+    display: inline-block; align-self: flex-start; font: 500 12px/1 'JetBrains Mono', 'Noto Sans SC', monospace;
+    color: var(--c-graphite); background: var(--c-side); border: 1px solid var(--c-hairline);
+    padding: 6px 12px; border-radius: 999px;
+  }
+  .title { font: 500 28px/1.35 'Noto Serif SC', serif; margin: 14px 0 0; color: var(--c-ink); }
+
+  .work { flex: 1; min-height: 0; display: flex; gap: 40px; margin-top: 16px; }
+  .canvas-wrap { flex: 1; min-width: 0; position: relative; min-height: 440px; }
+  .canvas-wrap canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  .canvas-wrap .legend { position: absolute; }
+
+  .answer { width: 340px; flex: 0 0 auto; align-self: flex-start; }
+
+  /* 候选块 */
+  .opts { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  .opt {
+    width: 340px; max-width: 100%; height: 56px; border: 1.5px solid var(--c-hairline); border-radius: 14px;
+    background: var(--c-card); color: var(--c-ink); font-size: 16px; text-align: left; padding: 0 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .opt .t { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; font-size: 15px; color: var(--c-graphite); }
+  .opt.lose { color: var(--c-steel); }
+  .opt.lose .t { color: var(--c-steel); text-decoration: line-through; }
+  .opt.win, .opt.win .t { color: var(--c-field); }
+  .opt.win.on { border-color: var(--c-field); }
+  .real { margin-top: 18px; display: flex; justify-content: space-between; width: 340px; max-width: 100%; padding: 0 19px; font-size: 15px; color: var(--c-steel); }
+  .real .num { font-size: 15px; color: var(--c-steel); }
+  .real.shown, .real.shown .num { color: var(--c-ink); font-weight: 500; }
+  .opt:hover { border-color: var(--c-steel); }
+  .opt.on { border-color: var(--c-ink); }
+  .opt .sym { font-size: 17px; }
+  .res { font-size: 14px; color: var(--c-graphite); padding: 2px 4px 8px 19px; line-height: 1.6; max-width: 340px; }
+  .res .sym { font-size: 15px; }
+
+  .legend { position: absolute; right: 0; top: 0; display: flex; flex-direction: column; gap: 6px; font: 12px 'JetBrains Mono', 'Noto Sans SC', monospace; color: var(--c-steel); pointer-events: none; }
+  .legend span { display: inline-flex; align-items: center; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c-velocity); margin-right: 6px; }
+  .ring { display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--c-graphite); margin-right: 6px; }
+
+
+  /* 结论卡 */
+  .concl { font: 500 30px/1.45 'Noto Serif SC', serif; color: var(--c-ink); }
+  .concl .sym { font-size: 32px; }
+  .concl-sub { margin-top: 14px; font-size: 15px; line-height: 1.7; color: var(--c-graphite); }
+
+  /* 加速度横条 */
+  .bars { display: flex; flex-direction: column; gap: 26px; }
+  .bar-lab { font-size: 14px; color: var(--c-graphite); margin-bottom: 10px; }
+  .bar-lab .sym { font-size: 15px; }
+  .bar { height: 14px; border-radius: 7px; background: var(--c-accel); }
+  .bar-note { margin-top: 2px; font-size: 14px; color: var(--c-steel); }
+
+  .foot { display: flex; justify-content: center; margin-top: 16px; }
+  .go {
+    width: 360px; max-width: 100%; height: 52px; border: 0; border-radius: 999px;
+    background: var(--c-ink); color: var(--c-page); font: 500 16px 'Noto Sans SC', sans-serif;
+    letter-spacing: .04em; cursor: pointer;
+  }
+  .go:disabled { background: var(--c-bar); color: var(--c-steel); cursor: default; }
+
+  /* ---------- 手机宽度 ---------- */
+  @media (max-width: 700px) {
+    .top { padding: 0 12px; gap: 8px; }
+    .progress { gap: 4px; }
+    .stage { flex-direction: column; min-height: 0; }
+    .caption { width: auto; max-width: none; padding: 14px 16px; }
+    .prev, .status { display: none; }
+    .board { margin: 0 16px 24px; padding: 20px 16px 24px; }
+    .work { flex-direction: column; gap: 16px; }
+    .canvas-wrap { flex: none; height: 400px; min-height: 0; }
+    .answer { width: 100%; }
+    .title { font-size: 26px; }
+  }
+</style>
+
+<header class="top">
+  <button class="icon-btn" type="button" aria-label="关闭" title="关闭">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>
+  </button>
+  <button class="arrow-btn" id="prev" type="button" aria-label="上一步" title="上一步（←）">‹</button>
+  <div class="progress" aria-label="进度">
+    <span class="seg done"></span>
+    <span class="seg cur"><span class="fill" id="fill"></span></span>
+    <span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span>
+  </div>
+  <button class="arrow-btn" id="next" type="button" aria-label="下一步" title="下一步（→）">›</button>
+  <div class="tools">
+    <button class="icon-btn" type="button" aria-label="目录" title="目录">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+    </button>
+    <button class="txt-btn" id="theme" type="button" aria-pressed="false">夜光</button>
+  </div>
+</header>
+
+<main class="stage">
+  <aside class="caption">
+    <div class="prev" id="prev-line"></div>
+    <div class="cur" id="cur-line"></div>
+    <div class="status" id="status"></div>
+  </aside>
+
+  <section class="board" id="board">
+    <div><span class="tag">第 2 幕 · 月亮来作证</span></div>
+    <h1 class="title" id="title"></h1>
+    <div class="work">
+      <div class="canvas-wrap"><canvas id="scene" aria-label="地月系统示意图"></canvas><div class="legend" id="legend"></div></div>
+      <div class="answer" id="answer"></div>
+    </div>
+    <div class="foot"><button class="go" id="go" type="button"></button></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var root = document.documentElement;
+  var $ = function (s) { return document.querySelector(s); };
+  var params = new URLSearchParams(location.search);
+
+  // ---------- 物理（全部由这里计算） ----------
+  var PHYS = { g: 9.8, R: 6.371e6, r: 3.84e8, DAY: 86400, T_REAL: 27.3, r_meas: 3.8e8, SEC_PER_DAY: 0.25 };
+  var CANDS = [0, 1, 2, 3].map(function (n) {
+    var a = PHYS.g * Math.pow(PHYS.R / PHYS.r, n);
+    var T = 2 * Math.PI * Math.sqrt(PHYS.r / a) / PHYS.DAY;
+    return { n: n, a: a, T: T, ok: Math.abs(T - PHYS.T_REAL) / PHYS.T_REAL < 0.02 };
+  });
+  var A_PRED = PHYS.g / (60 * 60);
+  var A_MEAS = 4 * Math.PI * Math.PI * PHYS.r_meas / Math.pow(PHYS.T_REAL * PHYS.DAY, 2);
+  var DIFF_PCT = Math.round(Math.abs(A_PRED - A_MEAS) / A_PRED * 100);
+
+  var LAW = ['不随距离变', '∝ 1/<i class="sym">r</i>', '∝ 1/<i class="sym">r</i>²', '∝ 1/<i class="sym">r</i>³'];
+  var NOTE = {
+    0: '月亮 11 小时就该转一圈，和真实差太远。',
+    1: '3.5 天一圈，还是太快。',
+    2: '27.4 天，和真实的 27.3 天几乎一样。',
+    3: '要 213 天才转一圈，太慢了。'
+  };
+  var TITLES = [
+    '如果是同一种力，它随距离怎么变？',
+    '如果是同一种力，它随距离怎么变？',
+    '月亮自己说：27.3 天',
+    '同一种力，和距离的平方成反比',
+    '牛顿当年比的是加速度'
+  ];
+  var CAP = [
+    { prev: '苹果在地面，月亮在 60 倍地球半径远的地方。',
+      cur: '上一节，太阳拉行星的力和距离的平方成反比。地球拉苹果、拉月亮，会不会也是这样？' },
+    { prev: '上一节，太阳拉行星的力和距离的平方成反比。地球拉苹果、拉月亮，会不会也是这样？',
+      cur: '从苹果的 <i class="sym">g</i> 出发，按你选的规律算一算：月亮应该几天绕地球一圈？' },
+    { prev: '从苹果的 <i class="sym">g</i> 出发，按你选的规律算一算：月亮应该几天绕地球一圈？',
+      cur: '翻开来：月亮绕地球一圈是 27.3 天。哪一种规律对得上？' },
+    { prev: '翻开来：月亮绕地球一圈是 27.3 天。哪一种规律对得上？',
+      cur: '苹果落地和月亮绕地球，是同一种力在起作用。你开头选的是“说不清”，现在有答案了。' },
+    { prev: '苹果落地和月亮绕地球，是同一种力在起作用。你开头选的是“说不清”，现在有答案了。',
+      cur: '牛顿比的是加速度：预测 <i class="sym">g</i>/3600，实测月球的向心加速度 4π²<i class="sym">r</i>/<i class="sym">T</i>²。和我们比周期，是同一件事。' }
+  ];
+  var BTN = ['试一试', '翻开实际周期', '继续', '继续', '下一幕'];
+
+  // ---------- 格式化 ----------
+  var SUP = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+  function sup(s) { return s.split('').map(function (c) { return SUP[c] || c; }).join(''); }
+  function fmtSci(x) {
+    var p = x.toExponential(2).split('e');
+    return p[0] + '×10' + sup(String(Number(p[1])));
+  }
+  function fmtA(a) {
+    if (a >= 1) return a.toPrecision(2);
+    if (a >= 0.01) return a.toPrecision(3);
+    return fmtSci(a);
+  }
+  function fmtT(T) { return T < 10 ? T.toPrecision(2) : T.toPrecision(3); }
+
+  // ---------- 状态 ----------
+  function clampInt(v, lo, hi) {
+    var n = parseInt(v, 10);
+    if (isNaN(n)) n = 0;
+    return Math.min(hi, Math.max(lo, n));
+  }
+  function validN(n) { return n >= 0 && n <= 3; }
+
+  var step = clampInt(params.get('step'), 0, 4);
+  var pick = (function () {
+    var v = params.get('pick');
+    if (v === null || v === '') return null;
+    var n = parseInt(v, 10);
+    return validN(n) ? n : null;
+  })();
+  var tried = new Set(((params.get('tried') || '').split(',')).map(function (v) { return parseInt(v, 10); }).filter(validN));
+  if (pick !== null) tried.add(pick);
+  if (params.get('theme') === 'night') root.setAttribute('data-theme', 'dark');
+  var darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function isDark() {
+    var t = root.getAttribute('data-theme');
+    return t === 'dark' || (t !== 'light' && !!(darkMQ && darkMQ.matches));
+  }
+
+  // ---------- 动画时钟（1 天 = 0.25 秒） ----------
+  var vt = 0;
+  var pred = { n: null, base: 0, anchor: 0, omega: 0 };
+  var realAnchor = 0;
+  var OMEGA_REAL = 2 * Math.PI / (PHYS.T_REAL * PHYS.SEC_PER_DAY);
+  function omegaOf(n) { return 2 * Math.PI / (CANDS[n].T * PHYS.SEC_PER_DAY); }
+  function predAngle() { return pred.base + pred.omega * (vt - pred.anchor); }
+  function realAngle() { return OMEGA_REAL * (vt - realAnchor); }
+  function setPred(n, reset) {
+    var base = (reset || pred.n === null) ? 0 : predAngle();
+    pred = { n: n, base: base, anchor: vt, omega: n === null ? 0 : omegaOf(n) };
+  }
+  function effPick() { return step >= 3 ? 2 : pick; }
+  function syncPred(reset) {
+    var e = effPick();
+    if (reset || e !== pred.n) setPred(e, reset);
+  }
+
+  function goStep(s) {
+    var prev = step;
+    step = Math.min(4, Math.max(0, s));
+    if (prev < 2 && step >= 2) { realAnchor = vt; syncPred(true); }
+    else syncPred(false);
+    render();
+  }
+  function canAdvance() { return step === 1 ? tried.size > 0 : true; }
+  function pickN(n) {
+    pick = n;
+    tried.add(n);
+    syncPred(false);
+    render();
+  }
+
+  // ---------- 画布 ----------
+  var canvas = $('#scene');
+  var ctx = canvas.getContext('2d');
+  var wrap = canvas.parentNode;
+  var cw = 1, ch = 1, dpr = 1;
+
+  function resize() {
+    var rect = wrap.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    cw = Math.max(1, Math.round(rect.width));
+    ch = Math.max(1, Math.round(rect.height));
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+  }
+  function col(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
+  function palette() {
+    return {
+      ink: col('--c-ink'), graphite: col('--c-graphite'), steel: col('--c-steel'),
+      hair: col('--c-hairline'), accel: col('--c-accel'), vel: col('--c-velocity')
+    };
+  }
+  function ITAL(px) { return 'italic ' + px + 'px "Source Serif 4", serif'; }
+  function UI(px) { return px + 'px "Noto Sans SC", sans-serif'; }
+  function NUM(px) { return px + 'px Inter, sans-serif'; }
+  function text(str, x, y, font, color, align) {
+    ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(str, x, y);
+  }
+  function runs(list, x, y, align) {
+    var total = 0;
+    list.forEach(function (it) { ctx.font = it.f; it.w = ctx.measureText(it.t).width; total += it.w; });
+    var px = align === 'center' ? x - total / 2 : x;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    list.forEach(function (it) { ctx.font = it.f; ctx.fillStyle = it.c; ctx.fillText(it.t, px, y); px += it.w; });
+  }
+
+  function draw(C) {
+    var TAU = Math.PI * 2;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cw, ch);
+    var s = Math.min(cw, ch), rho = 0.42 * s;
+    var cx = cw / 2, cy = ch - rho - 28, RE = rho / 60.27;
+
+    // 轨道（虚线）
+    ctx.save();
+    ctx.setLineDash([2, 4]); ctx.strokeStyle = C.hair; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, rho, 0, TAU); ctx.stroke();
+    ctx.restore();
+
+    // 半径线与标注
+    ctx.save();
+    ctx.globalAlpha = 0.7; ctx.strokeStyle = C.steel; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx + RE, cy); ctx.lineTo(cx + rho, cy); ctx.stroke();
+    ctx.restore();
+    runs([
+      { t: 'r', f: ITAL(15), c: C.graphite },
+      { t: ' = 60', f: NUM(13), c: C.graphite },
+      { t: 'R', f: ITAL(15), c: C.graphite }
+    ], cx + rho * 0.5, cy - 10, 'center');
+
+    // 地球（按比例）
+    ctx.save();
+    ctx.globalAlpha = 0.3; ctx.fillStyle = C.vel;
+    ctx.beginPath(); ctx.arc(cx, cy, RE, 0, TAU); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, RE, 0, TAU); ctx.stroke();
+    text('地球', cx, cy + RE + 18, UI(12), C.graphite, 'center');
+    text('距离按比例；月球圆点放大画', 14, ch - 6, UI(11), C.steel, 'left');
+
+    // 左上角插图：苹果下落 + g
+    var x0 = 14, y0 = 14, gy = y0 + 84, ax = x0 + 22, ra = 6;
+    var f = Math.min(1, (vt % 1.6) / 1.2);
+    var yTop = y0 + 14, yEnd = gy - ra;
+    var ay = yTop + (yEnd - yTop) * f * f;
+    ctx.strokeStyle = C.steel; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, gy); ctx.lineTo(x0 + 90, gy); ctx.stroke();
+    ctx.fillStyle = C.graphite;
+    ctx.beginPath(); ctx.arc(ax, ay, ra, 0, TAU); ctx.fill();
+    runs([
+      { t: 'g', f: ITAL(14), c: C.graphite },
+      { t: ' = ', f: UI(12), c: C.graphite },
+      { t: String(PHYS.g), f: NUM(12), c: C.accel },
+      { t: ' m/s²', f: NUM(12), c: C.graphite }
+    ], x0 + 46, y0 + 26, 'left');
+    text('地面', x0, gy + 15, UI(11), C.steel, 'left');
+
+    // 预测月球（没选时停在最右侧，选了就按 T_n 转，后面拖一段渐隐尾迹）
+    var th = pred.n === null ? 0 : predAngle();
+    if (pred.n !== null) {
+      var span = Math.PI / 3, N = 24;
+      ctx.save();
+      ctx.strokeStyle = C.vel; ctx.lineWidth = 3;
+      for (var i = 0; i < N; i++) {
+        ctx.globalAlpha = 0.55 * (1 - i / N);
+        ctx.beginPath();
+        ctx.arc(cx, cy, rho, th - span * (i + 1) / N, th - span * i / N);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    var mx = cx + rho * Math.cos(th), my = cy + rho * Math.sin(th);
+    ctx.fillStyle = C.vel;
+    ctx.beginPath(); ctx.arc(mx, my, 6, 0, TAU); ctx.fill();
+    if (pred.n !== null) {
+      var Ts = CANDS[pred.n].T * PHYS.SEC_PER_DAY;
+      if (Ts < 0.3) text('太快了', mx, my - 14, UI(12), C.graphite, 'center');
+      else if (Ts > 20) text('几乎不动', mx, my - 14, UI(12), C.graphite, 'center');
+    }
+
+    // 真实月球（翻开后出现，空心圆）
+    if (step >= 2) {
+      var ath = realAngle();
+      ctx.strokeStyle = C.graphite; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx + rho * Math.cos(ath), cy + rho * Math.sin(ath), 6, 0, TAU);
+      ctx.stroke();
+    }
+  }
+
+  var lastNow = null;
+  function frame(now) {
+    if (lastNow === null) lastNow = now;
+    var dt = Math.min(0.05, (now - lastNow) / 1000);
+    lastNow = now;
+    vt += dt;
+    draw(palette());
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- 作答区 HTML ----------
+  function resHTML(c) {
+    if (step === 2) return '<div class="res">' + NOTE[c.n] + '</div>';
+    return '<div class="res">月亮处 <i class="sym">a</i> = <span class="num acc">' + fmtA(c.a) +
+      '</span> <span class="u">m/s²</span>' + (c.T < 1 ? '，约 ' + Math.round(c.T * 24) + ' 小时一圈' : '') + '</div>';
+  }
+  function optsHTML() {
+    var h = '<div class="opts" role="group" aria-label="候选规律">';
+    CANDS.forEach(function (c) {
+      var on = pick === c.n, done = tried.has(c.n);
+      var cls = step === 2 && done ? (c.ok ? ' win' : ' lose') : '';
+      var t = done ? fmtT(c.T) + ' 天' + (step === 2 && c.ok ? ' ✓' : '') : '';
+      h += '<button type="button" class="opt' + (on ? ' on' : '') + cls + '" data-n="' + c.n +
+        '" aria-pressed="' + on + '"><span>' + LAW[c.n] + '</span><span class="t">' + t + '</span></button>';
+      if (on) h += resHTML(c);
+    });
+    h += '</div><div class="real' + (step >= 2 ? ' shown' : '') + '"><span>实际周期</span><span class="num">' +
+      (step >= 2 ? '27.3 天' : '？') + '</span></div>';
+    return h;
+  }
+  function legendHTML() {
+    if (step < 1) return '';
+    return '<span><i class="dot"></i>预测</span>' +
+      (step >= 2 ? '<span><i class="ring"></i>实际（27.3 天）</span>' : '');
+  }
+  function conclHTML() {
+    return '<div class="concl">地球的引力 ∝ 1/<i class="sym">r</i>²</div>' +
+      '<div class="concl-sub">从地面到月球，距离变成 <span class="num">60</span> 倍，引力变成 <span class="num">1/3600</span>。</div>';
+  }
+  function barsHTML() {
+    var maxV = Math.max(A_PRED, A_MEAS);
+    var L = function (v) { return Math.round(280 * v / maxV); };
+    return '<div class="bars">' +
+      '<div><div class="bar-lab">预测 <i class="sym">g</i>/3600 = <span class="num acc">' + fmtSci(A_PRED) +
+      '</span> <span class="u">m/s²</span></div><div class="bar" style="width:' + L(A_PRED) + 'px"></div></div>' +
+      '<div><div class="bar-lab">实测 4π²<i class="sym">r</i>/<i class="sym">T</i>² = <span class="num acc">' + fmtSci(A_MEAS) +
+      '</span> <span class="u">m/s²</span></div><div class="bar" style="width:' + L(A_MEAS) + 'px"></div></div>' +
+      '<div class="bar-note">相差约 ' + DIFF_PCT + '%</div></div>';
+  }
+  function answerHTML() {
+    if (step === 0) return '';
+    if (step === 4) return barsHTML();
+    return step <= 2 ? optsHTML() : conclHTML();
+  }
+  function statusHTML() {
+    if (step === 1) return pick === null ? '等你选择……' : '可以再试别的，也可以翻开实际周期';
+    if (step === 2) {
+      if (pick === null) return '';
+      return pick === 2 ? '<span class="ok">对上了：实际周期和 ∝ 1/r² 的预测一致</span>'
+                        : '<span class="no">对不上：这一种规律的周期和实际不符</span>';
+    }
+    if (step === 0) return '点下面的按钮往下走';
+    if (step === 4) return '点下一幕';
+    return '点继续往下';
+  }
+
+  // ---------- 渲染 ----------
+  var el = {
+    fill: $('#fill'), title: $('#title'), prev: $('#prev-line'), cur: $('#cur-line'),
+    status: $('#status'), answer: $('#answer'), go: $('#go'), board: $('#board'),
+    prevBtn: $('#prev'), nextBtn: $('#next'), theme: $('#theme'), legend: $('#legend')
+  };
+
+  function render() {
+    el.fill.style.width = ((step + 1) / 5 * 100).toFixed(0) + '%';
+    el.title.textContent = TITLES[step];
+    el.prev.innerHTML = CAP[step].prev;
+    el.cur.innerHTML = CAP[step].cur;
+    el.status.innerHTML = statusHTML();
+    el.board.classList.toggle('won', step >= 2 && effPick() === 2);
+    el.answer.innerHTML = answerHTML();
+    el.legend.innerHTML = legendHTML();
+    el.go.textContent = BTN[step];
+    el.go.disabled = step === 1 && !canAdvance();
+    el.prevBtn.disabled = step === 0;
+    el.nextBtn.disabled = step >= 4 || !canAdvance();
+    el.theme.setAttribute('aria-pressed', String(isDark()));
+  }
+
+  function prevStep() { if (step > 0) goStep(step - 1); }
+  function nextStep() { if (step < 4 && canAdvance()) goStep(step + 1); }
+
+  // ---------- 事件 ----------
+  el.go.addEventListener('click', function () {
+    if (step === 0) goStep(1);
+    else if (step === 1) { if (tried.size > 0) goStep(2); }
+    else if (step === 2 || step === 3) goStep(step + 1);
+    // 第 4 步的“下一幕”没有动作
+  });
+  el.answer.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.opt') : null;
+    if (!b) return;
+    pickN(Number(b.getAttribute('data-n')));
+  });
+  el.prevBtn.addEventListener('click', prevStep);
+  el.nextBtn.addEventListener('click', nextStep);
+  $('#theme').addEventListener('click', function () {
+    root.setAttribute('data-theme', isDark() ? 'light' : 'dark');
+    render();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') nextStep();
+    else if (e.key === 'ArrowLeft') prevStep();
+  });
+
+  // ---------- 启动 ----------
+  resize();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  else window.addEventListener('resize', resize);
+  syncPred(false);
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
