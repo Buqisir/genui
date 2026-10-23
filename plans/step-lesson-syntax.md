@@ -128,7 +128,7 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 <Fill rows={[
   { name: "弹性", text: "碰撞前后 {总动能|每个物体的动能|每个物体的速度} 不变；一样重时交换速度" },
   { name: "非弹性", text: "总动能减少，碰后可以分开" },
-  { name: "完全非弹性", text: "碰后粘在一起，动能减少 {最多|全部|为零}，一般不是全部" },
+  { name: "完全非弹性", text: "碰后粘在一起，动能减少 {最多|全部|最少}，一般不是全部" },
   { name: "三种都", text: "动量守恒" }
 ]} />
 
@@ -137,7 +137,7 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 
 第一项是答案，其余是干扰项；每项各自的反馈写在 `say` 属性里（这里省略）。
 
-**#a1s1 预测锁定**：`<Choice predict>` 选了就锁定、不判对错；后面的句子可以按学生选的那项说不同的话，写成 `<Say when="…">` 还是放进选项的 `then` 属性，选定方案后再定。
+**#a1s1 预测锁定**：`<Choice predict>` 选了就锁定、不判对错；之后用 `<Recall>` 回看学生选的那项（v0.2 定，见下文第三节）。
 
 ## 选定后接着要定的
 
@@ -147,9 +147,11 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 
 ---
 
-# 组件清单与属性表（v0.1，2026-10-23，待用户审）
+# 组件清单与属性表（v0.2，2026-10-23，用户定）
 
-以下按方案 A 写。代码现状的依据：`app/src/lesson/parse.ts`、`app/src/components/LessonView.tsx` 的 `splitSegments`、`app/src/lesson/store.tsx`、`app/src/lesson/validate.ts`（行号见本节末）。
+以下按方案 A 写。v0.2 = v0.1 + 迁移第 4 节时发现的 10 处修改（`plans/collision-migration.md` 第二节 A–J），本节已经全部并入，以本节为准。代码现状的依据：`app/src/lesson/parse.ts`、`app/src/components/LessonView.tsx` 的 `splitSegments`、`app/src/lesson/store.tsx`、`app/src/lesson/validate.ts`（行号见第六节）。
+
+属性类型沿用 `components.ts` 的 `PropKind`（string、number、boolean、expr、array、object、name、names）。下表写"枚举"的，在 `components.ts` 里是 `string`，取值由 `validate.ts` 检查。
 
 ## 一、整页怎么切
 
@@ -162,12 +164,14 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 
 | 规矩 | 说明 |
 |---|---|
-| 句 | 步里的正文按空行拆，每段一句。现在解析器把连续正文合成一个 markdown 块，播放器在步内按空行再拆。一句 ≤ 60 字（警告）。 |
+| 句 | 步里的正文按空行拆，每段一句。现在解析器把连续正文合成一个 markdown 块，播放器在步内按空行再拆。一句 ≤ 60 字（警告 `sentence-too-long`）。 |
 | 出现时间 | 组件写在第 k 句（从 0 数）后面，就从第 k 句起出现在板上；写在第一句之前的从第 0 句起就在。 |
-| 停点 | `<Choice>`、`<Fill>`、`<Lab>` 是停点：从它所在的那一句往下讲，要先答对、锁定预测或做满实验。停点后面必须还有一句（`stop-at-end` 错误）。 |
-| 反馈 | 选项的 `say` 在讲述栏作为当前句说出来，板上只变状态（板面规格总规矩 7）。 |
-| 画面跟句子 | 课件开场声明 `<Param name="beat" hidden value={0} />`，播放器把当前句号写进它，`<Sim>` / `<Figure>` 的 `params` 里写上 `beat` 就能读。做法和 `<Segment revealParam>` 一样：参数系统不用改。进入每一步时归 0。 |
-| 开播 | `<Step play={k}>`：这一步的 `<Sim>` 停在 t = 0，讲到第 k 句才从头播一次；不写 `play` 时进入就播。 |
+| 停点 | `<Choice>`、`<Fill>`、`<Lab>`（不带 `filled`）是停点：讲到它所在的那一句就停，要先答对、锁定预测或做满实验才能往下讲。停点可以在一步的最后一句（v0.1 的 `stop-at-end` 已删）：答完说完反馈，按钮变"继续"进下一步。 |
+| 反馈 | 选项的 `say` 在讲述栏作为当前句说出来，板上只变状态（板面规格总规矩 7）。`say` 可以是字符串数组，按句说，每句 ≤ 60 字。 |
+| 回看 | `<Recall choice="名字" />` 单独成段，占一句，见第三节。 |
+| 画面跟句子 | 课件开场声明 `<Param name="beat" hidden value={0} />`，播放器把当前句号写进它，`<Sim>` / `<Figure>` 的 `params` 里写上 `beat` 就能读，`<Collision>` 的 expr 属性也能读。做法和 `<Segment revealParam>` 一样：参数系统不用改。进入每一步时归 0。 |
+| 开播 | `<Step play={k}>`：这一步的 `<Sim>` / `<Collision>` 停在 t = 0，讲到第 k 句才从头播一次；不写 `play` 时进入就播。 |
+| 多张定义卡 | 同一步里的多个 `<Def>` 接成一张卡，后写的行从它所在的那一句起出现。 |
 
 ## 三、组件
 
@@ -177,39 +181,49 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | title | string | 是 | 幕名，幕标签显示成"第 N 幕 · 幕名"，N 自动数 |
-| quiz | boolean |  | 小测幕：本幕里每个 `<Choice>` 的第一次作答计入成绩 |
+| quiz | boolean |  | 小测幕：本幕里每个 `<Choice>` 的第一次作答计入成绩；步标题自动加"小测 N / M：" |
 
 ### `<Step />` 步
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| title | string | 是 | 步标题，≤ 18 字（小测幕自动加"小测 N / M："，不计字数） |
+| title | string | 是 | 步标题，≤ 18 字（小测幕的"小测 N / M："前缀不计） |
 | play | number |  | 第几句开播（见上） |
-| frame | enum |  | 强制版式：`result grid fill example quiz lab derive def pic`；不写时按板面规格 3.3 自动判定 |
+| frame | 枚举 |  | 强制版式：`result grid fill example quiz lab derive def pic`；不写时按板面规格 3.3 自动判定 |
 
 ### `<Stem />` 题干卡
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | text | string | 是 | 题干，已知条件 |
 | ask | string |  | 问句，接在题干最后，600 字重（G7）；≤ 40 字 |
-| label | string |  | 小标题，如"情境 · 自编" |
+| label | string |  | 小标题，如"情境" |
 
-校验：例题、小测里的 `<Stem>` 没写 `ask` 时警告 `stem-without-ask`（第 4 节 #a5s1、#a7s2/3/6/7 迁移时补上）。
+校验：小测幕里、或同一步有 `<Choice>` 的 `<Stem>` 没写 `ask` 时警告 `stem-without-ask`。
 
 ### `<Choice />` 选择题（停点）
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| options | array | 是 | 2–4 项，每项 `{ text, correct?, say }`；`text` ≤ 24 字；`say` 是选了这一项时讲述栏说的话 |
+| options | array | 是 | 2–4 项，每项 `{ text, correct?, say, check? }`；`text` ≤ 24 字；`say` 是选了这一项时讲述栏说的话（字符串或字符串数组）；`check` 只给预测题用，见 `<Recall>` |
 | ask | string |  | 没有 `<Stem>` 的步里，选项上方的问句 |
 | hints | array |  | 三级提示（不写就没有"提示"按钮；写了必须正好 3 条） |
-| predict | boolean |  | 预测题：没有正确项，选了就锁定，不判对错 |
+| predict | boolean |  | 预测题：选了就锁定，不判对错 |
+| name | string |  | 给 `<Recall>` 引用；全课不能重名 |
+| label | string |  | 例题里的小节名，如"策略" |
 
-规则：非预测题正好一个 `correct`；预测题不能有 `correct`。交互照板面规格 G5、G6（先选后提交、提交后 400ms 防连点）。
+规则：非预测题正好一个 `correct`；预测题最多一个 `correct`（表示实测结果是这一项，锁定时不揭晓，到 `<Recall>` 才说）。交互照板面规格 G5、G6（先选后提交、提交后 400ms 防连点）。
+
+### `<Recall />` 回看预测（新，v0.2）
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| choice | string | 是 | 引用的 `<Choice name>`，必须是预测题，写在它之后（可以在后面的步里） |
+
+单独成段，占一句。讲述栏说：选中项就是 `correct` → "你猜的是「text」，猜对了。"；否则 → "你猜的是「text」。"；再接这一项的 `check`。学生没选（跳步跳过了）→ 只说 `correct` 那项的 `check`。被引用的预测题每项都要有 `check`（`recall-needs-check`），`check` ≤ 45 字。
 
 ### `<Work />` 演算
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| lines | array |  | ≤ 3 行的算式列，每行 `{ eq, note? }`，一句出一行 |
-| blocks | array |  | ≥ 4 行的推导分块，每块 `{ title, lines, note? }`，一屏 ≤ 4 块，最后一块是结论框 |
+| lines | array |  | ≤ 3 行的算式列，每行 `{ eq, note? }`，从所在那句起一句出一行 |
+| blocks | array |  | ≥ 4 行的推导分块，每块 `{ title, lines, note? }`，一屏 ≤ 4 块，最后一块是结论框；从所在那句起一句出一块 |
+| label | string |  | 例题里的小节名，如"解答" |
 
 `lines` 和 `blocks` 二选一，必须有一个；`lines` 超过 3 行报 `work-needs-blocks`。
 
@@ -222,36 +236,64 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 ### `<Fill />` 补全（停点）
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| rows | array | 是 | 同 `<Def>`；`text` 里的空格写成 `{答案|干扰1|干扰2}`，第一项是答案 |
+| rows | array | 是 | 同 `<Def>`；`text` 里的空格写成 `{答案|干扰1|干扰2}`，第一项是答案（显示时打乱） |
 | say | array |  | 每个空一组反馈，和选项一一对应：`[["对……", "……", "……"], …]` |
+| hints | array |  | 每个空一组三级提示：`[["…", "…", "…"], …]` |
+| mask | array |  | 结论链条目的 `title` 列表：这些条目到这个 `<Fill>` 全部答完前盖住 |
 
 一次只问一个空；答对后卡里填上，选项收成一行。
 
-### `<Lab />` 实验（停点）
+### `<Lab />` 实验（停点；带 `filled` 时不是）
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| runs | array | 是 | 可选的实验条件，每项 `{ label, set }`，`set` 是要设的参数（同 `<Preset>`） |
-| columns | array | 是 | 数据表的列，每列 `{ label, expr }`，每做一次按当时参数求值记一行 |
+| runs | array | 是 | 实验条件，每项 `{ label, set }`，`set` 是要设的参数（同 `<Preset>`） |
+| columns | array | 是 | 数据表的列（条件名那一列自动加在最前），每列 `{ label, expr, digits? }`，按当时参数求值 |
 | need | number |  | 要做满几种不同条件才放行，默认 = `runs` 的个数 |
+| first | array |  | 固定的首行，如 `["碰前", "0.240", "0.072", "100%"]`，个数 = 列数 + 1 |
+| filled | boolean |  | 表一开始就按 `runs` 全部算好填满；不出条件按钮，不是停点 |
 
-点一个条件 → 设参数 → `<Sim>` 从头播 → 记一行。
+点一个条件 → 设参数 → `<Sim>` / `<Collision>` 从头播 → 记一行。
+
+### `<Collision />` 碰撞画面（新，v0.2）
+一维两体碰撞：导轨（或台面）、两车（或两球）、速度箭头；下面动量、动能两组柱子（A、B、和，虚线是碰前的和）。画法照原型 `mockups/collision/draw.js` 的 `COL.scene`，颜色只取调色板。
+
+| 属性 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| m | array | 是 | 两个质量（kg），每项 number 或 expr |
+| v | array | 是 | 碰前两个速度（m/s，向右为正），每项 number 或 expr |
+| after | array |  | 碰后两个速度，每项 number 或 expr；不写 `still` 时必填（`collision-needs-after`） |
+| surface | string 或 expr |  | 碰撞面：`magnet` 磁体、`rubber` 橡皮、`velcro` 粘扣；写 expr 时取值 0 / 1 / 2 依次对应。默认 `magnet`；`velcro` 碰后两车画成一体 |
+| body | 枚举 |  | `cart` 小车（默认）、`ball` 小球 |
+| names | array |  | 两个物体的名字，默认 `["A", "B"]` |
+| massText | array |  | 质量标注，默认按 `m` 写"0.4 kg"；题目只说"质量都是 m"时写 `["m", "m"]` |
+| label | string |  | 左上角说明；不写且写了 `surface` 时自动写"碰撞面：橡皮，碰后弹开" |
+| bars | boolean 或 expr |  | 画不画柱子，默认 true；如 `"beat >= 3"` |
+| digits | object |  | 小数位 `{ v, p, k }`，默认 `{ v: 2, p: 3, k: 3 }` |
+| still | boolean |  | 只画碰前一帧，不播（小测的碰前示意图） |
+| height | number |  | 画布高度（像素） |
+
+在普通课件（没有 `<Act>`）里和 `<Sim>` 一样带播放条。
 
 ### `<Conclude />` 结论链条目
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| title | string | 是 | 链上的短标题 |
+| title | string | 是 | 链上的短标题，全课不重名 |
 | text | string | 是 | 浮层里的正文 |
-| under | string |  | 挂在哪一条下面（写那一条的 title） |
+| under | string |  | 挂在哪一条下面（写那一条的 title）；可以指向后出现的条目，那一条出现前先挂在根上 |
 | guess | boolean |  | 这是猜想，之后由另一条用 `settles` 判定 |
-| settles | string |  | 判定哪一条猜想（写它的 title） |
-| result | enum |  | `holds`（成立）或 `out`（出局），和 `settles` 一起用 |
+| settles | string |  | 判定或收编哪一条（写它的 title） |
+| result | 枚举 |  | `holds`：成立，或被这一条收编，链上那一条改显示这一条的标题和正文；`out`：出局。和 `settles` 一起用 |
+| blank | string |  | 被 `<Fill mask>` 盖住时显示的挖空版，空格写 `___`；不写就显示"……" |
 
 写在第几句后面就在第几句加进链里。
 
 ### `<Result />` 小测结果
 | 属性 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| goals | array | 是 | 每个目标 `{ title, items, back }`：`items` 是小测题号，`back` 是答错时"回第 N 幕再看" |
+| goals | array | 是 | 每个目标 `{ title, items, back }`：`items` 是小测题号（从 1 数），`back` 是答错时"回第 N 幕再看"的幕号 |
+| say | object |  | `{ all, some }`：全对和没全对时讲述栏说的话，`{n}`、`{total}` 换成成绩 |
+
+有 `<Result>` 的步可以不写正文。
 
 ### `<Homework />` 作业
 | 属性 | 类型 | 必填 | 说明 |
@@ -260,19 +302,18 @@ sim({ … 读 p.beat：beat ≥ 2 开播，beat ≥ 3 画柱子 … })
 
 ## 四、和板面规格的对应
 
-板面规格 3.3 的自动判定，从原型的 CSS 类换成组件：`.score` → `<Result>`，`.hw` → `<Homework>`，`.fill` → `<Fill>`，`.stem` → `<Stem>`，`.run`/`table.dt` → `<Lab>`，`.bks` → `<Work blocks>`，`.def` → `<Def>`。第六节的自动检查挂到对应组件上：标题（Step）、讲述每句（句）、问句（Stem.ask、Choice.ask）、选项（Choice）、提示（Choice.hints）、演算（Work）。
+板面规格 3.3 的自动判定，从原型的 CSS 类换成组件：`.score` → `<Result>`，`.hw` → `<Homework>`，`.fill` → `<Fill>`，`.stem` → `<Stem>`，`.run`/`table.dt` → `<Lab>`（含 `filled`），`.bks` → `<Work blocks>`，`.def` → `<Def>`；"有画面" = 这一步有 `<Sim>`、`<Figure>`、`<Collision>` 或其他画布组件。第六节的自动检查挂到对应组件上：标题（Step）、讲述每句（句、`say`、`check`）、问句（Stem.ask、Choice.ask）、选项（Choice）、提示（Choice.hints）、演算（Work）。
 
-原型里的 `button`、`gateAt`、`layout: 'answer'`、`tall`、`onBeat` 都不进库：按钮字由外壳定，停点由组件位置定，版式自动判定。
-
-> 迁移第 4 节时发现要改的地方（新增 `<Collision>`、`<Recall>`，`Lab`/`Fill`/`Result` 等加属性，删掉 `stop-at-end`）见 `plans/collision-migration.md` 第二节，用户审过后并进 v0.2。
+原型里的 `button`、`gateAt`、`layout: 'answer'`、`tall`、`onBeat`、`boardMask` 都不进库：按钮字由外壳定，停点由组件位置定，版式自动判定，遮罩由 `<Fill mask>` 定。
 
 ## 五、这一版先不做的
 
-- 预测题之后按学生选的那项说不同的话（第 4 节 #a1s1）。v0.1 只在锁定时说该项的 `say`，后面的句子对谁都一样；迁移时把原型里分支的话并进 `say`。
 - 补丁按"整步"替换：现在补丁只按块定位，`<Step>` 会被索引成 `Step:标题`，只能替换那一行；整步替换以后再加。
+
+（v0.1 这里的"预测之后按选项说不同的话"已由 `<Recall>` 解决。）
 
 ## 六、进库要改的地方（据调研）
 
 - 新组件：`app/src/lesson/components.ts` 的 `COMPONENTS` 加定义 → `validate.ts` 的 `checkComponent` 加 case → `LessonView.tsx` 渲染（另起 `StepLesson`，参照 `SegmentedLesson`）→ `docs/cards/` 各一张卡并挂进 `docs/manifest.yaml` → `npx tsx scripts/docs.ts build` → `npm run lock:components` → `npm run prompts:update`。
-- 跨块规则（`stop-at-end`、`act-without-step`、`mixed-structure`）写在 `validateLesson` 里遍历 `lesson.blocks`；新错误码先加进 `ISSUE_CODES`。
-- `beat`：校验时如果 `<Sim>`/`<Figure>` 的 `params` 用了 `beat`，要求它是 `hidden` 的 `<Param>`。
+- 跨块规则（`act-without-step`、`mixed-structure`、`recall-needs-check`、`Recall` 引用存在且在前、`Choice name` / `Conclude title` 不重名、`under` / `settles` / `mask` 引用存在）写在 `validateLesson` 里遍历 `lesson.blocks`；新错误码先加进 `ISSUE_CODES`。
+- `beat`：校验时如果 `<Sim>`/`<Figure>`/`<Collision>` 用了 `beat`，要求它是 `hidden` 的 `<Param>`。
