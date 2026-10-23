@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { choiceOptions, type ComponentBlock } from './model'
 import { useStepRuntime, useStop } from './runtime'
+import { INTERACTIVE_PARTS } from './parts/interactiveParts'
+import { TEXT_PARTS } from './parts/textParts'
 
 /**
  * Step components (Choice, Fill, Lab, Stem, …) register here. StepLesson looks a component up by name
@@ -8,7 +10,7 @@ import { useStepRuntime, useStop } from './runtime'
  * `at` is the sentence the component appears at: it is on the board from that sentence on.
  */
 export type StepComponent = (p: { block: ComponentBlock; at: number }) => ReactNode
-export const STEP_COMPONENTS: Record<string, StepComponent> = {}
+export const STEP_COMPONENTS: Record<string, StepComponent> = { ...TEXT_PARTS, ...INTERACTIVE_PARTS }
 
 /** Names that only exist inside a step lesson: they never go to LessonView's renderComponent. */
 export const STEP_ONLY_NAMES = new Set(['Stem', 'Choice', 'Recall', 'Work', 'Def', 'Fill', 'Lab', 'Conclude', 'Result', 'Homework'])
