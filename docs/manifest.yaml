@@ -40,6 +40,32 @@
   file: cards/dial.md
 - region: segment
   file: cards/segment.md
+- region: step-lesson
+  file: cards/step-lesson.md
+- region: step-step
+  file: ref/step-step.md
+- region: step-stem
+  file: ref/step-stem.md
+- region: step-choice
+  file: ref/step-choice.md
+- region: step-recall
+  file: ref/step-recall.md
+- region: step-work
+  file: ref/step-work.md
+- region: step-def
+  file: ref/step-def.md
+- region: step-fill
+  file: ref/step-fill.md
+- region: step-lab
+  file: ref/step-lab.md
+- region: step-conclude
+  file: ref/step-conclude.md
+- region: step-result
+  file: ref/step-result.md
+- region: step-homework
+  file: ref/step-homework.md
+- region: collision
+  file: cards/collision.md
 - region: variant
   file: cards/variant.md
 - region: force-diagram

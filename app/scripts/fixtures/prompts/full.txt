@@ -482,6 +482,45 @@ answers:                      # 参考答案，校验用，不显示
 ### `<Segment>`：分段讲解
 
 `<Segment title quote hint watch />` 是分段标记，自闭合。从它开始到下一个 `<Segment>` 之前的正文、图和控件都属于这一段；第一个 `<Segment>` 之前的正文是开场，只在第一段上方显示。最后一段通常写「完整解答」，不放图。`ask`、`reveal`、`revealParam` 只用于上课模式：`ask` 是投在屏幕上问全班的一句话，`reveal` 是按空格揭晓的答案，`revealParam` 是揭晓前设为 0、揭晓后设为 1 的隐藏参数。写了 `chain` 的是全景段：不放自己的图，而是把 `chain` 里各段的第一张图排成一行，用 `steps` 标在箭头上，由 `link` 的第一个参数统一驱动。上课模式还有画笔（P 键），在投影上圈画，翻页时自动擦掉。每段都写了 `quote` 时，页首的原题默认收成一行关键条件（头信息 `givens: ["…", …]`），点「题目原文」展开全文。
+### `<Act>` / `<Step>`：分步课
+
+`<Act title quiz />` 是幕标记，显示成「第 N 幕 · 幕名」；`quiz` 的幕里每个 `<Choice>` 的第一次作答计入成绩，由 `<Result>` 汇总。`<Step title play frame />` 是步标记，标题不超过 18 字；`frame` 强制版式（`result grid fill example quiz lab derive def pic`），不写则自动判定。步里的句、出现时间、停点、反馈、回看、`beat`、开播的规矩见 `step-lesson` 卡。各步内组件见 `step-stem`、`step-choice`、`step-recall`、`step-work`、`step-def`、`step-fill`、`step-lab`、`step-conclude`、`step-result`、`step-homework`。
+### `<Step>`
+
+`<Step title play frame />` 自闭合。`title` 不超过 18 字（超过警告）；`play` 是非负整数，让 `<Sim>` / `<Collision>` 讲到第 `play` 句才开播；`frame` 取 `result grid fill example quiz lab derive def pic`，不写则自动判定。`<Act>` 之后必须紧跟 `<Step>`。
+### `<Stem>`
+
+`<Stem text ask label />`：`text` 是题干，`ask` 是接在题干最后的问句（不超过 40 字），`label` 是小标题，如「情境」。
+### `<Choice>`
+
+`<Choice options ask hints predict name label />`：每个选项 `{ text, correct?, say, check? }`。`name` 全课不能重名，给 `<Recall>` 引用。没有 `<Stem>` 的步里，用 `ask` 写问句。
+### `<Recall>`
+
+`<Recall choice />`：`choice` 是预测题的 `name`。引用错误报 `recall-target`，缺 `check` 报 `recall-needs-check`。
+### `<Work>`
+
+`<Work lines blocks label />`：`lines` 每行 `{ eq, note? }`，`label` 是例题里的小节名，如「解答」。
+### `<Def>`
+
+`<Def rows follow />`：每行 `{ name, text, note? }`。
+### `<Fill>`
+
+`<Fill rows say hints mask />`：`rows` 同 `<Def>`。
+### `<Lab>`
+
+`<Lab runs columns need first filled />`：`runs` 每项 `{ label, set }`，`set` 是要设的参数（同 `<Preset>`）；`columns` 每列 `{ label, expr, digits? }`，按当时参数求值，条件名那一列自动加在最前；`first` 个数 = 列数 + 1。
+### `<Conclude>`
+
+`<Conclude title text under guess settles result blank />`：`blank` 是被 `<Fill mask>` 盖住时的挖空版，空格写 `___`，不写就显示「……」。
+### `<Result>`
+
+`<Result goals say />`：`goals` 每项 `{ title, items, back }`，`items` 是小测题号（从 1 数），`back` 是答错时「回第 N 幕再看」的幕号；`say` 是 `{ all, some }`，`{n}`、`{total}` 换成成绩。
+### `<Homework>`
+
+`<Homework items />`：每题 `{ tag, q, a }`，`tag` 如「必做 1 · L1」，`a` 折叠，点开看。
+### `<Collision>`：碰撞画面
+
+`<Collision m v after surface />` 画一维两体碰撞：导轨（或台面）、两车（或两球）、速度箭头；下面动量、动能两组柱子。`m`、`v`、`after` 各两项，数字或表达式；`still` 只画碰前一帧。颜色只取调色板。
 ### `<Variant>`：变式
 
 `<Variant label set ask reveal />` 是「如果……」变式，自闭合，只在上课画布里生效。`label` 是变式的名字；`set` 是应用变式时写入的参数，键必须是 `<Param>` 声明过的名字，值是数字或表达式；`ask` 是提出的问题，`reveal` 是揭晓的答案，一两句。老师在画布上点「应用」后，所有引用了这些参数的图和读数都按新条件重算；点「复原」回到题目原来的条件。`expect` 可选，写应用变式后应得的数值，键是 `<Param>` 或 `<Define>` 名，如 `expect={{h: 0}}`；校验器在题目初始参数上叠加 `set` 重新计算并核对，误差超过 1% 退回。

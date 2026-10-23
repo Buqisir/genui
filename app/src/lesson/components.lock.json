@@ -1,4 +1,18 @@
 {
+  "Act": {
+    "quiz": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    }
+  },
   "Answer": {
     "items": {
       "kind": [
@@ -77,6 +91,44 @@
     "y": {
       "kind": [
         "object"
+      ],
+      "required": false
+    }
+  },
+  "Choice": {
+    "ask": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "hints": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "name": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "options": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "predict": {
+      "kind": [
+        "boolean"
       ],
       "required": false
     }
@@ -166,6 +218,140 @@
         "object"
       ],
       "required": false
+    }
+  },
+  "Collision": {
+    "after": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "bars": {
+      "kind": [
+        "boolean",
+        "expr"
+      ],
+      "required": false
+    },
+    "body": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "digits": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    },
+    "height": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "m": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "massText": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "names": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "still": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "surface": {
+      "kind": [
+        "expr",
+        "string"
+      ],
+      "required": false
+    },
+    "v": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    }
+  },
+  "Conclude": {
+    "blank": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "guess": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "result": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "settles": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "text": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    },
+    "under": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    }
+  },
+  "Def": {
+    "follow": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "rows": {
+      "kind": [
+        "array"
+      ],
+      "required": true
     }
   },
   "Define": {
@@ -407,6 +593,32 @@
     "title": {
       "kind": [
         "string"
+      ],
+      "required": false
+    }
+  },
+  "Fill": {
+    "hints": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "mask": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "rows": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "say": {
+      "kind": [
+        "array"
       ],
       "required": false
     }
@@ -854,6 +1066,14 @@
       "required": false
     }
   },
+  "Homework": {
+    "items": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    }
+  },
   "Instrument": {
     "angle": {
       "kind": [
@@ -996,6 +1216,38 @@
       "kind": [
         "expr",
         "number"
+      ],
+      "required": true
+    }
+  },
+  "Lab": {
+    "columns": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "filled": {
+      "kind": [
+        "boolean"
+      ],
+      "required": false
+    },
+    "first": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "need": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "runs": {
+      "kind": [
+        "array"
       ],
       "required": true
     }
@@ -1446,6 +1698,28 @@
       "required": true
     }
   },
+  "Recall": {
+    "choice": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    }
+  },
+  "Result": {
+    "goals": {
+      "kind": [
+        "array"
+      ],
+      "required": true
+    },
+    "say": {
+      "kind": [
+        "object"
+      ],
+      "required": false
+    }
+  },
   "Segment": {
     "ask": {
       "kind": [
@@ -1617,6 +1891,46 @@
       "required": true
     }
   },
+  "Stem": {
+    "ask": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "text": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    }
+  },
+  "Step": {
+    "frame": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "play": {
+      "kind": [
+        "number"
+      ],
+      "required": false
+    },
+    "title": {
+      "kind": [
+        "string"
+      ],
+      "required": true
+    }
+  },
   "TickerTape": {
     "analysis": {
       "kind": [
@@ -1781,6 +2095,26 @@
         "array"
       ],
       "required": true
+    }
+  },
+  "Work": {
+    "blocks": {
+      "kind": [
+        "array"
+      ],
+      "required": false
+    },
+    "label": {
+      "kind": [
+        "string"
+      ],
+      "required": false
+    },
+    "lines": {
+      "kind": [
+        "array"
+      ],
+      "required": false
     }
   }
 }

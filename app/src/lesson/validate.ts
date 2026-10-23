@@ -53,6 +53,8 @@ export const ISSUE_CODES = [
   'bad-name', 'duplicate-name', 'undeclared-name', 'cycle', 'bad-expr', 'eval-failed', 'no-scene',
   'component-invalid', 'not-finite', 'out-of-range', 'component-warning', 'unused-name',
   'arrow-direction', 'arrow-zero', 'arrow-scale',
+  'mixed-structure', 'act-without-step', 'step-without-act', 'outside-step', 'work-needs-blocks', 'collision-needs-after',
+  'recall-target', 'recall-needs-check', 'conclude-ref', 'stem-without-ask', 'sentence-too-long', 'step-without-text', 'beat-not-hidden',
 ] as const
 
 type Kind = PropKind
@@ -231,6 +233,8 @@ export function validateLesson(source: string): ValidationResult {
   }
   errors.push(...compErrors.filter((e) => !cascade(e.message)))
 
+  stepRules(lesson.blocks, comps, errors, warnings)
+
   const motionCircuits = new Set(
     comps.filter((b) => b.name === 'Motion' && b.props.circuit && typeof b.props.name === 'string').map((b) => String(b.props.name)),
   )
@@ -240,11 +244,11 @@ export function validateLesson(source: string): ValidationResult {
     }
   }
 
-  const SCENES = ['Sim', 'Figure', 'ForceDiagram', 'Circuit', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes']
+  const SCENES = ['Sim', 'Figure', 'ForceDiagram', 'Circuit', 'Instrument', 'TickerTape', 'EnergyLevels', 'Wiring', 'GasBox', 'GasTube', 'Fringes', 'Collision']
   // A scene tag that is unclosed or failed to parse is already reported; the lesson did not lose its scene.
   const sceneBroken = lesson.errors.some((e) => SCENES.includes(tagAt(raw, e.line) ?? ''))
   if (!metaBroken && meta.demo !== true && !sceneBroken && !comps.some((b) => SCENES.includes(b.name))) {
-    errors.push({ message: '课件没有画出物理情景：至少要有一个 Sim、Figure、ForceDiagram、Circuit、Instrument、TickerTape、EnergyLevels、Wiring、GasBox、GasTube 或 Fringes（只有 Plot 不够）', code: 'no-scene' })
+    errors.push({ message: '课件没有画出物理情景：至少要有一个 Sim、Figure、ForceDiagram、Circuit、Instrument、TickerTape、EnergyLevels、Wiring、GasBox、GasTube、Fringes 或 Collision（只有 Plot 不够）', code: 'no-scene' })
   }
 
   let scope: Record<string, number> | undefined
@@ -1486,6 +1490,345 @@ function checkComponent(
     case 'Fringes': {
       fringesIssues(b.props, declared, userNames, err, expr, keysOnly)
       break
+    }
+    case 'Act':
+      break
+    case 'Step': {
+      if (typeof props.title === 'string' && textLen(props.title.replace(/\s/g, '')) > 18) warn(`标题超过 18 字：${props.title}`)
+      if (props.play !== undefined && !(Number.isInteger(props.play) && (props.play as number) >= 0)) err('play 应为非负整数（第几句开播，从 0 数）')
+      if (props.frame !== undefined && !STEP_FRAMES.includes(String(props.frame))) err(`frame 只能是 ${STEP_FRAMES.join('、')}`)
+      break
+    }
+    case 'Stem': {
+      if (typeof props.ask === 'string' && textLen(props.ask.trim()) > 40) warn('ask 超过 40 字')
+      break
+    }
+    case 'Choice': {
+      const opts = Array.isArray(props.options) ? (props.options as unknown[]) : []
+      if (opts.length < 2 || opts.length > 4) err(`options 要写 2–4 项，现在 ${opts.length} 项`)
+      let correct = 0
+      opts.forEach((o, i) => {
+        const w = `options[${i}]`
+        if (!isObj(o)) return err(`${w} 应为对象 {text, correct?, say, check?}`)
+        keysOnly(o, ['text', 'correct', 'say', 'check'], w)
+        if (typeof o.text !== 'string' || !o.text.trim()) err(`${w} 缺少字符串 text`, 'missing-required')
+        else if (textLen(o.text.trim()) > 24) warn(`${w}.text 超过 24 字`)
+        if (o.correct !== undefined && typeof o.correct !== 'boolean') err(`${w}.correct 应为布尔值`)
+        if (o.correct === true) correct++
+        if (o.say === undefined) err(`${w} 缺少 say`, 'missing-required')
+        else if (!(typeof o.say === 'string' || (Array.isArray(o.say) && o.say.length > 0 && o.say.every((s) => typeof s === 'string')))) err(`${w}.say 应为字符串或字符串数组`)
+        if (o.check !== undefined && typeof o.check !== 'string') err(`${w}.check 应为字符串`)
+        else if (typeof o.check === 'string' && textLen(o.check.trim()) > 45) warn(`${w}.check 超过 45 字`)
+      })
+      if (props.predict === true) {
+        if (correct > 1) err('预测题最多一个 correct')
+      } else if (correct !== 1) err(`非预测题要正好一个 correct，现在 ${correct} 个`)
+      if (props.hints !== undefined && !(Array.isArray(props.hints) && props.hints.length === 3 && props.hints.every((h) => typeof h === 'string'))) err('hints 写了就要正好 3 条字符串（三级提示）')
+      break
+    }
+    case 'Recall':
+      if (typeof props.choice !== 'string' || !props.choice) err('choice 应为 Choice 的 name')
+      break
+    case 'Work': {
+      const hasLines = props.lines !== undefined
+      const hasBlocks = props.blocks !== undefined
+      if (hasLines === hasBlocks) err('lines 和 blocks 要写且只写一个')
+      const eqLines = (v: unknown, where: string) => {
+        const arr = Array.isArray(v) ? (v as unknown[]) : []
+        arr.forEach((l, i) => {
+          if (!isObj(l)) return err(`${where}[${i}] 应为对象 {eq, note?}`)
+          keysOnly(l, ['eq', 'note'], `${where}[${i}]`)
+          if (typeof l.eq !== 'string') err(`${where}[${i}] 缺少字符串 eq`, 'missing-required')
+          if (l.note !== undefined && typeof l.note !== 'string') err(`${where}[${i}].note 应为字符串`)
+        })
+        return arr.length
+      }
+      if (hasLines) {
+        const n = eqLines(props.lines, 'lines')
+        if (n > 3) err(`lines 最多 3 行，现在 ${n} 行，改用 blocks 分块`, 'work-needs-blocks')
+      }
+      if (Array.isArray(props.blocks)) {
+        if (props.blocks.length > 4) warn(`blocks 一屏最多 4 块，现在 ${props.blocks.length} 块`)
+        props.blocks.forEach((bl, i) => {
+          if (!isObj(bl)) return err(`blocks[${i}] 应为对象 {title, lines, note?}`)
+          keysOnly(bl, ['title', 'lines', 'note'], `blocks[${i}]`)
+          if (typeof bl.title !== 'string') err(`blocks[${i}] 缺少字符串 title`, 'missing-required')
+          if (!Array.isArray(bl.lines)) err(`blocks[${i}] 缺少 lines 数组`, 'missing-required')
+          else eqLines(bl.lines, `blocks[${i}].lines`)
+          if (bl.note !== undefined && typeof bl.note !== 'string') err(`blocks[${i}].note 应为字符串`)
+        })
+      }
+      break
+    }
+    case 'Def':
+      stepRows(props.rows, err, keysOnly)
+      break
+    case 'Fill': {
+      stepRows(props.rows, err, keysOnly)
+      const blanks = fillBlanks(props.rows)
+      if (blanks.length === 0) err('text 里至少要有一个空，写成 {答案|干扰1|干扰2}')
+      blanks.forEach((opts, i) => {
+        if (opts.length < 2) err(`第 ${i + 1} 个空至少 2 项（答案加干扰项）：{${opts.join('|')}}`)
+      })
+      if (props.say !== undefined) {
+        const say = props.say as unknown
+        if (!Array.isArray(say) || say.length !== blanks.length) err(`say 要每个空一组，共 ${blanks.length} 组`)
+        else say.forEach((g, i) => {
+          if (!(Array.isArray(g) && g.length === blanks[i].length && g.every((s) => typeof s === 'string'))) err(`say[${i}] 要 ${blanks[i].length} 条字符串，和第 ${i + 1} 个空的选项一一对应`)
+        })
+      }
+      if (props.hints !== undefined) {
+        const hints = props.hints as unknown
+        if (!Array.isArray(hints) || hints.length !== blanks.length) err(`hints 要每个空一组，共 ${blanks.length} 组`)
+        else hints.forEach((g, i) => {
+          if (!(Array.isArray(g) && g.length === 3 && g.every((s) => typeof s === 'string'))) err(`hints[${i}] 要正好 3 条字符串`)
+        })
+      }
+      if (props.mask !== undefined && !(Array.isArray(props.mask) && props.mask.every((s) => typeof s === 'string'))) err('mask 应为 Conclude title 的字符串数组')
+      break
+    }
+    case 'Lab': {
+      const runs = Array.isArray(props.runs) ? (props.runs as unknown[]) : []
+      if (runs.length < 1) err('runs 至少 1 项')
+      runs.forEach((r, i) => {
+        if (!isObj(r)) return err(`runs[${i}] 应为对象 {label, set}`)
+        keysOnly(r, ['label', 'set'], `runs[${i}]`)
+        if (typeof r.label !== 'string') err(`runs[${i}] 缺少字符串 label`, 'missing-required')
+        if (!isObj(r.set)) err(`runs[${i}] 缺少对象 set`, 'missing-required')
+        else setMap(r.set, `runs[${i}].set`)
+      })
+      const cols = Array.isArray(props.columns) ? (props.columns as unknown[]) : []
+      if (cols.length < 1) err('columns 至少 1 列')
+      cols.forEach((c, i) => {
+        if (!isObj(c)) return err(`columns[${i}] 应为对象 {label, expr, digits?}`)
+        keysOnly(c, ['label', 'expr', 'digits'], `columns[${i}]`)
+        if (typeof c.label !== 'string') err(`columns[${i}] 缺少字符串 label`, 'missing-required')
+        if (c.expr === undefined) err(`columns[${i}] 缺少 expr`, 'missing-required')
+        else expr(c.expr, `columns[${i}].expr`)
+        if (c.digits !== undefined && !(Number.isInteger(c.digits) && (c.digits as number) >= 0)) err(`columns[${i}].digits 应为非负整数`)
+      })
+      if (props.need !== undefined && !(Number.isInteger(props.need) && (props.need as number) >= 1 && (props.need as number) <= runs.length)) err(`need 应为 1 到 ${runs.length} 的整数`)
+      if (Array.isArray(props.first) && props.first.length !== cols.length + 1) err(`first 要 ${cols.length + 1} 项（列数加条件名那一列），现在 ${props.first.length} 项`)
+      break
+    }
+    case 'Collision': {
+      const pair = (key: string, each: (x: unknown, i: number) => void) => {
+        const v = props[key] as unknown
+        if (v === undefined) return
+        if (!Array.isArray(v) || v.length !== 2) return err(`${key} 要正好 2 项`)
+        v.forEach(each)
+      }
+      for (const key of ['m', 'v', 'after']) pair(key, (x, i) => expr(x, `${key}[${i}]`))
+      if (props.after === undefined && props.still !== true) err('不写 still 时要写 after（碰后两个速度）', 'collision-needs-after')
+      if (typeof props.surface === 'string' && !SURFACES.includes(props.surface)) expr(props.surface, 'surface')
+      if (props.body !== undefined && props.body !== 'cart' && props.body !== 'ball') err('body 只能是 cart 或 ball')
+      for (const key of ['names', 'massText']) pair(key, (x, i) => typeof x !== 'string' && err(`${key}[${i}] 应为字符串`))
+      if (typeof props.bars === 'string') expr(props.bars, 'bars')
+      if (props.digits !== undefined && isObj(props.digits)) {
+        keysOnly(props.digits, ['v', 'p', 'k'], 'digits')
+        for (const [k, x] of Object.entries(props.digits)) if (!(Number.isInteger(x) && (x as number) >= 0)) err(`digits.${k} 应为非负整数`)
+      }
+      break
+    }
+    case 'Conclude': {
+      if (props.result !== undefined && props.result !== 'holds' && props.result !== 'out') err('result 只能是 holds 或 out')
+      if (props.result !== undefined && props.settles === undefined) err('写 result 必须同时写 settles', 'missing-required')
+      break
+    }
+    case 'Result': {
+      const goals = Array.isArray(props.goals) ? (props.goals as unknown[]) : []
+      if (goals.length < 1) err('goals 至少 1 项')
+      const posInt = (x: unknown) => Number.isInteger(x) && (x as number) >= 1
+      goals.forEach((g, i) => {
+        if (!isObj(g)) return err(`goals[${i}] 应为对象 {title, items, back}`)
+        keysOnly(g, ['title', 'items', 'back'], `goals[${i}]`)
+        if (typeof g.title !== 'string') err(`goals[${i}] 缺少字符串 title`, 'missing-required')
+        if (!(Array.isArray(g.items) && g.items.length > 0 && g.items.every(posInt))) err(`goals[${i}].items 应为正整数数组（小测题号，从 1 数）`)
+        if (!posInt(g.back)) err(`goals[${i}].back 应为正整数（幕号）`)
+      })
+      if (props.say !== undefined && isObj(props.say)) {
+        keysOnly(props.say, ['all', 'some'], 'say')
+        if (typeof props.say.all !== 'string' || typeof props.say.some !== 'string') err('say 要写 {all, some} 两个字符串')
+      }
+      break
+    }
+    case 'Homework': {
+      const items = Array.isArray(props.items) ? (props.items as unknown[]) : []
+      if (items.length < 1) err('items 至少 1 题')
+      items.forEach((it, i) => {
+        if (!isObj(it)) return err(`items[${i}] 应为对象 {tag, q, a}`)
+        keysOnly(it, ['tag', 'q', 'a'], `items[${i}]`)
+        for (const k of ['tag', 'q', 'a']) if (typeof it[k] !== 'string') err(`items[${i}] 缺少字符串 ${k}`, 'missing-required')
+      })
+      break
+    }
+  }
+}
+
+// ---- Step lessons (<Act>/<Step>): see plans/step-lesson-syntax.md ----
+
+const STEP_FRAMES = ['result', 'grid', 'fill', 'example', 'quiz', 'lab', 'derive', 'def', 'pic']
+const SURFACES = ['magnet', 'rubber', 'velcro']
+/** Components that only make sense inside a <Step>. */
+const STEP_ONLY = new Set(['Stem', 'Choice', 'Recall', 'Work', 'Def', 'Fill', 'Lab', 'Conclude', 'Result', 'Homework'])
+
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+/** Length in characters (code points), so astral characters count once. */
+const textLen = (s: string): number => Array.from(s).length
+
+/** The `{答案|干扰…}` blanks in the rows' text, in reading order, each as its list of options. */
+function fillBlanks(rows: unknown): string[][] {
+  const out: string[][] = []
+  if (!Array.isArray(rows)) return out
+  for (const r of rows) {
+    if (!isObj(r) || typeof r.text !== 'string') continue
+    for (const m of r.text.matchAll(/\{([^{}]*)\}/g)) out.push(m[1].split('|').map((s) => s.trim()))
+  }
+  return out
+}
+
+/** Rows of a <Def> or <Fill>: {name, text, note?}. */
+function stepRows(
+  rows: unknown,
+  err: (message: string, code?: string) => void,
+  keysOnly: (obj: Record<string, unknown>, allowed: string[], where: string) => void,
+) {
+  if (!Array.isArray(rows)) return
+  if (rows.length === 0) err('rows 至少 1 行')
+  rows.forEach((r, i) => {
+    if (!isObj(r)) return err(`rows[${i}] 应为对象 {name, text, note?}`)
+    keysOnly(r, ['name', 'text', 'note'], `rows[${i}]`)
+    if (typeof r.name !== 'string') err(`rows[${i}] 缺少字符串 name`, 'missing-required')
+    if (typeof r.text !== 'string') err(`rows[${i}] 缺少字符串 text`, 'missing-required')
+    if (r.note !== undefined && typeof r.note !== 'string') err(`rows[${i}].note 应为字符串`)
+  })
+}
+
+type CompBlock = Extract<Block, { kind: 'component' }>
+
+/** Cross-block rules of step lessons, over the blocks in lesson order. */
+function stepRules(blocks: Block[], comps: CompBlock[], errors: Issue[], warnings: Issue[]) {
+  const err = (line: number | undefined, message: string, code: string) => errors.push({ line, message, code })
+  const warn = (line: number | undefined, message: string, code: string) => warnings.push({ line, message, code })
+  const str = (v: unknown): v is string => typeof v === 'string' && v.length > 0
+  const firstAct = blocks.findIndex((b) => b.kind === 'component' && b.name === 'Act')
+  const firstSegment = comps.find((b) => b.name === 'Segment')
+  if (firstAct >= 0 && firstSegment) err(firstSegment.line, '<Act> 和 <Segment> 不能出现在同一份课件里', 'mixed-structure')
+
+  interface StepInfo { step: CompBlock; quiz: boolean; blocks: CompBlock[]; paragraphs: number }
+  const steps: StepInfo[] = []
+  let cur: StepInfo | undefined
+  let act: CompBlock | undefined
+  const seenActs = new Set<number>()
+  blocks.forEach((b, idx) => {
+    if (b.kind === 'markdown') {
+      if (!cur) return
+      for (const p of b.text.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean)) {
+        cur.paragraphs++
+        if (textLen(p) > 60) warn(cur.step.line, `步「${String(cur.step.props.title)}」里有一句超过 60 字：${p.slice(0, 20)}…`, 'sentence-too-long')
+      }
+      return
+    }
+    if (b.name === 'Act') {
+      act = b
+      cur = undefined
+      seenActs.add(idx)
+      const next = blocks[idx + 1]
+      if (!(next && next.kind === 'component' && next.name === 'Step')) err(b.line, '<Act> 后面必须紧跟 <Step>', 'act-without-step')
+      return
+    }
+    if (b.name === 'Step') {
+      if (firstAct < 0 || idx < firstAct) err(b.line, '<Step> 之前要先有 <Act>', 'step-without-act')
+      cur = { step: b, quiz: act?.props.quiz === true, blocks: [], paragraphs: 0 }
+      steps.push(cur)
+      return
+    }
+    if (STEP_ONLY.has(b.name)) {
+      if (!cur) err(b.line, `<${b.name}> 要写在 <Step> 里面`, 'outside-step')
+      else cur.blocks.push(b)
+      return
+    }
+    cur?.blocks.push(b)
+  })
+
+  // Names across the lesson.
+  const choices = comps.filter((b) => b.name === 'Choice')
+  const concludes = comps.filter((b) => b.name === 'Conclude')
+  const dupes = (list: CompBlock[], key: string, what: string) => {
+    const seen = new Set<string>()
+    for (const b of list) {
+      const v = b.props[key]
+      if (!str(v)) continue
+      if (seen.has(v)) err(b.line, `<${b.name}> ${what} 全课不能重名：${v}`, 'duplicate-name')
+      seen.add(v)
+    }
+  }
+  dupes(choices, 'name', 'name')
+  dupes(concludes, 'title', 'title')
+
+  // Recall points at an earlier predict Choice whose options all carry a check.
+  comps.forEach((b, i) => {
+    if (b.name !== 'Recall' || !str(b.props.choice)) return
+    const target = comps.slice(0, i).find((c) => c.name === 'Choice' && c.props.name === b.props.choice)
+    if (!target) {
+      const later = choices.some((c) => c.props.name === b.props.choice)
+      err(b.line, `<Recall> choice="${b.props.choice}" 必须指向写在它前面的 <Choice name>${later ? '（这个 Choice 写在它后面）' : ''}`, 'recall-target')
+      return
+    }
+    if (target.props.predict !== true) {
+      err(b.line, `<Recall> choice="${b.props.choice}" 指向的 <Choice> 不是预测题（要写 predict）`, 'recall-target')
+      return
+    }
+    const opts = Array.isArray(target.props.options) ? (target.props.options as unknown[]) : []
+    if (!opts.every((o) => isObj(o) && str(o.check))) err(b.line, `<Recall> 引用的预测题 ${b.props.choice} 每个选项都要写 check`, 'recall-needs-check')
+  })
+
+  // Conclude chain references.
+  const titles = new Set(concludes.map((b) => b.props.title).filter(str))
+  const ref = (line: number, owner: string, what: string, v: unknown) => {
+    if (v !== undefined && !(str(v) && titles.has(v))) err(line, `<${owner}> ${what} 必须是某个 <Conclude> 的 title：${String(v)}`, 'conclude-ref')
+  }
+  for (const b of concludes) {
+    ref(b.line, 'Conclude', 'under', b.props.under)
+    ref(b.line, 'Conclude', 'settles', b.props.settles)
+  }
+  for (const b of comps) if (b.name === 'Fill' && Array.isArray(b.props.mask)) b.props.mask.forEach((t, i) => ref(b.line, 'Fill', `mask[${i}]`, t))
+
+  // Per step.
+  for (const s of steps) {
+    const title = String(s.step.props.title)
+    if (s.paragraphs === 0 && !s.blocks.some((b) => b.name === 'Result')) err(s.step.line, `步「${title}」没有一句正文（讲述栏会是空的）`, 'step-without-text')
+    const hasChoice = s.blocks.some((b) => b.name === 'Choice')
+    for (const b of s.blocks) {
+      if (b.name === 'Stem' && !str(b.props.ask) && (s.quiz || hasChoice)) warn(b.line, `<Stem> 在${s.quiz ? '小测幕' : '有 Choice 的步'}里最好写 ask（问句）`, 'stem-without-ask')
+      if (b.name === 'Choice' && Array.isArray(b.props.options)) {
+        for (const o of b.props.options as unknown[]) {
+          if (!isObj(o)) continue
+          for (const sentence of Array.isArray(o.say) ? o.say : [o.say]) {
+            if (typeof sentence === 'string' && textLen(sentence.trim()) > 60) warn(b.line, `<Choice> 选项的 say 有一句超过 60 字：${sentence.trim().slice(0, 20)}…`, 'sentence-too-long')
+          }
+        }
+      }
+    }
+  }
+
+  // The playhead parameter must be a hidden Param.
+  const beat = comps.find((b) => b.name === 'Param' && b.props.name === 'beat')
+  const beatDeclared = comps.some((b) => (b.name === 'Param' || b.name === 'Define') && b.props.name === 'beat')
+  if (beatDeclared && !(beat && beat.props.hidden === true)) {
+    const reads = (v: unknown): boolean => {
+      if (typeof v !== 'string') return false
+      try {
+        return symbolsOf(v).includes('beat')
+      } catch {
+        return false
+      }
+    }
+    for (const b of comps) {
+      const usesInParams = (b.name === 'Sim' || b.name === 'Figure') && Array.isArray(b.props.params) && b.props.params.includes('beat')
+      const usesInExpr = b.name === 'Collision' && (['m', 'v', 'after'].some((k) => Array.isArray(b.props[k]) && (b.props[k] as unknown[]).some(reads)) || reads(b.props.surface) || reads(b.props.bars))
+      const uses = usesInParams || usesInExpr
+      if (uses) err(b.line, `<${b.name}> 读了 beat，但 beat 不是 hidden 的 Param：声明成 <Param name="beat" hidden value={0} />`, 'beat-not-hidden')
     }
   }
 }
