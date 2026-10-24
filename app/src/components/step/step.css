@@ -117,6 +117,11 @@
 .sl-item.prev.ph {
   cursor: default;
 }
+/* 上一句行里 Markdown 产生的段落：同一行，无外边距，好让单行截断照样生效 */
+.sl-item.prev p {
+  display: inline;
+  margin: 0;
+}
 .sl-item.say {
   font-size: var(--S);
   color: var(--c-graphite);

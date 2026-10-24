@@ -41,11 +41,24 @@ function renderComp(block: ComponentBlock, at: number, canvasH?: number): ReactN
   return boxed(block, block.line)
 }
 
-/** Last line of a sentence, for the faded "previous sentence" row of the narration. */
+/**
+ * Last sentence of a line, for the faded "previous sentence" row of the narration.
+ * Keeps the Markdown and TeX as they are (the row renders them); cuts only outside $…$,
+ * so a punctuation mark inside a formula does not end a sentence.
+ */
 function lastLine(text: string) {
-  const plain = text.replace(/[*_`$]/g, '').replace(/\s+/g, ' ').trim()
-  const parts = plain.split(/(?<=[。！？；])/).filter((p) => p.trim())
-  return (parts.length ? parts[parts.length - 1] : plain).trim()
+  const plain = text.replace(/\s+/g, ' ').trim()
+  let inMath = false
+  const ends: number[] = []
+  for (let i = 0; i < plain.length; i++) {
+    const ch = plain[i]
+    if (ch === '$') inMath = !inMath
+    else if (!inMath && '。！？；'.includes(ch)) ends.push(i)
+  }
+  // drop a terminator that closes the text; the last sentence starts after the one before it
+  if (ends.length && ends[ends.length - 1] === plain.length - 1) ends.pop()
+  const start = ends.length ? ends[ends.length - 1] + 1 : 0
+  return plain.slice(start).trim()
 }
 
 type Item = { type: 'say' | 'me'; text: string }
@@ -119,7 +132,7 @@ function Narration({ items, ghost }: { items: Item[]; ghost: string[] }) {
               row(items[i], 'me', i)
             ) : i === prevSay ? (
               <button key={i} type="button" className="sl-item prev" aria-expanded="false" title="展开本步记录" onClick={() => setOpen(true)}>
-                {lastLine(items[i].text)} ▾
+                <Markdown text={lastLine(items[i].text)} /> ▾
               </button>
             ) : (
               row(items[i], 'cur', i)
