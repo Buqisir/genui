@@ -700,10 +700,10 @@ sim({
 
 <Step title="回到冰壶" />
 
-<Sim title="冰壶" height={190} duration={3.4} note="示意图，两只冰壶一样重" params={[]}>
+<Sim title="冰壶" height={190} duration={3} note="示意图，两只冰壶一样重" params={[]}>
 sim({
   at(t, p) {
-    const hit = 1.4
+    const hit = 4 / 3
     const v0 = 1.5
     const xA = t < hit ? 0.8 + v0 * t : 0.8 + v0 * hit
     const xB = t < hit ? 3.6 : 3.6 + v0 * (t - hit)
@@ -714,8 +714,8 @@ sim({
     v.ground(m, 0, 9, 0)
     v.ball(m, s.xA, 0.4, 0.4, { label: 'A' })
     v.ball(m, s.xB, 0.4, 0.4, { label: 'B' })
-    if (!s.after) v.vec(m, s.xA, 1.25, 1.4, 0, { label: 'v' })
-    else v.vec(m, s.xB, 1.25, 1.4, 0, { label: 'v' })
+    if (!s.after) v.vec(m, s.xA, 1.25, 1, 0, { label: 'v' })
+    else v.vec(m, s.xB, 1.25, 1, 0, { label: 'v' })
   },
 })
 </Sim>
@@ -830,7 +830,7 @@ sim({
   "碰前小车 2 是 $1\\,\\mathrm{m/s}$；碰后小车 1、2 约 $0.67$、$0.33\\,\\mathrm{m/s}$。",
   "两车一样重，动能之比就是速度平方之和之比。"
 ]} options={[
-  { text: "非弹性，总动能约为碰前 56%", correct: true, say: ["对。动量 1 = 2/3 + 1/3，守恒。", "动能比 $(2/3)^2 + (1/3)^2 = 5/9 \\approx 0.56$。"] },
+  { text: "非弹性，总动能约为碰前 56%", correct: true, say: ["对。动量 1 = 2/3 + 1/3，守恒。", "动能比 $(2/3)^2 + (1/3)^2 = 5/9$，约为 0.56。"] },
   { text: "弹性碰撞：碰后两车分开了", say: ["不对。分开不等于弹性。", "动量守恒，可总动能只剩约 56%。"] },
   { text: "非弹性，总动能约为碰前 44%", say: ["44% 只算了小车 1。", "要把两辆车的动能加起来。"] },
   { text: "完全非弹性碰撞：用了吸能材料", say: ["不对。完全非弹性要看碰后是否同速。", "两车碰后速度不同，是非弹性碰撞。"] }
