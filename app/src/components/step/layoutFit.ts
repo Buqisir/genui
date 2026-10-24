@@ -121,10 +121,11 @@ export function useLayoutFit(refs: { root: RefObject<HTMLElement | null>; main: 
           rowGeom({ left: L, right: R, picture: scene ? h : 0, gap: 0, bar: scene ? extra : 0, topAlign: a.kind === 'fill' })
         const row = (h: number) => (solo ? { lt: 0, rt: 0, h: R } : pic(h))
         // the tallest the canvas can be: what is left of the row, and not taller than the column is wide
-        const cmax = Math.max(CANVAS_MIN, CANVAS_MAX)
-        c = scene ? Math.max(CANVAS_MIN, Math.min(cmax, Math.floor(rowAvail - L - extra))) : 0
+        const cmin = Math.max(CANVAS_MIN, Number(scene?.dataset.min || 0))
+        const cmax = Math.max(cmin, CANVAS_MAX)
+        c = scene ? Math.max(cmin, Math.min(cmax, Math.floor(rowAvail - L - extra))) : 0
         let g = row(c)
-        while (g.h > rowAvail + 0.5 && scene && c > CANVAS_MIN) {
+        while (g.h > rowAvail + 0.5 && scene && c > cmin) {
           c -= 4
           g = row(c)
         }

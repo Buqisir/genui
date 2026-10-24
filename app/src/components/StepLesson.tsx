@@ -14,7 +14,7 @@ import {
   type ComponentBlock,
   type StepModel,
 } from './step/model'
-import { detectLayout, placeComps, SCENE_NAMES, SIZABLE_SCENES, type LayoutKind } from './step/layout'
+import { detectLayout, placeComps, sceneMin, SCENE_NAMES, SIZABLE_SCENES, type LayoutKind } from './step/layout'
 import { useDesktop, useLayoutFit } from './step/layoutFit'
 import { ConcludeChain } from './step/parts/ConcludeChain'
 import { PlayGate } from './step/playGate'
@@ -284,7 +284,7 @@ export function StepLesson({ blocks, title }: { blocks: Block[]; title?: string 
         const cls = `sl-comp sl-comp-${c.block.name}${SCENE_NAMES.has(c.block.name) ? ' sl-canvas' : ''}${sized ? ' sl-scene' : ''}`
         return (
           // not yet reached: keep the room, show nothing, so the page does not jump
-          <div key={`${epoch}:${c.i}`} className={cls} style={c.at > beat && c.block.name !== 'Conclude' ? { visibility: 'hidden' } : undefined} data-at={c.at} data-h={sized ? canvasH : undefined}>
+          <div key={`${epoch}:${c.i}`} className={cls} style={c.at > beat && c.block.name !== 'Conclude' ? { visibility: 'hidden' } : undefined} data-at={c.at} data-h={sized ? canvasH : undefined} data-min={sized ? sceneMin(c.block.name, c.block.props) : undefined}>
             {renderComp(c.block, c.at, sized ? canvasH : undefined)}
           </div>
         )

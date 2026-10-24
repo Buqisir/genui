@@ -82,9 +82,9 @@ sim({
   { text: "也减少一半", say: "先记下你的猜想。", check: "连粘扣这次也只少了约三分之一，弹开的两次少得更少。" }
 ]} />
 
-<Step title="先排一排，再撞三次" play={2} />
+<Step title="先排一排：碰后的动能" />
 
-<Collision m={[0.4, 0.2]} v={[0.6, 0]} after={["va", "vb"]} surface="surf" label="模拟数据" bars="beat >= 2" />
+<Collision still m={[0.4, 0.2]} v={[0.6, 0]} bars={false} />
 
 还是第 1 节的两辆车：0.4 kg 的 A 以 0.60 m/s 撞静止的 0.2 kg 的 B。
 
@@ -95,6 +95,10 @@ sim({
   { text: "磁体 = 橡皮 > 粘扣", say: "先记下你的排序。", check: "橡皮也弹开了，动能却只剩 74%，比磁体的 98% 少。" },
   { text: "磁体 > 橡皮 > 粘扣", correct: true, say: "先记下你的排序。", check: "98% > 74% > 65%，弹开的两次也不一样。" }
 ]} />
+
+<Step title="再撞三次，验证排序" />
+
+<Collision m={[0.4, 0.2]} v={[0.6, 0]} after={["va", "vb"]} surface="surf" label="模拟数据" />
 
 下面是模拟数据：三种碰撞面各撞一次，验证你的排序。
 
@@ -116,7 +120,7 @@ sim({
 
 橡皮看着挺有弹性，动能却少了约四分之一。
 
-再看上一步你对弹开的猜想。
+再回头看你对弹开碰撞的猜想。
 
 <Recall choice="g2" />
 
@@ -502,17 +506,17 @@ A 只能带负的动量，就是往回走：重的那辆像一堵会动的墙。
 
 <Conclude title="弹性正碰公式" text="$m_1$ 以 $v_1$ 弹性正碰静止的 $m_2$：$v_1' = \frac{m_1 - m_2}{m_1 + m_2}v_1$，$v_2' = \frac{2m_1}{m_1 + m_2}v_1$" />
 
-再代另外两组数据，公式算的和模拟数据也对得上。
+再代另外两组（质量单位 kg），公式算的和模拟数据也对得上。
 
 <Lab filled runs={[
-  { label: "0.2 / 0.2 kg", set: { b2m1: 0.2, b2m2: 0.2, b2a: 0, b2b: 0.594 } },
-  { label: "0.4 / 0.2 kg", set: { b2m1: 0.4, b2m2: 0.2, b2a: 0.198, b2b: 0.792 } },
-  { label: "0.2 / 0.4 kg", set: { b2m1: 0.2, b2m2: 0.4, b2a: -0.197, b2b: 0.396 } }
+  { label: "0.2/0.2", set: { b2m1: 0.2, b2m2: 0.2, b2a: 0, b2b: 0.594 } },
+  { label: "0.4/0.2", set: { b2m1: 0.4, b2m2: 0.2, b2a: 0.198, b2b: 0.792 } },
+  { label: "0.2/0.4", set: { b2m1: 0.2, b2m2: 0.4, b2a: -0.197, b2b: 0.396 } }
 ]} columns={[
-  { label: "公式 v₁′", expr: "(b2m1 - b2m2) / (b2m1 + b2m2) * 0.6", digits: 2 },
-  { label: "公式 v₂′", expr: "2 * b2m1 / (b2m1 + b2m2) * 0.6", digits: 2 },
-  { label: "模拟数据 v₁′", expr: "b2a", digits: 3 },
-  { label: "模拟数据 v₂′", expr: "b2b", digits: 3 }
+  { label: "v₁′ 公式", expr: "(b2m1 - b2m2) / (b2m1 + b2m2) * 0.6", digits: 2 },
+  { label: "v₂′ 公式", expr: "2 * b2m1 / (b2m1 + b2m2) * 0.6", digits: 2 },
+  { label: "v₁′ 模拟", expr: "b2a", digits: 3 },
+  { label: "v₂′ 模拟", expr: "b2b", digits: 3 }
 ]} />
 
 <Conclude title="一样重：公式的特例" text="$m_1 = m_2$ 时 $v_1' = 0$、$v_2' = v_1$，就是交换速度，是弹性正碰公式的特例" under="弹性正碰公式" settles="一样重：交换速度" result="holds" />
@@ -609,11 +613,11 @@ sim({
 
 重的继续向前、变慢；轻的比 A 原来还快，但不到 2 倍，和上一幕的极限一致。
 
-<Step title="渐退样例：这是哪一种碰撞？" play={1} />
+<Step title="渐退样例：这是哪一种碰撞？" play={3} />
 
-<Collision m={[2, 1]} v={[3, 0]} after={[1.5, 3]} bars="beat >= 1" digits={{ v: 1, p: 1, k: 2 }} />
+<Collision m={[2, 1]} v={[3, 0]} after={[1.5, 3]} bars="beat >= 3" digits={{ v: 1, p: 1, k: 2 }} />
 
-<Stem label="情境" text="光滑水平面上，2 kg 的 A 以 3 m/s 撞静止的 1 kg 的 B，碰后 A 以 1.5 m/s、B 以 3 m/s 沿原方向运动。" ask="这次碰撞是哪一种？" />
+<Stem label="情境" text="光滑水平面上，2 kg 的 A 以 3 m/s 撞静止的 1 kg 的 B，碰后 A 1.5 m/s、B 3 m/s。" ask="两者都沿原方向。这次碰撞是哪一种？" />
 
 策略已经给出：先查动量守恒，再比较碰撞前后的总动能。
 

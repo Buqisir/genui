@@ -135,5 +135,11 @@ export const FIT_STAGES = [
 export const CANVAS_MIN = 200
 export const CANVAS_MAX = 640
 
+/** Lowest height a scene can be squeezed to. A Collision with bars needs room under the track for both bar groups. */
+export function sceneMin(name: string, props: Record<string, unknown>): number {
+  if (name === 'Collision' && props.bars !== false && props.body !== 'ball') return 300
+  return CANVAS_MIN
+}
+
 /** Scene components whose `height` prop the layout sets (the first one on the left). */
 export const SIZABLE_SCENES: ReadonlySet<string> = new Set(['Sim', 'Figure', 'Collision', 'Wiring', 'GasBox'])
