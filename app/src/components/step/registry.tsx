@@ -64,7 +64,7 @@ function ResultPlaceholder({ block }: { block: ComponentBlock }) {
 }
 
 /**
- * Just enough of a Choice to drive the player: pick an option (the main button turns into 提交), submit it,
+ * Just enough of a Choice to drive the player: pick an option (the main button turns into 检查), submit it,
  * a predict choice locks and records the pick, a quiz choice records its first answer. The real component replaces this.
  */
 function ChoicePlaceholder({ block, at }: { block: ComponentBlock; at: number }) {
@@ -91,14 +91,15 @@ function ChoicePlaceholder({ block, at }: { block: ComponentBlock; at: number })
       setDone(true)
     } else if (o.correct === true) {
       rt.recordQuiz(`${rt.stepKey}#${block.line}`, true)
-      if (said.length) rt.say(said)
+      if (said.length) rt.say(said, 'right')
       stop.resolve()
       setDone(true)
     } else {
       rt.recordQuiz(`${rt.stepKey}#${block.line}`, false)
-      if (said.length) rt.say(said)
+      if (said.length) rt.say(said, 'wrong')
       setSel(null)
       stop.setSubmit(null)
+      stop.setWrong({ hint: null })
     }
   }
   const pick = (i: number) => {

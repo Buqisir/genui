@@ -118,6 +118,16 @@ export const Fill: StepComponent = ({ block, at }) => {
   const cur = !finished ? blanks[k] : null
   const order = (i: number) => shuffleOrder(blanks[i].opts.length, block.line * 7919 + i * 104729 + 1)
 
+  const hint = () => {
+    const list = hints[mem.k] ?? []
+    const lvl = mem.hints[mem.k] ?? 0
+    if (lvl >= list.length) return
+    rt.say([list[lvl]], 'hint')
+    mem.hints[mem.k] = lvl + 1
+    stop.setWrong({ hint: lvl + 1 < list.length ? hint : null })
+    bump()
+  }
+
   const submit = (idx: number) => {
     if (mem.k >= n) return
     const kk = mem.k
@@ -125,7 +135,7 @@ export const Fill: StepComponent = ({ block, at }) => {
     const ok = idx === 0
     rt.me(`我选「${b.opts[idx]}」`)
     const said = say[kk]?.[idx]
-    rt.say([said || (ok ? `对，是「${b.answer}」。` : '不对，再想想。')])
+    rt.say([said || (ok ? `对，是「${b.answer}」。` : '不对，再想想。')], ok ? 'right' : 'wrong')
     if (ok) {
       mem.k = kk + 1
       mem.sel = null
@@ -135,6 +145,7 @@ export const Fill: StepComponent = ({ block, at }) => {
       mem.lose[kk] = [...(mem.lose[kk] ?? []), idx]
       mem.sel = null
       stop.setSubmit(null)
+      stop.setWrong({ hint: (hints[kk]?.length ?? 0) > (mem.hints[kk] ?? 0) ? hint : null })
     }
     bump()
   }
@@ -144,16 +155,6 @@ export const Fill: StepComponent = ({ block, at }) => {
     stop.setSubmit(() => submit(idx))
     bump()
   }
-  const hint = () => {
-    const list = hints[mem.k] ?? []
-    const lvl = mem.hints[mem.k] ?? 0
-    if (lvl >= list.length) return
-    rt.say([list[lvl]])
-    mem.hints[mem.k] = lvl + 1
-    bump()
-  }
-
-  const hintLeft = !finished && (hints[k]?.length ?? 0) > (mem.hints[k] ?? 0)
   return (
     <div className="il-fill" data-testid="fill">
       <div className="il-card">
@@ -208,11 +209,6 @@ export const Fill: StepComponent = ({ block, at }) => {
               )
             })}
           </div>
-          {hintLeft && (
-            <button type="button" className="il-txt-btn" onClick={hint}>
-              提示
-            </button>
-          )}
         </div>
       )}
     </div>

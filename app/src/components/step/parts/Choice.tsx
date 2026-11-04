@@ -18,8 +18,9 @@ interface State {
 const FRESH: State = { sel: null, lose: [], win: null, locked: null, hints: 0, revealed: false }
 
 /**
- * 选择题（5.10，交互 G5/G6）。点选项只是选中，主按钮变"提交"（stop.setSubmit）；提交后判：
+ * 选择题（5.10，交互 G5/G6）。点选项只是选中，主按钮变"检查"（stop.setSubmit）；检查后判：
  * 答错标 ✕、讲述栏说它的 say、可以重选，错两次揭晓正解；答对标 ✓、说 say、放行。
+ * 答错后按钮条出"再试一次"和"给我提示"（还有提示时），由 stop.setWrong 告诉引擎，组件里不再画"提示"文字按钮。
  * 预测题提交即锁定（"已锁定"），不判对错。小测幕里每题第一次作答计分。
  */
 export const Choice: StepComponent = ({ block, at }) => {
@@ -54,6 +55,14 @@ export const Choice: StepComponent = ({ block, at }) => {
   if (!rt || !stop) return null
   const done = st.win !== null || (predict && (st.locked !== null || stop.resolved))
 
+  const hint = () => {
+    const cur = live.current
+    if (done || cur.revealed || cur.hints >= hints.length) return
+    rt.say([hints[cur.hints]], 'hint')
+    update({ hints: cur.hints + 1 })
+    stop.setWrong({ hint: cur.hints + 1 < hints.length ? hint : null })
+  }
+
   const submit = (i: number) => {
     const o = opts[i]
     if (!o || done) return
@@ -73,17 +82,19 @@ export const Choice: StepComponent = ({ block, at }) => {
       rt.setPredict(quizKey(qno), ok ? 1 : 0)
       rt.recordQuiz(`${rt.stepKey}#${block.line}`, ok)
     }
-    if (said.length) rt.say(said)
     if (ok) {
+      if (said.length) rt.say(said, 'right')
       update({ win: i, sel: null, revealed: false })
       stop.resolve()
       return
     }
+    if (said.length) rt.say(said, 'wrong')
     const lose = [...live.current.lose, i]
     const revealed = lose.length >= 2 && correctIdx >= 0
     update({ lose, sel: null, revealed })
     stop.setSubmit(null)
-    if (revealed && hints.length) rt.say([hints[hints.length - 1]])
+    if (revealed && hints.length) rt.say([hints[hints.length - 1]], 'hint')
+    stop.setWrong({ hint: !revealed && live.current.hints < hints.length ? hint : null })
   }
   const pick = (i: number) => {
     const cur = live.current
@@ -91,20 +102,16 @@ export const Choice: StepComponent = ({ block, at }) => {
     update({ sel: i })
     stop.setSubmit(() => submit(i))
   }
-  const hint = () => {
-    const cur = live.current
-    if (done || cur.revealed || cur.hints >= hints.length) return
-    rt.say([hints[cur.hints]])
-    update({ hints: cur.hints + 1 })
-  }
 
   const label = str(block.props.label)
   const ask = str(block.props.ask)
+  // every option is short (≤ 10 characters once $…$ TeX markers and ** are removed): two columns fit on a phone
+  const short = opts.length >= 2 && opts.every((o) => str(o.text).replace(/[$*]/g, '').trim().length <= 10)
   return (
     <div className="tx-choice" data-testid="choice">
       {label && <div className="tx-label">{label}</div>}
       {ask && !hasStem && <Md text={ask} className="tx-ask" />}
-      <div className="tx-opts" role="group">
+      <div className="tx-opts" role="group" data-short={short ? '' : undefined}>
         {opts.map((o, i) => {
           const cls = ['tx-opt']
           let mark = ''
@@ -128,13 +135,6 @@ export const Choice: StepComponent = ({ block, at }) => {
           )
         })}
       </div>
-      {hints.length > 0 && !done && !st.revealed && st.hints < hints.length && (
-        <div className="tx-choice-foot">
-          <button type="button" className="tx-txt-btn" onClick={hint}>
-            提示
-          </button>
-        </div>
-      )}
     </div>
   )
 }

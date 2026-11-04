@@ -18,19 +18,30 @@ export interface Pos {
   epoch: number
 }
 
+/** How a piece of feedback is marked: right ✓, wrong ✕, hint 提示. */
+export type Tone = 'right' | 'wrong' | 'hint'
+
+/** The student answered wrong at a stop. */
+export interface WrongState {
+  /** Says the next hint; null = no hint left (the 给我提示 button is hidden). */
+  hint: (() => void) | null
+}
+
 export interface StopHandle {
   /** The student got past this stop earlier in this visit to the lesson (so a remounted component can show itself done). */
   readonly resolved: boolean
   /** The stop is cleared: the narration may go on. */
   resolve(): void
-  /** The student has picked something: the main button reads 提交 and is enabled, and calls `fn`. `null` = nothing to submit. */
+  /** The student has picked something: the main button reads 检查 and is enabled, and calls `fn`. `null` = nothing to submit. */
   setSubmit(fn: (() => void) | null): void
+  /** The student answered wrong: the bar shows 再试一次 (and 给我提示 when `hint` is set). `null` leaves the wrong state. */
+  setWrong(state: WrongState | null): void
   /** Unregister (when the component unmounts). `useStop` does this for you. */
   release(): void
 }
 
 export interface StopOptions {
-  /** A gate with no options to pick (a lab that needs three runs): the disabled button reads 继续, not 提交. */
+  /** A gate with no options to pick (a lab that needs three runs): the disabled button reads 继续, not 检查. */
   gate?: boolean
 }
 
@@ -69,8 +80,8 @@ export interface StepRuntime {
   epoch: number
   /** The stop at sentence `at` of this step: narration cannot go past that sentence until it is resolved. `id` is unique within the step. */
   registerStop(id: string, at: number, opts?: StopOptions): StopHandle
-  /** Say feedback as the current sentence of the narration; the next advance replaces it with the next sentence. */
-  say(lines: string[]): void
+  /** Say feedback as the current sentence of the narration; the next advance replaces it with the next sentence. `tone` = right / wrong / hint mark shown with the feedback. */
+  say(lines: string[], tone?: Tone): void
   /** The student's answer, shown in the narration as a small bubble (「我选…」). */
   me(text: string): void
   /** Start the 400 ms hold after a submit: the main button, Enter and → do nothing meanwhile. */
@@ -115,6 +126,7 @@ export function useStop(id: string, at: number, opts?: StopOptions): StopHandle 
       },
       resolve: () => live.current?.resolve(),
       setSubmit: (fn) => live.current?.setSubmit(fn),
+      setWrong: (s) => live.current?.setWrong(s),
       release: () => live.current?.release(),
     }),
     [],
@@ -136,19 +148,23 @@ interface Stop {
   at: number
   gate: boolean
   submit: (() => void) | null
+  wrong: WrongState | null
 }
 
-interface LogEntry {
+export interface LogEntry {
   beat: number
   type: 'say' | 'me'
   text: string
+  tone?: Tone
 }
 
 export const HOLD_MS = 400
 
 export interface MainButton {
-  label: '开始' | '继续' | '提交' | '重新开始'
+  label: '开始' | '继续' | '检查' | '再试一次' | '重新开始'
   disabled: boolean
+  /** Show the 给我提示 button next to the main button. */
+  hint?: boolean
 }
 
 export class StepEngine {
@@ -291,7 +307,8 @@ export class StepEngine {
     if (phase === 'done') return { label: '重新开始', disabled: false }
     const stop = this.blockingStop()
     if (!stop) return { label: '继续', disabled: false }
-    return { label: stop.submit || !stop.gate ? '提交' : '继续', disabled: !stop.submit }
+    if (stop.wrong) return { label: '再试一次', disabled: false, hint: !!stop.wrong.hint }
+    return { label: stop.submit || !stop.gate ? '检查' : '继续', disabled: !stop.submit }
   }
 
   /** Click on the main button, or Enter. */
@@ -302,6 +319,11 @@ export class StepEngine {
     if (phase === 'cover') return this.start()
     const stop = this.blockingStop()
     if (stop) {
+      if (stop.wrong) {
+        stop.wrong = null
+        this.notify()
+        return
+      }
       if (stop.submit) {
         const fn = stop.submit
         fn()
@@ -318,6 +340,12 @@ export class StepEngine {
     this.advance()
   }
 
+  /** The 给我提示 button: the component says its next hint. */
+  pressHint(): void {
+    if (this.held()) return
+    this.blockingStop()?.wrong?.hint?.()
+  }
+
   markSubmitted() {
     this.holdUntil = this.now() + HOLD_MS
   }
@@ -328,10 +356,10 @@ export class StepEngine {
   entries(): readonly LogEntry[] {
     return this.log
   }
-  say(lines: string[]) {
+  say(lines: string[], tone?: Tone) {
     const text = lines.filter((l) => l.trim()).join('\n\n')
     if (!text) return
-    this.log = [...this.log, { beat: this.pos.beat, type: 'say', text }]
+    this.log = [...this.log, { beat: this.pos.beat, type: 'say', text, ...(tone ? { tone } : {}) }]
     this.notify()
   }
   me(text: string) {
@@ -344,7 +372,7 @@ export class StepEngine {
 
   registerStop(stepKey: string, id: string, at: number, opts?: StopOptions): StopHandle {
     const key = `${stepKey}#${id}`
-    const stop: Stop = { key, at, gate: !!opts?.gate, submit: null }
+    const stop: Stop = { key, at, gate: !!opts?.gate, submit: null, wrong: null }
     this.stops.set(key, stop)
     this.notify()
     const mine = () => this.stops.get(key) === stop
@@ -354,14 +382,24 @@ export class StepEngine {
         return resolvedSet.has(key)
       },
       resolve: () => {
-        if (this.resolvedStops.has(key) && !stop.submit) return
+        if (this.resolvedStops.has(key) && !stop.submit && !stop.wrong) return
         this.resolvedStops.add(key)
         stop.submit = null
+        stop.wrong = null
         this.notify()
       },
       setSubmit: (fn) => {
-        if (!mine() || stop.submit === fn) return
+        if (!mine()) return
+        // picking a new option (fn !== null) leaves the wrong state
+        const leavesWrong = fn !== null && stop.wrong !== null
+        if (stop.submit === fn && !leavesWrong) return
         stop.submit = fn
+        if (fn !== null) stop.wrong = null
+        this.notify()
+      },
+      setWrong: (s) => {
+        if (!mine() || stop.wrong === s) return
+        stop.wrong = s
         this.notify()
       },
       release: () => {
@@ -518,7 +556,7 @@ export class StepEngine {
       stepKey,
       epoch,
       registerStop: (id, at, opts) => this.registerStop(stepKey, id, at, opts),
-      say: (lines) => live() && this.say(lines),
+      say: (lines, tone) => live() && this.say(lines, tone),
       me: (text) => live() && this.me(text),
       markSubmitted: () => this.markSubmitted(),
       setPredict: (n, i) => this.setPredict(n, i),

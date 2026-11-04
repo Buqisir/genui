@@ -380,3 +380,12 @@
 .tx-hw-a .tx-md {
   margin-top: var(--s1);
 }
+
+/* 手机：选项都很短时排两列（规矩 6：放不下两列就一列） */
+@media (max-width: 1023px) {
+  .tx-opts[data-short] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s2);
+  }
+}

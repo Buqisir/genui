@@ -210,9 +210,9 @@ describe('StepEngine', () => {
     expect(e.advance()).toBe(true) // sentence 0 -> 1
     expect(e.advance()).toBe(false)
     expect(e.pos.beat).toBe(1)
-    expect(e.mainButton()).toEqual({ label: '提交', disabled: true })
+    expect(e.mainButton()).toEqual({ label: '检查', disabled: true })
     stop.setSubmit(() => {})
-    expect(e.mainButton()).toEqual({ label: '提交', disabled: false })
+    expect(e.mainButton()).toEqual({ label: '检查', disabled: false })
     stop.resolve()
     expect(e.mainButton()).toEqual({ label: '继续', disabled: false })
     expect(e.advance()).toBe(true)
@@ -279,6 +279,43 @@ describe('StepEngine', () => {
     e.advance()
     e.advance()
     expect(e.entries()).toEqual([])
+  })
+
+  it('after a wrong answer the bar reads 再试一次, and pressing it goes back to 检查', () => {
+    const { e } = make()
+    e.start()
+    const stop = e.registerStop(e.stepKey, 'c', 0)
+    stop.setWrong({ hint: null })
+    expect(e.mainButton()).toEqual({ label: '再试一次', disabled: false, hint: false })
+    e.pressMain()
+    expect(e.mainButton()).toEqual({ label: '检查', disabled: true })
+  })
+
+  it('shows 给我提示 while the component has a hint, and pressHint calls it once', () => {
+    const { e } = make()
+    e.start()
+    const stop = e.registerStop(e.stepKey, 'c', 0)
+    let hinted = 0
+    stop.setWrong({ hint: () => void hinted++ })
+    expect(e.mainButton()).toEqual({ label: '再试一次', disabled: false, hint: true })
+    e.pressHint()
+    expect(hinted).toBe(1)
+  })
+
+  it('picking a new option while wrong clears the wrong state', () => {
+    const { e } = make()
+    e.start()
+    const stop = e.registerStop(e.stepKey, 'c', 0)
+    stop.setWrong({ hint: null })
+    stop.setSubmit(() => {})
+    expect(e.mainButton()).toEqual({ label: '检查', disabled: false })
+  })
+
+  it('stores the tone of feedback in the log', () => {
+    const { e } = make()
+    e.start()
+    e.say(['x'], 'wrong')
+    expect(e.entries()).toEqual([{ beat: 0, type: 'say', text: 'x', tone: 'wrong' }])
   })
 
   it('records predictions for the whole lesson and only the first quiz answer', () => {
