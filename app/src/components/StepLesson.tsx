@@ -19,7 +19,7 @@ import { useDesktop, useLayoutFit } from './step/layoutFit'
 import { ConcludeChain } from './step/parts/ConcludeChain'
 import { PlayGate } from './step/playGate'
 import { STEP_COMPONENTS, STEP_ONLY_NAMES, StepPlaceholder } from './step/registry'
-import { StepEngine, StepRuntimeContext, type StepRuntime } from './step/runtime'
+import { StepEngine, StepRuntimeContext, type StepRuntime, type Tone } from './step/runtime'
 import './step/step.css'
 
 /** Declarations only: nothing to draw. */
@@ -61,20 +61,16 @@ function lastLine(text: string) {
   return plain.slice(start).trim()
 }
 
-type Item = { type: 'say' | 'me'; text: string }
+type Item = { type: 'say' | 'me' | 'fb'; text: string; tone?: Tone }
 
 /**
- * Every line the narration of a step can say at its tallest: sentences, option feedback, recalls, result lines.
+ * Every line the narration of a step can say at its tallest: sentences, recalls, result lines.
  * On a phone the narration sits above the board, so its height must not change from sentence to sentence
  * or the board would move down the page; Narration reserves the tallest of these (see `.sl-narr-ghost`).
+ * Feedback is not in here: it sits in the bar on a phone (see Feedback).
  */
 function ghostTexts(step: StepModel, blocks: Block[]): string[] {
   const out: string[] = []
-  const walk = (v: unknown) => {
-    if (typeof v === 'string') out.push(v)
-    else if (Array.isArray(v)) v.forEach(walk)
-    else if (v && typeof v === 'object') Object.values(v).forEach(walk)
-  }
   for (const s of step.sentences) {
     if (s.kind === 'text') out.push(s.text)
     else {
@@ -83,15 +79,37 @@ function ghostTexts(step: StepModel, blocks: Block[]): string[] {
       choiceOptions(choice).forEach((_, i) => out.push(recallText(choice, i)))
     }
   }
-  for (const c of step.comps) {
-    walk(c.block.props.say)
-    for (const o of choiceOptions(c.block)) walk(o.say)
-  }
   return out.filter((t) => t.trim())
 }
 
-function Narration({ items, ghost }: { items: Item[]; ghost: string[] }) {
+/** The feedback a component said after the current sentence: said after the last sentence, so it leaves when the narration moves on. */
+function currentFeedback(items: Item[]): Item | null {
+  let lastSayIdx = -1
+  items.forEach((it, i) => {
+    if (it.type === 'say') lastSayIdx = i
+  })
+  for (let i = items.length - 1; i > lastSayIdx; i--) if (items[i].type === 'fb') return items[i]
+  return null
+}
+
+/** Feedback under the question (desktop: in the narration; phone: in the bar). */
+function Feedback({ fb, where }: { fb: Item | null; where: 'narr' | 'bar' }) {
+  if (!fb) return null
+  return (
+    <div className={`sl-fb sl-fb-${where}${fb.tone ? ` ${fb.tone}` : ''}`} data-testid={`feedback-${where}`}>
+      {fb.tone === 'hint' && <div className="sl-fb-h">提示</div>}
+      <div className="sl-fb-body">
+        {fb.tone === 'right' && <svg className="sl-fb-i" width="16" height="16" viewBox="0 0 16 16" aria-label="对"><circle cx="8" cy="8" r="7" fill="currentColor" /><path d="M4.8 8.2 7 10.4 11.2 5.8" stroke="var(--c-card)" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+        {fb.tone === 'wrong' && <svg className="sl-fb-i" width="16" height="16" viewBox="0 0 16 16" aria-label="不对"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M5.5 5.5 10.5 10.5M10.5 5.5 5.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>}
+        <Markdown text={fb.text} />
+      </div>
+    </div>
+  )
+}
+
+function Narration({ items, ghost, fb }: { items: Item[]; ghost: string[]; fb: Item | null }) {
   const [open, setOpen] = useState(false)
+  // sentences and the user's own lines only; feedback is shown separately under the sentence
   let lastSay = -1
   let prevSay = -1
   let lastMe = -1
@@ -99,7 +117,7 @@ function Narration({ items, ghost }: { items: Item[]; ghost: string[] }) {
     if (it.type === 'say') {
       prevSay = lastSay
       lastSay = i
-    } else lastMe = i
+    } else if (it.type === 'me') lastMe = i
   })
   const row = (it: Item, cls: string, i: number) => (
     <div key={i} className={`sl-item ${cls}`}>
@@ -113,7 +131,7 @@ function Narration({ items, ghost }: { items: Item[]; ghost: string[] }) {
         <button type="button" className="sl-item sl-fold" onClick={() => setOpen(false)}>
           收起记录 ▴
         </button>
-        {items.map((it, i) => row(it, it.type === 'me' ? 'me' : i === lastSay ? 'cur' : 'say', i))}
+        {items.map((it, i) => row(it, it.type === 'me' ? 'me' : it.type === 'say' && i === lastSay ? 'cur' : 'say', i))}
       </>
     )
   } else {
@@ -138,6 +156,7 @@ function Narration({ items, ghost }: { items: Item[]; ghost: string[] }) {
               row(items[i], 'cur', i)
             ),
           )}
+        <Feedback fb={fb} where="narr" />
       </>
     )
   }
@@ -242,6 +261,9 @@ export function StepLesson({ blocks, title }: { blocks: Block[]; title?: string 
     { desktop, active: phase === 'step' && !!plan, kind: plan?.kind ?? 'pic', stepKey: `${idx}:${epoch}` },
   )
 
+  const items = cur ? narrationItems(cur.step, blocks, engine, beat) : []
+  const fb = currentFeedback(items)
+
   let content: ReactNode
   let narration: ReactNode = null
   let head: ReactNode = null
@@ -272,11 +294,11 @@ export function StepLesson({ blocks, title }: { blocks: Block[]; title?: string 
     const { act, ai, step, si } = cur
     head = (
       <div className="sl-head">
-        <div className="sl-act">{`第 ${ai + 1} 幕 · ${act.title}`}</div>
+        <div className="sl-act sl-sr">{`第 ${ai + 1} 幕 · ${act.title}`}</div>
         <h2 className="sl-title">{stepTitle(act, si)}</h2>
       </div>
     )
-    narration = <Narration items={narrationItems(step, blocks, engine, beat)} ghost={ghostTexts(step, blocks)} />
+    narration = <Narration items={items} fb={fb} ghost={ghostTexts(step, blocks)} />
     const { kind, zoned, scene } = plan!
     const place = (list: typeof zoned.left) =>
       list.map((c) => {
@@ -313,13 +335,32 @@ export function StepLesson({ blocks, title }: { blocks: Block[]; title?: string 
   }
 
   const total = flat.length
+  // progress: one segment per act, filled by the steps done in it (the current step counts half)
+  const doneSteps = phase === 'done' ? total : phase === 'step' ? idx : 0
+  const fill = (ai: number) => {
+    if (phase === 'done') return 1
+    if (phase !== 'step') return 0
+    const n = model.acts[ai].steps.length
+    if (!n) return 0
+    const done = flat.filter((f, i) => f.ai === ai && i < idx).length
+    return (done + (flat[idx]?.ai === ai ? 0.5 : 0)) / n
+  }
   return (
     <div className="sl" data-phase={phase} data-frame={cur?.step.frame} data-layout={plan?.kind} ref={rootRef}>
       <header className="sl-top">
         <button type="button" className="sl-icon" aria-label="上一句" disabled={phase === 'cover'} onClick={() => engine.back()}>
           {chevron('left')}
         </button>
-        <span className="sl-progress">{phase === 'step' ? `${idx + 1} / ${total}` : phase === 'done' ? '完成' : '封面'}</span>
+        {title && <span className="sl-course">{title}</span>}
+        <div className="sl-progress" role="progressbar" aria-label="进度" aria-valuemin={0} aria-valuemax={total} aria-valuenow={doneSteps}>
+          {model.acts.map((act, ai) => (
+            <span key={ai} className="sl-seg" style={{ flexGrow: act.steps.length }} title={`第 ${ai + 1} 幕 · ${act.title}`}>
+              <span className="sl-seg-fill" style={{ width: `${fill(ai) * 100}%` }} />
+            </span>
+          ))}
+          <span className="sl-sr">{phase === 'step' ? `${idx + 1} / ${total}` : phase === 'done' ? '完成' : '封面'}</span>
+        </div>
+        <span className="sl-gap" />
         <button
           type="button"
           className="sl-icon"
@@ -334,29 +375,37 @@ export function StepLesson({ blocks, title }: { blocks: Block[]; title?: string 
       <section className="sl-board" data-layout={plan?.kind}>
         <StepRuntimeContext.Provider value={phase === 'step' ? rt : null}>
           <PlayGate.Provider value={gate}>
-            {/* 5.4 conclusion chain: the top row of the board (on a phone it sits under the content, see step.css) */}
+            {/* 板的顺序：标题、结论链、主区（手机上的顺序见 step.css） */}
+            {head}
             {phase === 'step' && (
               <div className={`sl-chain${hasChain ? ' has' : ''}`}>
                 <ConcludeChain />
               </div>
             )}
-            {head}
             <div className="sl-main" ref={mainEl}>
               {content}
             </div>
           </PlayGate.Provider>
         </StepRuntimeContext.Provider>
         <div className="sl-bar">
-          <button type="button" className="sl-go" data-sl-main disabled={main.disabled} onClick={() => engine.pressMain()}>
-            {main.label}
-          </button>
+          <Feedback fb={phase === 'step' ? fb : null} where="bar" />
+          <div className="sl-btns">
+            {main.hint && (
+              <button type="button" className="sl-go sl-go2" onClick={() => engine.pressHint()}>
+                给我提示
+              </button>
+            )}
+            <button type="button" className="sl-go" data-sl-main disabled={main.disabled} onClick={() => engine.pressMain()}>
+              {main.label}
+            </button>
+          </div>
         </div>
       </section>
     </div>
   )
 }
 
-/** What the narration has said so far in this step: sentences 0..beat, each followed by the feedback said at it. */
+/** What the narration has said so far in this step: sentences 0..beat, each followed by what the components said at it (feedback 'fb', the user's own lines 'me'). */
 function narrationItems(step: StepModel, blocks: Block[], engine: StepEngine, beat: number): Item[] {
   const result = step.comps.find((c) => c.block.name === 'Result')?.block
   const texts = step.sentences.length
@@ -365,7 +414,11 @@ function narrationItems(step: StepModel, blocks: Block[], engine: StepEngine, be
   const out: Item[] = []
   for (let j = 0; j <= beat && j < texts.length; j++) {
     out.push({ type: 'say', text: texts[j] })
-    for (const e of engine.entries()) if (e.beat === j) out.push({ type: e.type, text: e.text })
+    for (const e of engine.entries()) {
+      if (e.beat !== j) continue
+      if (e.type === 'say') out.push({ type: 'fb', text: e.text, tone: e.tone })
+      else out.push({ type: 'me', text: e.text })
+    }
   }
   return out
 }

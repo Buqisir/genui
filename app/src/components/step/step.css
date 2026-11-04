@@ -32,6 +32,11 @@
   font-size: var(--B);
   line-height: 1.65;
   color: var(--c-ink);
+  /* desktop: the white board sits on a light grey ground (on a phone the ground goes, see the phone block) */
+  background: var(--c-raised);
+  border-radius: var(--r3);
+  padding: 0 var(--s5) var(--s5);
+  box-sizing: border-box;
 }
 .sl[data-phase='cover'],
 .sl[data-phase='done'] {
@@ -51,9 +56,10 @@
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
+  justify-content: flex-start;
+  gap: var(--s4);
   height: 56px;
+  padding: 0 var(--s2);
 }
 .sl-icon {
   display: inline-flex;
@@ -61,19 +67,57 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--c-hairline);
+  border: 0;
   border-radius: var(--r2);
-  background: var(--c-card);
+  background: none;
   color: var(--c-ink);
 }
 .sl-icon:disabled {
   color: var(--c-steel);
   cursor: default;
 }
-.sl-progress {
+/* 课名：桌面显示，手机隐藏 */
+.sl-course {
+  flex: 0 1 auto;
+  max-width: 300px;
   font-size: var(--S);
   color: var(--c-graphite);
-  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 进度：每幕一段，段里填已学的比例（当前句算一半） */
+.sl-progress {
+  flex: 1 1 auto;
+  max-width: 520px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.sl-seg {
+  flex-basis: 0;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--c-hairline);
+  overflow: hidden;
+  min-width: 8px;
+}
+.sl-seg-fill {
+  display: block;
+  height: 100%;
+  background: var(--c-ink);
+}
+.sl-gap {
+  flex: 1 1 0;
+}
+/* 只给读屏看：幕标签、进度的文字 */
+.sl-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* ---------- 讲述栏 ---------- */
@@ -82,7 +126,7 @@
   flex-direction: column;
   gap: var(--s3);
   min-width: 0;
-  padding: var(--s4) var(--s2);
+  padding: var(--s6) var(--s2) var(--s4);
   overflow-wrap: anywhere;
 }
 .sl-item {
@@ -137,6 +181,39 @@
   padding: var(--s2) var(--s3);
 }
 
+/* 反馈：组件对答案说的话，压在问句下面（桌面在讲述栏里，手机在动作条里） */
+.sl-fb {
+  margin-top: var(--s2);
+  padding-top: var(--s3);
+  border-top: 1.5px solid var(--c-ink);
+  color: var(--c-ink);
+}
+.sl-fb-h {
+  font-size: var(--S);
+  font-weight: 600;
+  color: var(--c-graphite);
+  margin-bottom: var(--s1);
+}
+.sl-fb-body {
+  display: flex;
+  gap: var(--s2);
+  align-items: flex-start;
+}
+.sl-fb-i {
+  flex: none;
+  margin-top: calc((1.65em - 16px) / 2);
+  color: var(--c-ink);
+}
+.sl-fb-body p {
+  margin: 0 0 var(--s2);
+}
+.sl-fb-body p:last-child {
+  margin-bottom: 0;
+}
+.sl-fb-bar {
+  display: none; /* desktop: feedback lives in the narration */
+}
+
 /* 结论链的弹层：落在右上，不盖左栏的画面（也不盖幕标签和标题） */
 @media (min-width: 1024px) {
   .sl-chain .il-pop {
@@ -157,7 +234,7 @@
   min-width: 0;
 }
 
-/* ---------- 板（规格 3.1）：结论链 32 / 幕标签 / 标题 / 主区 / 动作条 ---------- */
+/* ---------- 板（规格 3.1）：标题 / 结论链 32 / 主区 / 动作条（幕标签只给读屏看） ---------- */
 .sl-board {
   position: relative;
   display: flex;
@@ -165,7 +242,7 @@
   min-width: 0;
   padding: 28px clamp(40px, 6.5%, 96px) 0;
   background: var(--c-card);
-  border: 1px solid var(--c-hairline);
+  border: 0;
   border-radius: var(--r3);
 }
 .sl-chain {
@@ -173,11 +250,11 @@
   position: relative;
   z-index: 6;
   height: 32px;
-  margin: 0 0 var(--s3);
+  margin: var(--s3) 0 0;
 }
 .sl-head {
   flex: none;
-  min-height: calc(var(--S) * 1.5 + var(--T) * 1.3 + var(--s1));
+  min-height: calc(var(--T) * 1.3);
 }
 .sl-act {
   font-size: var(--S);
@@ -186,23 +263,23 @@
 }
 .sl-title {
   margin: var(--s1) 0 0;
-  font-family: var(--font-sans);
+  font-family: var(--font-display);
   font-size: var(--T);
   font-weight: 600;
   line-height: 1.3;
   color: var(--c-ink);
 }
-/* 主区：标题下 s6 到动作条上 s5。整组（.sl-work）在里面水平居中、竖向偏上（layoutFit.ts 算 --gtop） */
+/* 主区：标题下 s5 到动作条上。整组（.sl-work）在里面水平居中、竖向偏上（layoutFit.ts 算 --gtop） */
 .sl-main {
   flex: 1 1 0;
   min-height: 0;
-  margin: var(--s6) 0 calc(var(--s5) * 2 + 48px);
+  margin: var(--s5) 0 calc(var(--s5) * 2 + 48px);
 }
 .sl[data-dn='1'] .sl-main {
-  margin-top: calc(var(--s6) - var(--s2));
+  margin-top: var(--s4);
 }
 .sl[data-dn='2'] .sl-main {
-  margin-top: var(--s5);
+  margin-top: var(--s3);
 }
 .sl-work {
   display: flex;
@@ -286,29 +363,42 @@
   width: 100%;
 }
 
-/* ---------- 动作条：板底居中，离板底 s5 ---------- */
+/* ---------- 动作条：板底居中，离板底 s5；反馈（手机）在上，按钮在下；给我提示在左、主键在右 ---------- */
 .sl-bar {
   position: absolute;
   left: 0;
   right: 0;
   bottom: var(--s5);
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   pointer-events: none;
 }
 .sl-bar > * {
   pointer-events: auto;
 }
+.sl-btns {
+  display: flex;
+  gap: var(--s3);
+  justify-content: center;
+  pointer-events: auto;
+}
 .sl-go {
   height: 48px;
-  min-width: 200px;
-  padding: 0 var(--s5);
+  min-width: 168px;
+  padding: 0 var(--s6);
   border: 0;
-  border-radius: var(--r2);
+  border-radius: 24px;
   background: var(--c-ink);
   color: var(--c-card);
   font-size: var(--B);
   font-weight: 600;
+}
+.sl-go2 {
+  background: var(--c-card);
+  color: var(--c-ink);
+  box-shadow: inset 0 0 0 1.5px var(--c-ink);
 }
 .sl-go:disabled {
   background: var(--c-raised);
@@ -406,25 +496,54 @@
   color: var(--c-graphite);
 }
 
-/* ---------- 手机和窄屏（< 1024）：单栏，从上往下 标签标题、题干、画面、问句、选项；结论链在内容下面；动作条贴底 ---------- */
+/* ---------- 手机和窄屏（< 1024）：整屏就是板，单列从上往下 顶栏、标题、结论链、讲述、主区、动作条（贴底，反馈在动作条里） ---------- */
 @media (max-width: 1023px) {
   .sl {
     --B0: 16px;
     --T: 22px;
     --lg: 16px;
     --rg: 16px;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 56px auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     height: auto;
     min-height: 0; /* the board hugs its content; no blank band between the last card and the button */
+    background: none;
+    border-radius: 0;
+    padding: 0;
   }
-  .sl[data-phase='cover'],
-  .sl[data-phase='done'] {
-    grid-template-rows: 56px minmax(0, 1fr);
+  /* on a phone the board is not a box: its children join the screen's column */
+  .sl-board {
+    display: contents;
+  }
+  .sl-top {
+    order: 0;
+    padding: 0;
+  }
+  .sl-course {
+    display: none;
+  }
+  .sl-gap {
+    display: none;
+  }
+  .sl-head {
+    order: 1;
+    min-height: 0;
+  }
+  .sl-title {
+    font-size: var(--T);
+  }
+  /* 结论链：手机上在标题下面（有 <Conclude> 的课每步都留这一行，第一条结论来时页面不动） */
+  .sl-chain {
+    order: 2;
+    margin: var(--s2) 0 0;
+  }
+  .sl-chain:not(.has) {
+    display: none;
   }
   .sl-narr {
+    order: 3;
     position: relative;
-    padding: var(--s2) 0 var(--s3);
+    padding: var(--s4) 0 var(--s3);
   }
   .sl-narr-ghost {
     display: flex;
@@ -444,18 +563,15 @@
   }
   .sl-narr:not(.open) .sl-narr-live {
     position: absolute;
-    top: var(--s2);
+    top: var(--s4);
     left: 0;
     right: 0;
   }
   .sl-narr.open .sl-narr-ghost {
     display: none;
   }
-  .sl-board {
-    padding: var(--s4);
-    border-radius: var(--r2);
-  }
   .sl-main {
+    order: 4;
     flex: 0 0 auto;
     margin: var(--s4) 0 0;
   }
@@ -484,26 +600,37 @@
   .sl-right .sl-comp {
     order: 1;
   }
-  /* 结论链：手机上也在板最上一行（有 <Conclude> 的课每步都留这一行，第一条结论来时页面不动） */
-  .sl-chain {
-    margin: 0 0 var(--s3);
-  }
-  .sl-chain:not(.has) {
-    display: none;
-  }
+  /* 动作条：贴底；反馈在条里，有反馈时条顶线变墨色 */
   .sl-bar {
-    order: 3;
+    order: 5;
     position: sticky;
     bottom: 0;
     z-index: 5;
-    margin: var(--s4) calc(var(--s4) * -1) calc(var(--s4) * -1);
-    padding: var(--s3) var(--s4);
-    background: var(--c-card);
+    align-items: stretch;
+    margin: var(--s4) 0 0;
+    padding: var(--s3) var(--s4) var(--s5);
+    background: var(--c-raised);
     border-top: 1px solid var(--c-hairline);
-    border-radius: 0 0 var(--r2) var(--r2);
+    border-radius: 0;
     pointer-events: auto;
   }
-  .sl-go {
+  .sl-bar:has(.sl-fb-bar) {
+    border-top: 1.5px solid var(--c-ink);
+  }
+  .sl-fb-narr {
+    display: none;
+  }
+  .sl-fb-bar {
+    display: block;
+    margin: 0 0 var(--s3);
+    padding-top: 0;
+    border-top: 0;
+  }
+  .sl-btns {
     width: 100%;
+  }
+  .sl-go {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }
