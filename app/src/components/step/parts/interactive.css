@@ -320,11 +320,20 @@
 }
 .il-chain-h {
   margin-right: var(--s1, 4px);
+  font-size: var(--S, 14px);
+  color: var(--c-graphite);
 }
 .il-slot {
   flex: 0 0 auto;
   display: inline-flex;
+  align-items: center;
   min-width: 0;
+}
+.il-slot + .il-slot::before {
+  content: '→';
+  color: var(--c-steel);
+  margin-right: 6px;
+  font-size: var(--S, 14px);
 }
 .il-slot.folded {
   position: absolute;
@@ -408,7 +417,7 @@
   border: 1px solid var(--c-hairline);
   border-radius: var(--r2, 14px);
   background: var(--c-card);
-  box-shadow: var(--card-shadow, none);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   color: var(--c-ink);
   line-height: 1.7;
   overflow-wrap: anywhere;
@@ -469,4 +478,64 @@
     top: auto;
     bottom: calc(100% + 6px);
   }
+}
+
+/* 新结论：链上的新项亮成墨色（直到换步），它的弹层上面有一行"新结论" */
+.il-pop-new {
+  font-size: var(--S, 14px);
+  font-weight: 600;
+  color: var(--c-graphite);
+  margin-bottom: 2px;
+}
+.il-ch.fresh {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+  color: var(--c-card);
+}
+.il-ch.fresh .il-ch-t,
+.il-ch.fresh .il-ch-n {
+  color: var(--c-card);
+}
+.il-ch.fresh .il-tag {
+  background: transparent;
+  color: var(--c-card);
+  box-shadow: 0 0 0 1px var(--c-card);
+}
+
+/* 手机：结论链收成一个按钮（已得结论 n + 最新一条 + ›），点开是全部条目的卡片 */
+.il-chain-one {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-graphite);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.il-cnt {
+  font-weight: 600;
+  color: var(--c-ink);
+  flex: none;
+}
+.il-one-t {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.il-one-t .il-ch-t {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-chain.compact .il-pop {
+  left: 0;
+  right: 0;
+  width: auto;
 }
